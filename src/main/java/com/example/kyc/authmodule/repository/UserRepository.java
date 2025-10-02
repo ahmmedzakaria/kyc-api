@@ -1,0 +1,11 @@
+package com.example.kyc.authmodule.repository;
+
+import com.example.kyc.authmodule.enitty.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
+
+}
+
