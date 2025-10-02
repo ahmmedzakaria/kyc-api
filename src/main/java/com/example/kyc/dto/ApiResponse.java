@@ -21,6 +21,15 @@ public class ApiResponse<T> {
     @Schema( description = "Server response time.", example = "2025-05-31T11:55:28.0076812")
     private LocalDateTime timestamp;
 
+    public static <T> ApiResponse<T> body(String message, T data) {
+        return ApiResponse.<T>builder()
+                .status(200)
+                .message(List.of(message))
+                .data(data)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
     public static <T> ApiResponse<T> body(List<String> message, T data) {
         return ApiResponse.<T>builder()
                 .status(200)
@@ -43,6 +52,15 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .status(status)
                 .message(message)
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static <T> ApiResponse<T> body(String message, int status) {
+        return ApiResponse.<T>builder()
+                .status(status)
+                .message(List.of(message))
                 .data(null)
                 .timestamp(LocalDateTime.now())
                 .build();

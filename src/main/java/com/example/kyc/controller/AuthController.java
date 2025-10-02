@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Authentication", description = "Handles registration, login, OTP, and password management")
+@Tag(name = "Authentication", description = "Handles registration, login, and password management")
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -23,7 +23,7 @@ public class AuthController {
 
     @Operation(summary = "Login user by OTP", security = {}) // security = {} make disables JWT for this method
     @PostMapping("/authenticate")
-    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid LoginRequestWithOTP requestDto) {
+    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid AuthRequest requestDto) {
         return authService.authenticate(requestDto);
     }
 

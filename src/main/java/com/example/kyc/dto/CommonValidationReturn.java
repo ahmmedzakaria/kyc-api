@@ -17,13 +17,7 @@ public class CommonValidationReturn {
 	public List<String> getMessages() {
 		return messages;
 	}
-	public void setMessages(List<String> messages) {
-		this.messages = messages;
-	}
 	public void setMessage(String message) {
 		this.messages.add(message);
-	}
-	public void clearMessage() {
-		this.messages.clear();
 	}
 }
