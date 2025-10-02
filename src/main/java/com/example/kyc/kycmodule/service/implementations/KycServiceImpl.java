@@ -108,7 +108,7 @@ public class KycServiceImpl implements KycService {
             try {
                 byte[] photo = getPhoto(p); // load bytes from DB, FS, or S3
                 if (photo != null) {
-                    dto.setPhoto(Base64.getEncoder().encodeToString(photo));
+                    dto.setPhotoString(Base64.getEncoder().encodeToString(photo));
                 }
             } catch (Exception e) {
                 log.warn("photo not found for id {}: {}", p.getId(), e.getMessage());

@@ -29,5 +29,5 @@ public class KycDto {
     @Size(max = 100)
     private String phone;
 
-    private String photo;
+    private String photoString;
 }
