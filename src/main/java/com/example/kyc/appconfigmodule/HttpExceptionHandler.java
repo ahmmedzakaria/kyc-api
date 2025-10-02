@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @ControllerAdvice
-public class GlobalHttpExceptionHandler {
+public class HttpExceptionHandler {
 
     // Handle validation errors (400 Bad Request)
     @ExceptionHandler(MethodArgumentNotValidException.class)

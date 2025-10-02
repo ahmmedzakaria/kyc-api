@@ -1,4 +1,4 @@
-package com.example.kyc.appconfigmodule;
+package com.example.kyc.appconfigmodule.security;
 
 import com.example.kyc.authmodule.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -150,6 +150,14 @@
       <artifactId>org.apache.commons.codec</artifactId>
       <version>1.8</version>
     </dependency>
+
+<!--    JASYPT With Spring Boot-->
+    <dependency>
+      <groupId>com.github.ulisesbocchio</groupId>
+      <artifactId>jasypt-spring-boot-starter</artifactId>
+      <version>3.0.5</version>
+    </dependency>
+
   </dependencies>
 
   <build>
