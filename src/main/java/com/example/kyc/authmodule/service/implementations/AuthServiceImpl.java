@@ -6,9 +6,10 @@ import com.example.kyc.authmodule.dto.AuthResponse;
 import com.example.kyc.authmodule.dto.RefreshTokenRequest;
 import com.example.kyc.authmodule.service.interfaces.AuthService;
 import com.example.kyc.commonmodule.dto.ApiResponse;
-import com.example.kyc.configmodule.jwt.JwtUtil;
+import com.example.kyc.appconfigmodule.jwt.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +23,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
 	private final AuthenticationManager authenticationManager;

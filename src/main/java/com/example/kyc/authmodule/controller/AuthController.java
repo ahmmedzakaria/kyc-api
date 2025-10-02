@@ -4,6 +4,7 @@ package com.example.kyc.authmodule.controller;
 import com.example.kyc.authmodule.dto.AuthRequest;
 import com.example.kyc.authmodule.dto.AuthResponse;
 import com.example.kyc.authmodule.dto.RefreshTokenRequest;
+import com.example.kyc.authmodule.service.implementations.AuthServiceImpl;
 import com.example.kyc.authmodule.service.interfaces.AuthService;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/auth")
 public class AuthController {
 
+    @Autowired
     private AuthService authService;
 
     @Operation(summary = "Login user by OTP", security = {}) // security = {} make disables JWT for this method (for using swagger UI)
