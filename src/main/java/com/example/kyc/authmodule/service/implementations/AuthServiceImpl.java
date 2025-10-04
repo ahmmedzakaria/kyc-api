@@ -48,14 +48,14 @@ public class AuthServiceImpl implements AuthService {
 						.refreshToken(refreshToken)
 						.build();
 
-				return ResponseEntity.ok(ApiResponse.body("Authentication successful. Token generated", response));
+				return ResponseEntity.ok(ApiResponse.success(response, "Authentication successful. Token generated"));
 
 			}else {
-				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.body("User authentication Failed", HttpStatus.PRECONDITION_FAILED.value()));
+				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"User authentication Failed"));
 			}
 
 		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.body(List.of("Exception occurred: " + e.getLocalizedMessage()),HttpStatus.INTERNAL_SERVER_ERROR.value()));
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),List.of("Exception occurred: " + e.getLocalizedMessage())));
 		}
 	}
 
@@ -75,15 +75,15 @@ public class AuthServiceImpl implements AuthService {
 						.refreshToken(newRefreshToken)
 						.build();
 
-				return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.body("access token is generated", response));
+				return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(response,"access token is generated"));
 
 			} else {
-				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.body("No such user is exist!", HttpStatus.PRECONDITION_FAILED.value()));
+				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"No such user is exist!"));
 			}
 
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(ApiResponse.body(Arrays.asList("Exception occurs: " + e.getLocalizedMessage()),HttpStatus.INTERNAL_SERVER_ERROR.value()));
+					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurs: " + e.getLocalizedMessage())));
 		}
 	}
 

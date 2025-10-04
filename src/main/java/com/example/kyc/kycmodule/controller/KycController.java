@@ -1,13 +1,18 @@
 package com.example.kyc.kycmodule.controller;
 
+import com.example.kyc.authmodule.dto.AuthResponse;
+import com.example.kyc.authmodule.dto.RefreshTokenRequest;
+import com.example.kyc.commonmodule.dto.ApiResponse;
+import com.example.kyc.kycmodule.dto.IdRequest;
 import com.example.kyc.kycmodule.dto.KycDto;
+import com.example.kyc.kycmodule.dto.KycSearchDto;
 import com.example.kyc.kycmodule.dto.documentation.KycCreateRequest;
 import com.example.kyc.kycmodule.service.interfaces.KycService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.URI;
 
 @RestController
 @RequestMapping("/api/kyc")
@@ -28,10 +32,9 @@ public class KycController {
 
     private final KycService service;
 
-//    @Operation(summary = "Create a KYC record")
     @Operation(
             summary = "Create KYC with JSON data and optional photo",
-            requestBody = @RequestBody(
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(
                             mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
@@ -40,50 +43,35 @@ public class KycController {
             )
     )
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<KycDto> create(@ModelAttribute KycDto dto,
+    public ResponseEntity<ApiResponse<KycDto>> create(@ModelAttribute KycDto dto,
                                          @RequestParam(value = "photo", required = false) MultipartFile photo) throws Exception {
-        KycDto created = service.create(dto, photo);
-        return ResponseEntity.created(URI.create("/api/kyc/" + created.getId())).body(created);
+        return service.create(dto, photo);
     }
-
-//    public ResponseEntity<KycDto> create(@RequestPart("data") @Valid KycDto dto,
-//                                         @RequestPart(value = "photo", required = false) MultipartFile photo) throws Exception {
-//        KycDto created = service.create(dto, photo);
-//        return ResponseEntity.created(URI.create("/api/kyc/" + created.getId())).body(created);
-//    }
 
     @Operation(summary = "Update a KYC record")
     @PostMapping(path = "update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<KycDto> update(@ModelAttribute KycDto dto,
+    public ResponseEntity<ApiResponse<KycDto>> update(@ModelAttribute KycDto dto,
                                          @RequestParam(value = "photo", required = false) MultipartFile photo) throws Exception {
-        KycDto updated = service.update( dto, photo);
-        return ResponseEntity.ok(updated);
+        return service.update( dto, photo);
     }
 
     @Operation(summary = "Delete a KYC record")
-    @PostMapping("delete/{id}")
-    public ResponseEntity<KycDto> delete(@PathVariable("id") Long id) throws Exception {
-        service.delete(id);
-        return ResponseEntity.ok(new KycDto());
-//        return ResponseEntity.noContent().build();
+    @PostMapping("delete")
+    public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequest idRequest) throws Exception {
+        return service.delete(idRequest.getId());
     }
 
     @Operation(summary = "Get KYC by Id")
-    @GetMapping("{id}")
-    public ResponseEntity<KycDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getById(id));
+    @PostMapping("get-by-id")
+    public ResponseEntity<ApiResponse<KycDto>> getById(@RequestBody IdRequest idRequest) {
+        return service.getById(idRequest.getId());
     }
 
     @Operation(summary = "Search KYC with pagination")
-    @GetMapping("/search")
-    public ResponseEntity<Page<KycDto>> search(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) String nationalId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String sort
-    ) {
-        return ResponseEntity.ok(service.search(q, nationalId, page, size, sort));
+    @PostMapping("/search")
+    public ResponseEntity<ApiResponse<Page<KycDto>>> search(@RequestBody KycSearchDto dto) {
+
+        return service.search(dto);
     }
 
     @Operation(summary = "Get photo attachment")

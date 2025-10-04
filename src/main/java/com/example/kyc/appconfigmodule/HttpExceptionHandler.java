@@ -35,7 +35,7 @@ public class HttpExceptionHandler {
 		            msg.add("Bad request for the field: "+ fieldName +", Msg: "+ errorMessage);
         });
         
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.body(msg, errors, HttpStatus.BAD_REQUEST.value()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(errors, HttpStatus.BAD_REQUEST.value(),msg));
     }
 
     // Handle method not allowed (405)
@@ -45,7 +45,7 @@ public class HttpExceptionHandler {
     	List<String> msg = new ArrayList<>();
     	msg.add("Method Not Allowed");
     	msg.add(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ApiResponse.body(msg, HttpStatus.METHOD_NOT_ALLOWED.value()));
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(ApiResponse.error(HttpStatus.METHOD_NOT_ALLOWED.value(),msg));
     }
 
     // Handle type mismatch (400 Bad Request)
@@ -57,7 +57,7 @@ public class HttpExceptionHandler {
     	msg.add("Method Not Allowed");
     	msg.add(String.format("Parameter '%s' has invalid value '%s'", ex.getName(), ex.getValue()));
     	
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.body(msg, HttpStatus.BAD_REQUEST.value()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(),msg));
     }
 
     // Handle constraint violations (400 Bad Request)
@@ -68,7 +68,7 @@ public class HttpExceptionHandler {
     	List<String> msg = new ArrayList<>();
     	msg.add(ex.getMessage());
     	
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.body(msg, HttpStatus.BAD_REQUEST.value()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(),msg));
     }
 
     // Handle 404 Not Found
@@ -80,6 +80,6 @@ public class HttpExceptionHandler {
     	msg.add("Not Found");
     	msg.add("The requested URL was not found on this server");
     	
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.body(msg, HttpStatus.NOT_FOUND.value()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(HttpStatus.NOT_FOUND.value(),msg));
     }
 }
