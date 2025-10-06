@@ -1,4 +1,4 @@
-package com.example.kyc.authmodule.enitty;
+package com.example.kyc.authmodule.entity;
 
 import com.example.kyc.commonmodule.dto.ActionInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -56,8 +56,8 @@ public class User extends ActionInfo {
     @Column
     private boolean mobileVerified;
 
-    @Column(length = 255)
-    private String pictureUrl;
+//    @Column(length = 255)
+//    private String pictureUrl;
 
 
 //    @Column(length = 4)

@@ -1,10 +1,9 @@
 package com.example.kyc.kycmodule.service.implementations;
 
-import com.example.kyc.authmodule.dto.AuthResponse;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import com.example.kyc.kycmodule.dto.KycDto;
 import com.example.kyc.kycmodule.dto.KycSearchDto;
-import com.example.kyc.kycmodule.enitty.KycRecord;
+import com.example.kyc.kycmodule.entity.KycRecord;
 import com.example.kyc.kycmodule.repository.KycRecordRepository;
 import com.example.kyc.kycmodule.service.interfaces.KycService;
 import com.example.kyc.commonmodule.service.interfaces.StorageService;

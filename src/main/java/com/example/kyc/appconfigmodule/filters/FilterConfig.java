@@ -5,9 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 
-@Configuration
+//@Configuration
 public class FilterConfig {
-    @Bean
+//    @Bean
     public FilterRegistrationBean<AuditLoggingFilter> auditFilter(AuditLoggingFilter filter) {
         FilterRegistrationBean<AuditLoggingFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(filter);

@@ -1,4 +1,4 @@
-package com.example.kyc.kycmodule.enitty;
+package com.example.kyc.kycmodule.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

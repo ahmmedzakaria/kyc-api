@@ -1,6 +1,6 @@
 package com.example.kyc.appconfigmodule.filters;
 
-import com.example.kyc.authmodule.enitty.ApiAuditLog;
+import com.example.kyc.authmodule.entity.ApiAuditLog;
 import com.example.kyc.authmodule.repository.ApiAuditLogRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
@@ -16,7 +15,7 @@ import org.springframework.web.util.ContentCachingResponseWrapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-@Component
+//@Component
 public class AuditLoggingFilter extends OncePerRequestFilter {
 
     private final ApiAuditLogRepository auditLogRepository;

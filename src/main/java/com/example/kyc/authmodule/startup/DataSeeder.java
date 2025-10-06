@@ -1,7 +1,7 @@
-package com.example.kyc.appconfigmodule.startup;
+package com.example.kyc.authmodule.startup;
 
-import com.example.kyc.authmodule.enitty.Role;
-import com.example.kyc.authmodule.enitty.User;
+import com.example.kyc.authmodule.entity.Role;
+import com.example.kyc.authmodule.entity.User;
 import com.example.kyc.authmodule.repository.RoleRepository;
 import com.example.kyc.authmodule.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;

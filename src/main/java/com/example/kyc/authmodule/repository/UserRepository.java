@@ -1,6 +1,6 @@
 package com.example.kyc.authmodule.repository;
 
-import com.example.kyc.authmodule.enitty.User;
+import com.example.kyc.authmodule.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 

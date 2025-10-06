@@ -1,6 +1,6 @@
 package com.example.kyc.authmodule.repository;
 
-import com.example.kyc.authmodule.enitty.Role;
+import com.example.kyc.authmodule.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

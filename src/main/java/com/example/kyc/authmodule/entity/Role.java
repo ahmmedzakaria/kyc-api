@@ -1,4 +1,4 @@
-package com.example.kyc.authmodule.enitty;
+package com.example.kyc.authmodule.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
