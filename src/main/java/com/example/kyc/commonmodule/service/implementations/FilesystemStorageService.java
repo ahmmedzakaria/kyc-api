@@ -23,10 +23,15 @@ public class FilesystemStorageService implements StorageService {
     private Path basePath;
 
     @PostConstruct
-    public void init() throws IOException {
-        basePath = Paths.get(baseDir).toAbsolutePath().normalize();
-        Files.createDirectories(basePath);
-        log.info("Filesystem storage base dir={}", basePath);
+    public void init() {
+        try {
+            basePath = Paths.get(baseDir).toAbsolutePath().normalize();
+            Files.createDirectories(basePath);
+            log.info("Filesystem storage base dir initialized at {}", basePath);
+        } catch (IOException e) {
+            log.error("Failed to initialize storage directory: {}", baseDir, e);
+            throw new IllegalStateException("Could not initialize storage directory", e);
+        }
     }
 
     @Override

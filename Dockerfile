@@ -3,6 +3,7 @@
 FROM maven:3.9.9-eclipse-temurin-23 AS build
 WORKDIR /app
 
+RUN mkdir -p /app/uploads && chown -R 1000:1000 /app/uploads
 # If you use mvnw, copy mvnw and .mvn. Otherwise copy pom and src
 COPY pom.xml .
 #COPY mvnw .
