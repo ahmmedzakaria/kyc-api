@@ -22,7 +22,7 @@ import javax.sql.DataSource;
         entityManagerFactoryRef = "kycEntityManagerFactory",
         transactionManagerRef = "kycTransactionManager"
 )
-public class kycDbConfig {
+public class KycDbConfig {
 
     @Bean(name = "kycDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.kyc")
