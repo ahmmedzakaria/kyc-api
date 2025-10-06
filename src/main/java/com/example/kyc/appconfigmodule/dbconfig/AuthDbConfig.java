@@ -20,35 +20,35 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @EnableJpaRepositories(
         basePackages = "com.example.kyc.authmodule.repository",
-        entityManagerFactoryRef = "primaryEntityManagerFactory",
-        transactionManagerRef = "primaryTransactionManager"
+        entityManagerFactoryRef = "authEntityManagerFactory",
+        transactionManagerRef = "authTransactionManager"
 )
-public class PrimaryDbConfig {
+public class AuthDbConfig {
 
     @Primary
-    @Bean(name = "primaryDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.primary")
-    public DataSource primaryDataSource() {
+    @Bean(name = "authDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.auth")
+    public DataSource authDataSource() {
         return DataSourceBuilder.create().build();
     }
 
     @Primary
-    @Bean(name = "primaryEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean primaryEntityManagerFactory(
+    @Bean(name = "authEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean authEntityManagerFactory(
             EntityManagerFactoryBuilder builder,
-            @Qualifier("primaryDataSource") DataSource dataSource) {
+            @Qualifier("authDataSource") DataSource dataSource) {
 
         return builder
                 .dataSource(dataSource)
                 .packages("com.example.kyc.authmodule.entity") // ✅ include all main entities
-                .persistenceUnit("primary")
+                .persistenceUnit("auth")
                 .build();
     }
 
     @Primary
-    @Bean(name = "primaryTransactionManager")
-    public PlatformTransactionManager primaryTransactionManager(
-            @Qualifier("primaryEntityManagerFactory") EntityManagerFactory emf) {
+    @Bean(name = "authTransactionManager")
+    public PlatformTransactionManager authTransactionManager(
+            @Qualifier("authEntityManagerFactory") EntityManagerFactory emf) {
 
         return new JpaTransactionManager(emf);
     }

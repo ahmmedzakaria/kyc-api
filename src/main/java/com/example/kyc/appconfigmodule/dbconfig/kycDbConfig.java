@@ -7,7 +7,6 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -20,32 +19,32 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @EnableJpaRepositories(
         basePackages = "com.example.kyc.kycmodule.repository",
-        entityManagerFactoryRef = "secondaryEntityManagerFactory",
-        transactionManagerRef = "secondaryTransactionManager"
+        entityManagerFactoryRef = "kycEntityManagerFactory",
+        transactionManagerRef = "kycTransactionManager"
 )
-public class SecondaryDbConfig {
+public class kycDbConfig {
 
-    @Bean(name = "secondaryDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.secondary")
-    public DataSource secondaryDataSource() {
+    @Bean(name = "kycDataSource")
+    @ConfigurationProperties(prefix = "spring.datasource.kyc")
+    public DataSource kycDataSource() {
         return DataSourceBuilder.create().build();
     }
 
-    @Bean(name = "secondaryEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean secondaryEntityManagerFactory(
+    @Bean(name = "kycEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean kycEntityManagerFactory(
             EntityManagerFactoryBuilder builder,
-            @Qualifier("secondaryDataSource") DataSource dataSource) {
+            @Qualifier("kycDataSource") DataSource dataSource) {
 
         return builder
                 .dataSource(dataSource)
                 .packages("com.example.kyc.kycmodule.entity") // ✅ include all audit entities
-                .persistenceUnit("secondary")
+                .persistenceUnit("kyc")
                 .build();
     }
 
-    @Bean(name = "secondaryTransactionManager")
-    public PlatformTransactionManager secondaryTransactionManager(
-            @Qualifier("secondaryEntityManagerFactory") EntityManagerFactory emf) {
+    @Bean(name = "kycTransactionManager")
+    public PlatformTransactionManager kycTransactionManager(
+            @Qualifier("kycEntityManagerFactory") EntityManagerFactory emf) {
 
         return new JpaTransactionManager(emf);
     }
