@@ -1,9 +1,9 @@
-package com.example.kyc.kycmodule.dto;
+package com.example.kyc.commonmodule.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
-public record KycSearchDto(
+public record SearchDto(
            String searchText,
            @Schema(example = "1", description = "Page Number")
            @NotNull(message = "page can not be null")

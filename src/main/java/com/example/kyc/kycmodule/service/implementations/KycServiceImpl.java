@@ -2,7 +2,7 @@ package com.example.kyc.kycmodule.service.implementations;
 
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import com.example.kyc.kycmodule.dto.KycDto;
-import com.example.kyc.kycmodule.dto.KycSearchDto;
+import com.example.kyc.commonmodule.dto.SearchDto;
 import com.example.kyc.kycmodule.entity.KycRecord;
 import com.example.kyc.kycmodule.repository.KycRecordRepository;
 import com.example.kyc.kycmodule.service.interfaces.KycService;
@@ -119,17 +119,17 @@ public class KycServiceImpl implements KycService {
     }
 
     @Override
-    public ResponseEntity<ApiResponse<Page<KycDto>>> search(KycSearchDto kycSearchDto) {
+    public ResponseEntity<ApiResponse<Page<KycDto>>> search(SearchDto searchDto) {
         try {
             Page<KycRecord> pageData = null;
-            Pageable pageable = PageRequest.of(kycSearchDto.page(), kycSearchDto.size(), Sort.by(Sort.Direction.DESC, (kycSearchDto.sort() == null || kycSearchDto.sort().isBlank()) ? "id" : kycSearchDto.sort()));
+            Pageable pageable = PageRequest.of(searchDto.page(), searchDto.size(), Sort.by(Sort.Direction.DESC, (searchDto.sort() == null || searchDto.sort().isBlank()) ? "id" : searchDto.sort()));
 //        if (nationalId != null && !nationalId.isBlank()) {
 //            //return repo.findByNationalId(nationalId, pageable).map(this::toDto);
 //        }
-            if (kycSearchDto.searchText() == null || kycSearchDto.searchText().isBlank()) {
+            if (searchDto.searchText() == null || searchDto.searchText().isBlank()) {
                 pageData = repo.findAll(pageable);
             } else {
-                pageData = repo.findByFirstNameIgnoreCaseContainingOrLastNameIgnoreCaseContaining(kycSearchDto.searchText(), kycSearchDto.searchText(), pageable);
+                pageData = repo.findByFirstNameIgnoreCaseContainingOrLastNameIgnoreCaseContaining(searchDto.searchText(), searchDto.searchText(), pageable);
             }
 
             Page<KycDto> response = pageData.map(p -> {

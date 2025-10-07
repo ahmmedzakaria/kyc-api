@@ -1,18 +1,15 @@
 package com.example.kyc.kycmodule.controller;
 
-import com.example.kyc.authmodule.dto.AuthResponse;
-import com.example.kyc.authmodule.dto.RefreshTokenRequest;
 import com.example.kyc.commonmodule.dto.ApiResponse;
-import com.example.kyc.kycmodule.dto.IdRequest;
+import com.example.kyc.commonmodule.dto.IdRequest;
 import com.example.kyc.kycmodule.dto.KycDto;
-import com.example.kyc.kycmodule.dto.KycSearchDto;
+import com.example.kyc.commonmodule.dto.SearchDto;
 import com.example.kyc.kycmodule.dto.documentation.KycCreateRequest;
 import com.example.kyc.kycmodule.service.interfaces.KycService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -69,7 +66,7 @@ public class KycController {
 
     @Operation(summary = "Search KYC with pagination")
     @PostMapping("/search")
-    public ResponseEntity<ApiResponse<Page<KycDto>>> search(@RequestBody KycSearchDto dto) {
+    public ResponseEntity<ApiResponse<Page<KycDto>>> search(@RequestBody SearchDto dto) {
 
         return service.search(dto);
     }

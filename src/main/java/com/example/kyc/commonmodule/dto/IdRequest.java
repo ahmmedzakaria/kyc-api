@@ -1,4 +1,4 @@
-package com.example.kyc.kycmodule.dto;
+package com.example.kyc.commonmodule.dto;
 
 import lombok.Data;
 

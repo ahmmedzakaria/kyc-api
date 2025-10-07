@@ -31,8 +31,8 @@ public class DataSeeder {
                 User admin = new User();
                 admin.setUsername("admin");
                 admin.setEmail("admin@example.com");
-                admin.setMobile("01700000000");
-                admin.setName("System Administrator");
+                admin.setMobileNumber("01700000000");
+                //admin.setName("System Administrator");
                 admin.setPassword(passwordEncoder.encode("admin123")); // BCrypt encoding
                 admin.getRoles().add(adminRole);
                 admin.setEmailVerified(true);

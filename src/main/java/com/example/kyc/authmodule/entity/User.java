@@ -42,16 +42,13 @@ public class User extends ActionInfo {
     private boolean enabled;
 
     @Column
-    private String name;
-
-    @Column
     private String email;
 
     @Column
     private boolean emailVerified;
 
     @Column
-    private String mobile;
+    private String mobileNumber;
 
     @Column
     private boolean mobileVerified;
