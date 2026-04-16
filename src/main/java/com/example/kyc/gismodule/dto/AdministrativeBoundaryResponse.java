@@ -8,10 +8,10 @@ import lombok.*;
 @NoArgsConstructor
 public class AdministrativeBoundaryResponse {
     private UUID id;
-    private String villageName;
     private String unionName;
     private String subDistrictName;
     private String districtName;
     private String divisionName;
+    private String detailLocation;
 }
 

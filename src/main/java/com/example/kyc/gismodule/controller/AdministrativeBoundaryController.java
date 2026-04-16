@@ -20,7 +20,8 @@ public class AdministrativeBoundaryController {
     @Operation(summary = "Search GIS with pagination")
     @PostMapping("/search")
     public ResponseEntity<ApiResponse<Page<AdministrativeBoundaryResponse>>> search(@RequestBody SearchDto dto) {
-        return service.search(dto);
+        ApiResponse<Page<AdministrativeBoundaryResponse>> data = service.search(dto);
+        return data.getResponseEntity();
     }
 }
 

@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 import org.geolatte.geom.M;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -87,5 +89,15 @@ public class ApiResponse<T> {
 
     public static List<ResponseMessage> buildResponseMessage( List<String> message,MessageType messageType) {
         return message.stream().map(m->new ResponseMessage(messageType, m)).toList();
+    }
+
+    public ResponseEntity<ApiResponse<T>> getResponseEntity(){
+        if(this.statusCode == 200){
+            return ResponseEntity.status(HttpStatus.OK).body(this);
+        }else{
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(this);
+
+        }
     }
 }
