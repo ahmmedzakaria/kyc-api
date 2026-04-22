@@ -25,6 +25,14 @@ public class PersonController {
         return ResponseEntity.ok(ApiResponse.success(service.create(dto, photo),"Created person"));
     }
 
+    @Operation(summary = "Update an existing person")
+    @PostMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<PersonDto>> update(
+            @ModelAttribute PersonDto dto,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) throws Exception {
+        return ResponseEntity.ok(ApiResponse.success(service.update(dto, photo), "Updated person"));
+    }
+
     @Operation(summary = "Search persons (paginated)")
     @PostMapping("/search")
     public ResponseEntity<ApiResponse<Page<PersonDto>>> search(
