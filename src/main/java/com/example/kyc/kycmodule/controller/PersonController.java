@@ -20,8 +20,8 @@ public class PersonController {
     @Operation(summary = "Create a new person")
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<PersonDto>> create(
-            @RequestPart("data") PersonDto dto,
-            @RequestPart(value = "photo", required = false) MultipartFile photo) throws Exception {
+            @ModelAttribute PersonDto dto,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) throws Exception {
         return ResponseEntity.ok(ApiResponse.success(service.create(dto, photo),"Created person"));
     }
 
@@ -42,4 +42,3 @@ public class PersonController {
         return ResponseEntity.ok(ApiResponse.success(null, "Person deleted"));
     }
 }
-

@@ -4,10 +4,12 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,13 +20,24 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    private final Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.allowed-clock-skew-seconds:60}")
+    private long allowedClockSkewSeconds;
 
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
     @Value("${jwt.refresh.expiration}")
     private long refreshExpirationMs;
+
+    private Key secretKey;
+
+    @PostConstruct
+    void init() {
+        secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
 
     // 🔹 Generate Access Token
     public String generateToken(UserDetails userDetails) {
@@ -87,9 +100,9 @@ public class JwtUtil {
     private Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)
+                .setAllowedClockSkewSeconds(allowedClockSkewSeconds)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 }
-

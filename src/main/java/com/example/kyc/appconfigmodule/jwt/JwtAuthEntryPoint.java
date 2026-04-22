@@ -15,10 +15,14 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
 	public void commence(HttpServletRequest request,
 						 HttpServletResponse response,
 						 AuthenticationException authException) throws IOException {
-		// Return 401 instead of redirecting
+		String jwtError = (String) request.getAttribute("jwt_exception");
 		response.setContentType("application/json");
 		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		response.getWriter().write("{\"error\": \"Unauthorized - Invalid or missing token\"}");
+		if (jwtError == null || jwtError.isBlank()) {
+			response.getWriter().write("{\"error\": \"Unauthorized - Invalid or missing token\"}");
+			return;
+		}
+		response.getWriter().write("{\"error\": \"" + jwtError.replace("\"", "\\\"") + "\"}");
 	}
 
 
