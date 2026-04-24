@@ -3,6 +3,8 @@ package com.example.kyc.kycmodule.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "person")
@@ -36,5 +38,7 @@ public class Person {
 
     private Boolean emailVerified = false;
     private Boolean mobileVerified = false;
-}
 
+    @OneToMany(mappedBy = "person", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PersonDocument> documents = new ArrayList<>();
+}
