@@ -3,10 +3,11 @@ package com.example.kyc.kycmodule.service.implementations;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import com.example.kyc.kycmodule.dto.KycDto;
 import com.example.kyc.commonmodule.dto.SearchDto;
+import com.example.kyc.servicesmodule.fileservice.dto.StoredFile;
 import com.example.kyc.kycmodule.entity.KycRecord;
 import com.example.kyc.kycmodule.repository.KycRecordRepository;
 import com.example.kyc.kycmodule.service.interfaces.KycService;
-import com.example.kyc.commonmodule.service.interfaces.StorageService;
+import com.example.kyc.servicesmodule.fileservice.service.interfaces.FileManagementService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,7 @@ import java.util.List;
 public class KycServiceImpl implements KycService {
 
     private final KycRecordRepository repo;
-    private final StorageService storageService;
+    private final FileManagementService fileManagementService;
 
     @Override
     @Transactional
@@ -46,8 +47,8 @@ public class KycServiceImpl implements KycService {
                     .updatedAt(Instant.now())
                     .build();
             if (photo != null && !photo.isEmpty()) {
-                String path = storageService.store(photo, null);
-                r.setPhotoPath(path);
+                StoredFile storedFile = fileManagementService.store("kyc", "profile-photo", photo, null);
+                r.setPhotoPath(storedFile.path());
                 r.setPhotoContentType(photo.getContentType());
             }
             KycRecord saved = repo.save(r);
@@ -74,8 +75,8 @@ public class KycServiceImpl implements KycService {
 //            r.setNationalId(dto.getNationalId());
 //        }
             if (photo != null && !photo.isEmpty()) {
-                String path = storageService.store(photo, r.getPhotoPath());
-                r.setPhotoPath(path);
+                StoredFile storedFile = fileManagementService.store("kyc", "profile-photo", photo, r.getPhotoPath());
+                r.setPhotoPath(storedFile.path());
                 r.setPhotoContentType(photo.getContentType());
             }
             r.setUpdatedAt(Instant.now());
@@ -94,7 +95,7 @@ public class KycServiceImpl implements KycService {
             KycRecord r = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("not found"));
             if (r.getPhotoPath() != null) {
                 try {
-                    storageService.delete(r.getPhotoPath());
+                    fileManagementService.delete(r.getPhotoPath());
                 } catch (Exception e) {
                     log.warn("failed to delete photo: {}", e.getMessage());
                 }
@@ -156,12 +157,12 @@ public class KycServiceImpl implements KycService {
     public byte[] getPhoto(Long id) throws Exception {
         KycRecord r = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("not found"));
         if (r.getPhotoPath() == null) return null;
-        return storageService.read(r.getPhotoPath());
+        return fileManagementService.read(r.getPhotoPath());
     }
 
     public byte[] getPhoto(KycRecord r) throws Exception {
         if (r.getPhotoPath() == null) return null;
-        return storageService.read(r.getPhotoPath());
+        return fileManagementService.read(r.getPhotoPath());
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.example.kyc.kycmodule.service.implementations.PersonService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,5 +49,18 @@ public class PersonController {
     public ResponseEntity<ApiResponse<Void>> delete(@RequestBody Long id) {
         service.delete(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Person deleted"));
+    }
+
+    @Operation(summary = "Get person photo")
+    @GetMapping("{id}/photo")
+    public ResponseEntity<byte[]> photo(@PathVariable Long id) throws Exception {
+        byte[] data = service.getPhoto(id);
+        if (data == null) {
+            return ResponseEntity.notFound().build();
+        }
+        String contentType = service.getPhotoContentType(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, contentType == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : contentType)
+                .body(data);
     }
 }

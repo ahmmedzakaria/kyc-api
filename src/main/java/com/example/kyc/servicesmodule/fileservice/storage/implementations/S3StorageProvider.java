@@ -1,6 +1,6 @@
-package com.example.kyc.commonmodule.service.implementations;
+package com.example.kyc.servicesmodule.fileservice.storage.implementations;
 
-import com.example.kyc.commonmodule.service.interfaces.StorageService;
+import com.example.kyc.servicesmodule.fileservice.storage.interfaces.StorageProvider;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -13,11 +13,10 @@ import java.nio.file.Path;
   - implement actual upload/download/delete to S3 bucket
   - wire configuration properties (access key, secret, region, bucket)
 */
-//@Service
-public class S3StorageService implements StorageService {
+public class S3StorageProvider implements StorageProvider {
     @Override
-    public String store(MultipartFile file, String existingPath) throws IOException {
-        throw new UnsupportedOperationException("S3 storage not implemented. Use filesystem or implement S3StorageService.");
+    public String store(String keyPrefix, MultipartFile file, String existingPath) throws IOException {
+        throw new UnsupportedOperationException("S3 storage not implemented. Use filesystem or implement S3StorageProvider.");
     }
 
     @Override
@@ -38,5 +37,15 @@ public class S3StorageService implements StorageService {
     @Override
     public Path resolveStoragePath(String path) {
         return null;
+    }
+
+    @Override
+    public String publicUrl(String path) {
+        return path;
+    }
+
+    @Override
+    public String normalizePath(String pathOrUrl) {
+        return pathOrUrl;
     }
 }
