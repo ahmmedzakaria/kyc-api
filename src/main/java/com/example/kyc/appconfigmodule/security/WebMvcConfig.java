@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-	@Value("${upload.dir}")
+	@Value("${storage.filesystem.base-dir}")
 	private String uploadDir;
 
 	@Override
@@ -24,4 +24,3 @@ public class WebMvcConfig implements WebMvcConfigurer {
 	}
 
 }
-

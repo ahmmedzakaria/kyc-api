@@ -33,4 +33,4 @@ RUN mkdir -p ${UPLOAD_DIR} && chown -R spring:spring ${UPLOAD_DIR}
 
 USER spring
 EXPOSE 9100
-ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS:-} -Dspring.config.additional-location=optional:file:/config/application.properties -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS:-} -jar /app/app.jar"]
