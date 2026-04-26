@@ -1,6 +1,7 @@
 package com.example.kyc.gismodule.controller;
 
 import com.example.kyc.commonmodule.dto.ApiResponse;
+import com.example.kyc.commonmodule.dto.IdRequestDto;
 import com.example.kyc.gismodule.dto.AdministrativeBoundaryResponse;
 import com.example.kyc.gismodule.service.implementations.AdministrativeBoundaryService;
 import com.example.kyc.commonmodule.dto.SearchDto;
@@ -9,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/locations")
@@ -23,5 +26,11 @@ public class AdministrativeBoundaryController {
         ApiResponse<Page<AdministrativeBoundaryResponse>> data = service.search(dto);
         return data.getResponseEntity();
     }
-}
 
+    @Operation(summary = "Get GIS location by id and gis code")
+    @PostMapping("/get-by-id")
+    public ResponseEntity<ApiResponse<AdministrativeBoundaryResponse>> getById(@RequestBody IdRequestDto dto) {
+        ApiResponse<AdministrativeBoundaryResponse> data = service.getById(UUID.fromString(dto.getId()), dto.getType());
+        return data.getResponseEntity();
+    }
+}
