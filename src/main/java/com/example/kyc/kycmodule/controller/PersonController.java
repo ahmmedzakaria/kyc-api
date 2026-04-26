@@ -3,6 +3,7 @@ package com.example.kyc.kycmodule.controller;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import com.example.kyc.commonmodule.dto.FileRequestDto;
 import com.example.kyc.commonmodule.dto.IdRequestDto;
+import com.example.kyc.commonmodule.dto.SearchDto;
 import com.example.kyc.kycmodule.dto.PersonDocumentDto;
 import com.example.kyc.kycmodule.dto.PersonDto;
 import com.example.kyc.kycmodule.entity.PersonDocumentType;
@@ -42,12 +43,10 @@ public class PersonController {
 
     @Operation(summary = "Search persons (paginated)")
     @PostMapping("/search")
-    public ResponseEntity<ApiResponse<Page<PersonDto>>> search(
-            @RequestParam(defaultValue = "") String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("firstName"));
-        return ResponseEntity.ok(ApiResponse.success(service.search(q, pageable),""));
+    public ResponseEntity<ApiResponse<Page<PersonDto>>> search(@RequestBody SearchDto dto) {
+        Pageable pageable = PageRequest.of(dto.page(), dto.size(), Sort.by("firstName"));
+        String searchText = dto.searchText() == null ? "" : dto.searchText();
+        return ResponseEntity.ok(ApiResponse.success(service.search(searchText, pageable),""));
     }
 
     @Operation(summary = "Delete person by ID")
