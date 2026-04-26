@@ -55,13 +55,13 @@ public class KycController {
     @Operation(summary = "Delete a KYC record")
     @PostMapping("delete")
     public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequestDto idRequestDto) throws Exception {
-        return service.delete(idRequestDto.getId());
+        return service.delete(Long.valueOf(idRequestDto.getId()));
     }
 
     @Operation(summary = "Get KYC by Id")
     @PostMapping("get-by-id")
     public ResponseEntity<ApiResponse<KycDto>> getById(@RequestBody IdRequestDto idRequestDto) {
-        return service.getById(idRequestDto.getId());
+        return service.getById(Long.valueOf(idRequestDto.getId()));
     }
 
     @Operation(summary = "Search KYC with pagination")

@@ -53,7 +53,7 @@ public class PersonController {
     @Operation(summary = "Delete person by ID")
     @PostMapping("/delete")
     public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequestDto idRequestDto) {
-        service.delete(idRequestDto.getId());
+        service.delete(Long.valueOf(idRequestDto.getId()));
         return ResponseEntity.ok(ApiResponse.success(null, "Person deleted"));
     }
 

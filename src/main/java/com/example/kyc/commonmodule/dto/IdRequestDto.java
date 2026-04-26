@@ -4,5 +4,6 @@ import lombok.Data;
 
 @Data
 public class IdRequestDto {
-    Long id;
+    private String id;
+    private String type;
 }
