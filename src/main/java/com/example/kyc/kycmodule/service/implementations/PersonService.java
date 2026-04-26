@@ -62,7 +62,7 @@ public class PersonService {
     }
 
     public Page<PersonDto> search(String q, Pageable pageable) {
-        return personRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(q, q, pageable)
+        return personRepository.searchByNameEmailOrMobile(q == null ? "" : q.trim(), pageable)
                 .map(this::toDto);
     }
 

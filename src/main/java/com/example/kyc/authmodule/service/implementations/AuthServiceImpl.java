@@ -5,6 +5,7 @@ import com.example.kyc.authmodule.dto.AuthRequest;
 import com.example.kyc.authmodule.dto.AuthResponse;
 import com.example.kyc.authmodule.dto.RefreshTokenRequest;
 import com.example.kyc.authmodule.service.interfaces.AuthService;
+import com.example.kyc.authmodule.service.interfaces.PrivilegeService;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import com.example.kyc.appconfigmodule.jwt.JwtUtil;
 import jakarta.validation.Valid;
@@ -29,6 +30,7 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationManager authenticationManager;
 	private final UserDetailsService userDetailsService;
 	private final JwtUtil jwtUtil;
+	private final PrivilegeService privilegeService;
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request) {
@@ -46,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
 				AuthResponse response =  AuthResponse.builder()
 						.accessToken(accessToken)
 						.refreshToken(refreshToken)
+						.privilegeCodes(privilegeService.getUserPrivilegeCodes(request.username()))
 						.build();
 
 				return ResponseEntity.ok(ApiResponse.success(response, "Authentication successful. Token generated"));
@@ -73,6 +76,7 @@ public class AuthServiceImpl implements AuthService {
 				AuthResponse response =  AuthResponse.builder()
 						.accessToken(newAccessToken)
 						.refreshToken(newRefreshToken)
+						.privilegeCodes(privilegeService.getUserPrivilegeCodes(username))
 						.build();
 
 				return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(response,"access token is generated"));

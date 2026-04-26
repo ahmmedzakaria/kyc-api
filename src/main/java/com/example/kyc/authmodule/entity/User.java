@@ -36,7 +36,17 @@ public class User extends ActionInfo {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_privileges",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "privilege_id")
+    )
+    @Builder.Default
+    private Set<Privilege> privileges = new HashSet<>();
 
     @Column(nullable = false)
     private boolean enabled;
