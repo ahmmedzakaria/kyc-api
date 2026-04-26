@@ -3,6 +3,6 @@ package com.example.kyc.commonmodule.dto;
 import lombok.Data;
 
 @Data
-public class IdRequest {
+public class IdRequestDto {
     Long id;
 }

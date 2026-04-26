@@ -1,7 +1,7 @@
 package com.example.kyc.kycmodule.controller;
 
 import com.example.kyc.commonmodule.dto.ApiResponse;
-import com.example.kyc.commonmodule.dto.IdRequest;
+import com.example.kyc.commonmodule.dto.IdRequestDto;
 import com.example.kyc.kycmodule.dto.KycDto;
 import com.example.kyc.commonmodule.dto.SearchDto;
 import com.example.kyc.kycmodule.dto.documentation.KycCreateRequest;
@@ -54,14 +54,14 @@ public class KycController {
 
     @Operation(summary = "Delete a KYC record")
     @PostMapping("delete")
-    public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequest idRequest) throws Exception {
-        return service.delete(idRequest.getId());
+    public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequestDto idRequestDto) throws Exception {
+        return service.delete(idRequestDto.getId());
     }
 
     @Operation(summary = "Get KYC by Id")
     @PostMapping("get-by-id")
-    public ResponseEntity<ApiResponse<KycDto>> getById(@RequestBody IdRequest idRequest) {
-        return service.getById(idRequest.getId());
+    public ResponseEntity<ApiResponse<KycDto>> getById(@RequestBody IdRequestDto idRequestDto) {
+        return service.getById(idRequestDto.getId());
     }
 
     @Operation(summary = "Search KYC with pagination")

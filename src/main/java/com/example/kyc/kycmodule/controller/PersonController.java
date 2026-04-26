@@ -2,6 +2,7 @@ package com.example.kyc.kycmodule.controller;
 
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import com.example.kyc.commonmodule.dto.FileRequestDto;
+import com.example.kyc.commonmodule.dto.IdRequestDto;
 import com.example.kyc.kycmodule.dto.PersonDocumentDto;
 import com.example.kyc.kycmodule.dto.PersonDto;
 import com.example.kyc.kycmodule.entity.PersonDocumentType;
@@ -51,8 +52,8 @@ public class PersonController {
 
     @Operation(summary = "Delete person by ID")
     @PostMapping("/delete")
-    public ResponseEntity<ApiResponse<Void>> delete(@RequestBody Long id) {
-        service.delete(id);
+    public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequestDto idRequestDto) {
+        service.delete(idRequestDto.getId());
         return ResponseEntity.ok(ApiResponse.success(null, "Person deleted"));
     }
 

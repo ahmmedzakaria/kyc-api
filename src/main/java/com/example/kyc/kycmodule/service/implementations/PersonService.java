@@ -3,8 +3,10 @@ package com.example.kyc.kycmodule.service.implementations;
 import com.example.kyc.kycmodule.dto.PersonDocumentDto;
 import com.example.kyc.kycmodule.dto.PersonDto;
 import com.example.kyc.kycmodule.entity.Person;
+import com.example.kyc.kycmodule.entity.PersonDetails;
 import com.example.kyc.kycmodule.entity.PersonDocument;
 import com.example.kyc.kycmodule.entity.PersonDocumentType;
+import com.example.kyc.kycmodule.repository.PersonDetailsRepository;
 import com.example.kyc.kycmodule.repository.PersonDocumentRepository;
 import com.example.kyc.kycmodule.repository.PersonRepository;
 import com.example.kyc.servicesmodule.fileservice.dto.StoredFile;
@@ -20,18 +22,22 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class PersonService {
 
     private final PersonRepository personRepository;
+    private final PersonDetailsRepository personDetailsRepository;
     private final PersonDocumentRepository personDocumentRepository;
     private final ModelMapper mapper;
     private final FileManagementService fileManagementService;
 
     public PersonDto create(PersonDto dto, MultipartFile photo) throws IOException {
-        Person savedPerson = personRepository.save(mapper.map(dto, Person.class));
+        Person person = mapPerson(dto, new Person());
+        Person savedPerson = personRepository.save(person);
+        savePersonDetails(savedPerson, dto);
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(savedPerson, PersonDocumentType.PROFILE_PHOTO, photo);
         }
@@ -44,8 +50,9 @@ public class PersonService {
         }
 
         Person existing = ensurePerson(dto.getId());
-        mapper.map(dto, existing);
+        mapPerson(dto, existing);
         personRepository.save(existing);
+        savePersonDetails(existing, dto);
 
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(existing, PersonDocumentType.PROFILE_PHOTO, photo);
@@ -201,12 +208,98 @@ public class PersonService {
 
     private PersonDto toDto(Person person) {
         PersonDto dto = mapper.map(person, PersonDto.class);
+        dto.setBloodGroup(person.getBloodGrop());
+
+        PersonDetails details = personDetailsRepository.findByPersonId(person.getId());
+        if (details != null) {
+            dto.setFatherName(details.getFatherName());
+            dto.setFatherMobileNumber(details.getFatherMobileNumber());
+            dto.setMotherName(details.getMotherName());
+            dto.setMotherMobileNumber(details.getMotherMobileNumber());
+            dto.setEmergencyContactPerson(details.getEmergencyContactPerson());
+            dto.setEmergencyContactPersonRelation(details.getEmergencyContactPersonRelation());
+            dto.setEmergencyContactNumber(details.getEmergencyContactNumber());
+            dto.setEducationLevel(details.getEducationLevel());
+            dto.setInstitutionName(details.getInstitutionName());
+            dto.setPassingYear(details.getPassingYear());
+            dto.setCurrentLocationId(details.getCurrentLocationId());
+            dto.setCurrentLocationType(details.getCurrentLocationType());
+            dto.setCurrentAddress(details.getCurrentAddress());
+            dto.setPermanentLocationId(details.getPermanentLocationId());
+            dto.setPermanentLocationType(details.getPermanentLocationType());
+            dto.setPermanentAddress(details.getPermanentAddress());
+        }
+
         if (person.getId() != null && personDocumentRepository
                 .findFirstByPersonIdAndDocumentTypeOrderByCreatedAtDesc(person.getId(), PersonDocumentType.PROFILE_PHOTO)
                 .isPresent()) {
             dto.setPhotoUrl(buildPhotoApiUrl(person.getId()));
         }
         return dto;
+    }
+
+    private Person mapPerson(PersonDto dto, Person person) {
+        mapper.map(dto, person);
+        person.setBloodGrop(dto.getBloodGroup());
+        person.setUsername(generateUniqueUsername(dto.getFirstName(), dto.getLastName(), person.getId()));
+        return person;
+    }
+
+    private String generateUniqueUsername(String firstName, String lastName, Long currentPersonId) {
+        String baseUsername = ((safeName(firstName) + "." + safeName(lastName)).replaceAll("^\\.+|\\.+$", ""))
+                .replaceAll("\\.+", ".");
+        if (baseUsername.isBlank()) {
+            baseUsername = "user";
+        }
+
+        String candidate = baseUsername;
+        int suffix = 1;
+        while (usernameExists(candidate, currentPersonId)) {
+            candidate = baseUsername + suffix++;
+        }
+        return candidate;
+    }
+
+    private boolean usernameExists(String username, Long currentPersonId) {
+        return currentPersonId == null
+                ? personRepository.existsByUsername(username)
+                : personRepository.existsByUsernameAndIdNot(username, currentPersonId);
+    }
+
+    private String safeName(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", ".");
+    }
+
+    private void savePersonDetails(Person person, PersonDto dto) {
+        PersonDetails details = personDetailsRepository.findByPersonId(person.getId());
+        if (details == null) {
+            details = PersonDetails.builder().person(person).build();
+        }
+
+        details.setPerson(person);
+        details.setFatherName(dto.getFatherName());
+        details.setFatherMobileNumber(dto.getFatherMobileNumber());
+        details.setMotherName(dto.getMotherName());
+        details.setMotherMobileNumber(dto.getMotherMobileNumber());
+        details.setEmergencyContactPerson(dto.getEmergencyContactPerson());
+        details.setEmergencyContactPersonRelation(dto.getEmergencyContactPersonRelation());
+        details.setEmergencyContactNumber(dto.getEmergencyContactNumber());
+        details.setEducationLevel(dto.getEducationLevel());
+        details.setInstitutionName(dto.getInstitutionName());
+        details.setPassingYear(dto.getPassingYear());
+        details.setCurrentLocationId(dto.getCurrentLocationId());
+        details.setCurrentLocationType(dto.getCurrentLocationType());
+        details.setCurrentAddress(dto.getCurrentAddress());
+        details.setPermanentLocationId(dto.getPermanentLocationId());
+        details.setPermanentLocationType(dto.getPermanentLocationType());
+        details.setPermanentAddress(dto.getPermanentAddress());
+
+        personDetailsRepository.save(details);
     }
 
     private PersonDocumentDto toDocumentDto(PersonDocument document) {
