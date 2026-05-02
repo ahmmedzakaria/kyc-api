@@ -435,6 +435,19 @@ User A has ROLE_KYC_OPERATOR
 User A also gets direct Person Delete access for a temporary task
 ```
 
+## Seeded Roles
+
+The backend creates these roles during startup:
+
+| Role | Purpose |
+| --- | --- |
+| `ROLE_ADMIN` | Full access to all module-provided privileges |
+| `ROLE_KYC_OPERATOR` | Create, update, view, and search KYC operational data |
+| `ROLE_KYC_APPROVER` | Review-oriented access such as view, search, reject, and send back |
+| `ROLE_REPORT_VIEWER` | Report view and search access only |
+
+The non-admin roles intentionally receive different privilege sets so access can be tested without giving every user full admin access.
+
 ## Important Rules
 
 - Each module must own its own feature, action, menu, and submenu definitions.

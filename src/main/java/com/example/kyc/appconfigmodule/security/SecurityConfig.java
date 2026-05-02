@@ -37,7 +37,8 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
-            "http://localhost:4200"
+            "http://localhost:4200",
+            "http://localhost:4300"
     };
 
     @Bean
@@ -57,7 +58,7 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOrigins(List.of("http://localhost:4200"));
+                    config.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:4300"));
                     config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
                     config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
                     return config;
