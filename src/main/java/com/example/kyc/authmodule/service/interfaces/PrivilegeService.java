@@ -4,7 +4,9 @@ import com.example.kyc.authmodule.dto.PrivilegeAssignmentRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckResponseDto;
 import com.example.kyc.authmodule.dto.PrivilegeDto;
+import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
 import com.example.kyc.authmodule.dto.PrivilegeRequestDto;
+import com.example.kyc.authmodule.dto.SidebarMenuDto;
 
 import java.util.List;
 import java.util.Set;
@@ -15,6 +17,10 @@ public interface PrivilegeService {
     PrivilegeDto savePrivilege(PrivilegeRequestDto requestDto);
 
     List<PrivilegeDto> getAllPrivileges();
+
+    List<PrivilegeFeatureDefinitionDto> getModulePrivilegeDefinitions();
+
+    List<SidebarMenuDto> getUserSidebarMenu(String username);
 
     Set<String> getUserPrivilegeCodes(String username);
 

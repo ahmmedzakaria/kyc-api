@@ -4,18 +4,24 @@ import com.example.kyc.authmodule.dto.PrivilegeAssignmentRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckResponseDto;
 import com.example.kyc.authmodule.dto.PrivilegeDto;
+import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
+import com.example.kyc.authmodule.dto.PrivilegeMenuItemDto;
 import com.example.kyc.authmodule.dto.PrivilegeRequestDto;
+import com.example.kyc.authmodule.dto.SidebarMenuDto;
 import com.example.kyc.authmodule.entity.Privilege;
 import com.example.kyc.authmodule.entity.Role;
 import com.example.kyc.authmodule.entity.User;
 import com.example.kyc.authmodule.repository.PrivilegeRepository;
 import com.example.kyc.authmodule.repository.RoleRepository;
 import com.example.kyc.authmodule.repository.UserRepository;
+import com.example.kyc.authmodule.service.interfaces.ModulePrivilegeProvider;
 import com.example.kyc.authmodule.service.interfaces.PrivilegeService;
+import com.example.kyc.commonmodule.enums.FeatureType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,6 +40,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final PrivilegeRepository privilegeRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
 
     @Override
     public String buildPrivilegeCode(String moduleCode, String featureTypeCode, String featureCode, String actionCode) {
@@ -77,6 +84,28 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         return privilegeRepository.findAll().stream()
                 .map(PrivilegeDto::fromEntity)
                 .toList();
+    }
+
+    @Override
+    public List<PrivilegeFeatureDefinitionDto> getModulePrivilegeDefinitions() {
+        return modulePrivilegeProviders.stream()
+                .flatMap(provider -> provider.getPrivilegeFeatures().stream())
+                .toList();
+    }
+
+    @Override
+    public List<SidebarMenuDto> getUserSidebarMenu(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+
+        Set<String> userPrivilegeCodes = getUserPrivilegeCodes(username);
+        boolean admin = user.getRoles().stream().anyMatch(role -> "ROLE_ADMIN".equals(role.getName()));
+
+        return List.of(
+                buildMainMenu(FeatureType.SETUP, "fa fa-sliders", userPrivilegeCodes, admin),
+                buildMainMenu(FeatureType.OPERATIONS, "fa fa-briefcase", userPrivilegeCodes, admin),
+                buildMainMenu(FeatureType.REPORT, "fa fa-chart-line", userPrivilegeCodes, admin)
+        );
     }
 
     @Override
@@ -167,6 +196,58 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         }
 
         return new HashSet<>(privileges);
+    }
+
+    private SidebarMenuDto buildMainMenu(FeatureType featureType,
+                                         String icon,
+                                         Set<String> userPrivilegeCodes,
+                                         boolean admin) {
+        List<SidebarMenuDto> featureMenus = getModulePrivilegeDefinitions().stream()
+                .filter(feature -> featureType.getCode().equals(feature.getFeatureTypeCode()))
+                .map(feature -> buildFeatureMenu(feature, userPrivilegeCodes, admin))
+                .filter(menu -> !menu.getChildren().isEmpty())
+                .toList();
+
+        return SidebarMenuDto.builder()
+                .label(featureType.getDisplayName())
+                .icon(icon)
+                .children(featureMenus)
+                .build();
+    }
+
+    private SidebarMenuDto buildFeatureMenu(PrivilegeFeatureDefinitionDto feature,
+                                            Set<String> userPrivilegeCodes,
+                                            boolean admin) {
+        List<SidebarMenuDto> children = feature.getMenuItems().stream()
+                .filter(menuItem -> admin || hasAnyPrivilege(menuItem.getPrivilegeCodes(), userPrivilegeCodes))
+                .map(this::toSidebarMenu)
+                .toList();
+
+        return SidebarMenuDto.builder()
+                .label(feature.getMenuLabel() == null ? feature.getFeatureName() : feature.getMenuLabel())
+                .icon(feature.getIcon())
+                .privilegeCodes(feature.getActions().stream()
+                        .map(action -> action.getPrivilegeCode())
+                        .toList())
+                .children(children)
+                .build();
+    }
+
+    private SidebarMenuDto toSidebarMenu(PrivilegeMenuItemDto menuItem) {
+        return SidebarMenuDto.builder()
+                .label(menuItem.getLabel())
+                .icon(menuItem.getIcon())
+                .path(menuItem.getPath())
+                .privilegeCodes(new ArrayList<>(menuItem.getPrivilegeCodes()))
+                .children(menuItem.getChildren().stream()
+                        .map(this::toSidebarMenu)
+                        .toList())
+                .build();
+    }
+
+    private boolean hasAnyPrivilege(List<String> requiredPrivilegeCodes, Set<String> userPrivilegeCodes) {
+        return requiredPrivilegeCodes != null
+                && requiredPrivilegeCodes.stream().anyMatch(userPrivilegeCodes::contains);
     }
 
     private void validateCodePart(String value, int expectedLength, String fieldName) {

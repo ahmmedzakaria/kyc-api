@@ -138,8 +138,10 @@ Main implementation files:
 | `PrivilegeRepository.java` | Privilege persistence |
 | `PrivilegeService.java` | Service contract |
 | `PrivilegeServiceImpl.java` | Code generation, assignment, and check logic |
+| `ModulePrivilegeProvider.java` | Interface implemented by business modules |
 | `PrivilegeController.java` | HTTP APIs |
-| `DataSeeder.java` | Default admin privilege seed |
+| `DataSeeder.java` | Seeds provider-owned privileges for admin |
+| `KycPrivilegeProvider.java` | KYC module implementation of the provider interface |
 
 Enums:
 
@@ -148,6 +150,35 @@ Enums:
 | `ApplicationModule` | Module code registry |
 | `FeatureType` | Setup, Operations, Reports |
 | `PrivilegeAction` | Action code registry |
+
+The common enums live in `commonmodule/enums`. Auth owns the provider interface, and each business module owns the implementation for its own features, actions, menus, and submenus.
+
+## Module Provider Contract
+
+Auth does not hardcode module features. Instead, it asks every module for its privilege metadata through this interface:
+
+```java
+public interface ModulePrivilegeProvider {
+    List<PrivilegeFeatureDefinitionDto> getPrivilegeFeatures();
+}
+```
+
+Each module implementation provides:
+
+- module code and name
+- feature type code and name
+- feature/object code and name
+- supported action codes
+- menu and submenu structure
+- privilege codes required for each menu item
+
+Example owner:
+
+```text
+KYC module owns Person, KYC Record, and KYC Report feature definitions.
+```
+
+This keeps inter-module communication interface-based and loosely coupled. Auth only depends on the interface and DTOs, not on KYC internals.
 
 ## API Contract
 
@@ -194,6 +225,38 @@ POST /auth/privilege/list
 ```
 
 Returns all privilege catalog records.
+
+### List Module Definitions
+
+Endpoint:
+
+```text
+POST /auth/privilege/definitions
+```
+
+Returns all feature/action/menu definitions provided by application modules.
+
+This is used by the privilege management frontend to understand what modules and features exist.
+
+### Sidebar Menu
+
+Endpoint:
+
+```text
+POST /auth/privilege/sidebar-menu
+```
+
+Returns the authenticated user's sidebar menu.
+
+The backend groups all module-provided menu items under:
+
+```text
+Setup
+Operations
+Reports
+```
+
+The frontend should render this response directly instead of hardcoding menus.
 
 ### Check Privilege
 
@@ -334,6 +397,14 @@ The main page is:
 
 Frontend code should treat privilege codes as the source of truth for access decisions.
 
+The KYC frontend sidebar is generated dynamically from:
+
+```text
+POST /auth/privilege/sidebar-menu
+```
+
+The sidebar does not own menu definitions. Modules provide menu metadata to Auth, Auth filters the menu by the logged-in user's effective privileges, and the frontend renders the returned tree.
+
 Example UI checks:
 
 | UI Element | Required Code |
@@ -366,6 +437,10 @@ User A also gets direct Person Delete access for a temporary task
 
 ## Important Rules
 
+- Each module must own its own feature, action, menu, and submenu definitions.
+- Common enums must stay in `commonmodule`.
+- Auth should communicate with modules only through `ModulePrivilegeProvider`.
+- The frontend should render menus from backend data, not hardcode module menus.
 - Keep privilege codes fixed after they are used in production.
 - Do not reuse a feature code for a different feature.
 - Keep feature names readable because they are shown in the privilege management UI.
@@ -375,7 +450,7 @@ User A also gets direct Person Delete access for a temporary task
 
 ## Default Seed
 
-The backend currently seeds KYC Person Operations privileges for `ROLE_ADMIN`.
+The backend currently seeds all module-provided privileges for `ROLE_ADMIN`.
 
 Examples:
 

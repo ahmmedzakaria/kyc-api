@@ -4,7 +4,9 @@ import com.example.kyc.authmodule.dto.PrivilegeAssignmentRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckResponseDto;
 import com.example.kyc.authmodule.dto.PrivilegeDto;
+import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
 import com.example.kyc.authmodule.dto.PrivilegeRequestDto;
+import com.example.kyc.authmodule.dto.SidebarMenuDto;
 import com.example.kyc.authmodule.service.interfaces.PrivilegeService;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,22 @@ public class PrivilegeController {
     @PostMapping("/list")
     public ResponseEntity<ApiResponse<List<PrivilegeDto>>> listPrivileges() {
         return ResponseEntity.ok(ApiResponse.success(privilegeService.getAllPrivileges(), "Privileges loaded"));
+    }
+
+    @PostMapping("/definitions")
+    public ResponseEntity<ApiResponse<List<PrivilegeFeatureDefinitionDto>>> listModulePrivilegeDefinitions() {
+        return ResponseEntity.ok(ApiResponse.success(
+                privilegeService.getModulePrivilegeDefinitions(),
+                "Module privilege definitions loaded"
+        ));
+    }
+
+    @PostMapping("/sidebar-menu")
+    public ResponseEntity<ApiResponse<List<SidebarMenuDto>>> sidebarMenu(Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                privilegeService.getUserSidebarMenu(authentication.getName()),
+                "Sidebar menu loaded"
+        ));
     }
 
     @PostMapping("/check")
