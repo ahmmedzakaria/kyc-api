@@ -1,4 +1,4 @@
-package com.example.kyc.commonmodule.enums;
+package com.example.kyc.authmodule.enums;
 
 import lombok.Getter;
 

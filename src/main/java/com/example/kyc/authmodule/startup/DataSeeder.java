@@ -1,16 +1,19 @@
 package com.example.kyc.authmodule.startup;
 
 import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
+import com.example.kyc.authmodule.dto.PrivilegeMenuItemDto;
 import com.example.kyc.authmodule.entity.Privilege;
 import com.example.kyc.authmodule.entity.Role;
+import com.example.kyc.authmodule.entity.SubMenu;
 import com.example.kyc.authmodule.entity.User;
 import com.example.kyc.authmodule.repository.PrivilegeRepository;
 import com.example.kyc.authmodule.repository.RoleRepository;
+import com.example.kyc.authmodule.repository.SubMenuRepository;
 import com.example.kyc.authmodule.repository.UserRepository;
 import com.example.kyc.authmodule.service.interfaces.ModulePrivilegeProvider;
-import com.example.kyc.commonmodule.enums.ApplicationModule;
-import com.example.kyc.commonmodule.enums.FeatureType;
-import com.example.kyc.commonmodule.enums.PrivilegeAction;
+import com.example.kyc.authmodule.enums.ApplicationModule;
+import com.example.kyc.authmodule.enums.FeatureType;
+import com.example.kyc.authmodule.enums.PrivilegeAction;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,9 +30,14 @@ public class DataSeeder {
     CommandLineRunner initDatabase(RoleRepository roleRepository,
                                    UserRepository userRepository,
                                    PrivilegeRepository privilegeRepository,
+                                   SubMenuRepository subMenuRepository,
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
+            if (isAlreadySeeded(roleRepository, userRepository, privilegeRepository, subMenuRepository)) {
+                System.out.println("Auth seed data already exists. Skipping data seeding.");
+                return;
+            }
 
             Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_ADMIN"));
@@ -40,7 +48,7 @@ public class DataSeeder {
             Role reportViewerRole = roleRepository.findByName("ROLE_REPORT_VIEWER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_REPORT_VIEWER"));
 
-            seedModulePrivileges(privilegeRepository, adminRole, modulePrivilegeProviders);
+            seedModulePrivileges(privilegeRepository, subMenuRepository, adminRole, modulePrivilegeProviders);
             assignRolePrivileges(privilegeRepository, kycOperatorRole, Set.of(
                     code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
                     code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
@@ -68,48 +76,55 @@ public class DataSeeder {
             roleRepository.save(kycApproverRole);
             roleRepository.save(reportViewerRole);
 
-            // Create users
-            createUserIfNotExists(userRepository, passwordEncoder,
-                    "admin", "admin@example.com", "01700000000", "123", adminRole);
+            seedDefaultUser(userRepository, passwordEncoder,
+                    "admin", "123", "admin@example.com", "01700000000", adminRole);
 
-            createUserIfNotExists(userRepository, passwordEncoder,
-                    "kyc_operator", "operator@example.com", "01700000001", "123", kycOperatorRole);
+            seedDefaultUser(userRepository, passwordEncoder,
+                    "kyc_operator", "123", "operator@example.com", "01700000001", kycOperatorRole);
 
-            createUserIfNotExists(userRepository, passwordEncoder,
-                    "kyc_approver", "approver@example.com", "01700000002", "123", kycApproverRole);
+            seedDefaultUser(userRepository, passwordEncoder,
+                    "kyc_approver", "123", "approver@example.com", "01700000002", kycApproverRole);
 
-            createUserIfNotExists(userRepository, passwordEncoder,
-                    "report_user", "report@example.com", "01700000003", "123", reportViewerRole);
+            seedDefaultUser(userRepository, passwordEncoder,
+                    "report_user", "123", "report@example.com", "01700000003", reportViewerRole);
+
+            seedDefaultUser(userRepository, passwordEncoder,
+                    "kyc_manager", "123", "manager@example.com", "01700000004",
+                    kycOperatorRole, kycApproverRole, reportViewerRole);
         };
     }
 
-    private void createUserIfNotExists(UserRepository userRepository,
-                                       PasswordEncoder passwordEncoder,
-                                       String username,
-                                       String email,
-                                       String mobile,
-                                       String password,
-                                       Role role) {
+    private boolean isAlreadySeeded(RoleRepository roleRepository,
+                                    UserRepository userRepository,
+                                    PrivilegeRepository privilegeRepository,
+                                    SubMenuRepository subMenuRepository) {
+        return roleRepository.findByName("ROLE_ADMIN").isPresent()
+                && userRepository.findByUsername("admin").isPresent()
+                && privilegeRepository.count() > 0
+                && subMenuRepository.count() > 0;
+    }
 
-        if (userRepository.findByUsername(username).isEmpty()) {
-            User user = new User();
-            user.setUsername(username);
-            user.setEmail(email);
-            user.setMobileNumber(mobile);
-            user.setPassword(passwordEncoder.encode(password));
+    private void seedDefaultUser(UserRepository userRepository,
+                                 PasswordEncoder passwordEncoder,
+                                 String username,
+                                 String password,
+                                 String email,
+                                 String mobile,
+                                 Role... roles) {
 
-            user.getRoles().add(role);
+        User user = userRepository.findByUsername(username).orElseGet(User::new);
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setMobileNumber(mobile);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRoles(new HashSet<>(List.of(roles)));
+        user.setEmailVerified(true);
+        user.setMobileVerified(true);
+        user.setEnabled(true);
 
-            user.setEmailVerified(true);
-            user.setMobileVerified(true);
-            user.setEnabled(true);
+        userRepository.save(user);
 
-            userRepository.save(user);
-
-            System.out.println("✅ User created: " + username + " / " + password);
-        } else {
-            System.out.println("⚠️ User already exists: " + username);
-        }
+        System.out.println("Seeded default user: " + username + " / " + password);
     }
 
     private Role createRole(RoleRepository roleRepository, String roleName) {
@@ -119,24 +134,69 @@ public class DataSeeder {
     }
 
     private void seedModulePrivileges(PrivilegeRepository privilegeRepository,
+                                      SubMenuRepository subMenuRepository,
                                       Role adminRole,
                                       List<ModulePrivilegeProvider> modulePrivilegeProviders) {
         modulePrivilegeProviders.stream()
                 .flatMap(provider -> provider.getPrivilegeFeatures().stream())
                 .forEach(feature -> feature.getActions().forEach(action -> {
-                    Privilege privilege = savePrivilegeIfMissing(privilegeRepository, feature, action.getActionCode(), action.getActionName());
+                    SubMenu subMenu = seedSubMenuIfMissing(subMenuRepository, feature);
+                    Privilege privilege = savePrivilegeIfMissing(
+                            privilegeRepository,
+                            feature,
+                            action.getActionCode(),
+                            action.getActionName(),
+                            subMenu
+                    );
                     adminRole.getPrivileges().add(privilege);
                 }));
+    }
+
+    private SubMenu seedSubMenuIfMissing(SubMenuRepository subMenuRepository,
+                                         PrivilegeFeatureDefinitionDto feature) {
+        PrivilegeMenuItemDto menuItem = feature.getMenuItems().stream()
+                .findFirst()
+                .orElse(null);
+
+        String name = menuItem == null ? feature.getMenuLabel() : menuItem.getLabel();
+        String url = menuItem == null ? "/" + feature.getFeatureName().toLowerCase().replace(" ", "-") : menuItem.getPath();
+        String icon = menuItem == null ? feature.getIcon() : menuItem.getIcon();
+
+        SubMenu subMenu = subMenuRepository.findFirstByModuleCodeAndFeatureTypeCodeAndFeatureCodeAndUrl(
+                        feature.getModuleCode(),
+                        feature.getFeatureTypeCode(),
+                        feature.getFeatureCode(),
+                        url
+                )
+                .orElseGet(SubMenu::new);
+
+        subMenu.setName(name == null ? feature.getFeatureName() : name);
+        subMenu.setUrl(url);
+        subMenu.setIcon(icon);
+        subMenu.setModuleCode(feature.getModuleCode());
+        subMenu.setModuleName(feature.getModuleName());
+        subMenu.setFeatureTypeCode(feature.getFeatureTypeCode());
+        subMenu.setFeatureTypeName(feature.getFeatureTypeName());
+        subMenu.setFeatureCode(feature.getFeatureCode());
+        subMenu.setFeatureName(feature.getFeatureName());
+        subMenu.setActive(true);
+        if (subMenu.getCreatedBy() == null) {
+            subMenu.setCreatedBy(0L);
+        }
+        subMenu.setUpdatedBy(0L);
+
+        return subMenuRepository.save(subMenu);
     }
 
     private Privilege savePrivilegeIfMissing(PrivilegeRepository privilegeRepository,
                                              PrivilegeFeatureDefinitionDto feature,
                                              String actionCode,
-                                             String actionName) {
+                                             String actionName,
+                                             SubMenu subMenu) {
         String privilegeCode = feature.getModuleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
 
-        return privilegeRepository.findByPrivilegeCode(privilegeCode)
-                .orElseGet(() -> privilegeRepository.save(Privilege.builder()
+        Privilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
+                .orElseGet(() -> Privilege.builder()
                         .privilegeCode(privilegeCode)
                         .moduleCode(feature.getModuleCode())
                         .moduleName(feature.getModuleName())
@@ -147,7 +207,11 @@ public class DataSeeder {
                         .actionCode(actionCode)
                         .actionName(actionName)
                         .active(true)
-                        .build()));
+                        .build());
+
+        privilege.setSubMenu(subMenu);
+        privilege.setActive(true);
+        return privilegeRepository.save(privilege);
     }
 
     private void assignRolePrivileges(PrivilegeRepository privilegeRepository, Role role, Set<String> privilegeCodes) {

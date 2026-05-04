@@ -1,29 +1,36 @@
 package com.example.kyc.authmodule.service.implementations;
 
+import com.example.kyc.authmodule.dto.ApplicationContextDto;
 import com.example.kyc.authmodule.dto.PrivilegeAssignmentRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckResponseDto;
 import com.example.kyc.authmodule.dto.PrivilegeDto;
 import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
-import com.example.kyc.authmodule.dto.PrivilegeMenuItemDto;
 import com.example.kyc.authmodule.dto.PrivilegeRequestDto;
 import com.example.kyc.authmodule.dto.SidebarMenuDto;
+import com.example.kyc.authmodule.dto.SubMenuDto;
+import com.example.kyc.authmodule.dto.SubMenuRequestDto;
 import com.example.kyc.authmodule.entity.Privilege;
 import com.example.kyc.authmodule.entity.Role;
+import com.example.kyc.authmodule.entity.SubMenu;
 import com.example.kyc.authmodule.entity.User;
 import com.example.kyc.authmodule.repository.PrivilegeRepository;
 import com.example.kyc.authmodule.repository.RoleRepository;
+import com.example.kyc.authmodule.repository.SubMenuRepository;
 import com.example.kyc.authmodule.repository.UserRepository;
 import com.example.kyc.authmodule.service.interfaces.ModulePrivilegeProvider;
 import com.example.kyc.authmodule.service.interfaces.PrivilegeService;
-import com.example.kyc.commonmodule.enums.FeatureType;
+import com.example.kyc.authmodule.enums.FeatureType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -40,6 +47,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final PrivilegeRepository privilegeRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final SubMenuRepository subMenuRepository;
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
 
     @Override
@@ -74,12 +82,14 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         privilege.setFeatureName(requestDto.getFeatureName());
         privilege.setActionCode(requestDto.getActionCode());
         privilege.setActionName(requestDto.getActionName());
+        privilege.setSubMenu(resolveSubMenu(requestDto.getSubMenuId()));
         privilege.setActive(requestDto.getActive() == null || requestDto.getActive());
 
         return PrivilegeDto.fromEntity(privilegeRepository.save(privilege));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<PrivilegeDto> getAllPrivileges() {
         return privilegeRepository.findAll().stream()
                 .map(PrivilegeDto::fromEntity)
@@ -94,6 +104,59 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
+    @Transactional
+    public SubMenuDto saveSubMenu(SubMenuRequestDto requestDto, String username) {
+        Long loginUserId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username))
+                .getId();
+
+        SubMenu subMenu = requestDto.getId() == null
+                ? new SubMenu()
+                : subMenuRepository.findById(requestDto.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Sub menu not found: " + requestDto.getId()));
+
+        subMenu.setName(requestDto.getName());
+        subMenu.setUrl(requestDto.getUrl());
+        subMenu.setIcon(requestDto.getIcon());
+        subMenu.setModuleCode(requestDto.getModuleCode());
+        subMenu.setModuleName(requestDto.getModuleName());
+        subMenu.setFeatureTypeCode(requestDto.getFeatureTypeCode());
+        subMenu.setFeatureTypeName(requestDto.getFeatureTypeName());
+        subMenu.setFeatureCode(requestDto.getFeatureCode());
+        subMenu.setFeatureName(requestDto.getFeatureName());
+        subMenu.setActive(requestDto.getActive() == null || requestDto.getActive());
+
+        if (subMenu.getId() == null) {
+            subMenu.setCreatedBy(loginUserId);
+        }
+        subMenu.setUpdatedBy(loginUserId);
+
+        return SubMenuDto.fromEntity(subMenuRepository.save(subMenu));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubMenuDto> getAllSubMenus() {
+        return subMenuRepository.findAll().stream()
+                .sorted(Comparator.comparing(SubMenu::getModuleCode)
+                        .thenComparing(SubMenu::getFeatureTypeCode)
+                        .thenComparing(SubMenu::getFeatureCode)
+                        .thenComparing(SubMenu::getName))
+                .map(SubMenuDto::fromEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApplicationContextDto getApplicationContext(String username) {
+        return ApplicationContextDto.builder()
+                .menus(getUserSidebarMenu(username))
+                .privilegeCodes(getUserPrivilegeCodes(username))
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<SidebarMenuDto> getUserSidebarMenu(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
@@ -109,6 +172,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Set<String> getUserPrivilegeCodes(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
@@ -202,10 +266,26 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                                          String icon,
                                          Set<String> userPrivilegeCodes,
                                          boolean admin) {
-        List<SidebarMenuDto> featureMenus = getModulePrivilegeDefinitions().stream()
-                .filter(feature -> featureType.getCode().equals(feature.getFeatureTypeCode()))
-                .map(feature -> buildFeatureMenu(feature, userPrivilegeCodes, admin))
-                .filter(menu -> !menu.getChildren().isEmpty())
+        List<Privilege> privileges = admin
+                ? privilegeRepository.findAll()
+                : privilegeRepository.findByPrivilegeCodeIn(userPrivilegeCodes);
+
+        Map<Long, SidebarMenuDto> childMenus = new LinkedHashMap<>();
+        privileges.stream()
+                .filter(Privilege::isActive)
+                .filter(privilege -> privilege.getSubMenu() != null)
+                .filter(privilege -> privilege.getSubMenu().isActive())
+                .filter(privilege -> featureType.getCode().equals(privilege.getSubMenu().getFeatureTypeCode()))
+                .sorted(Comparator.comparing((Privilege privilege) -> privilege.getSubMenu().getModuleCode())
+                        .thenComparing((Privilege privilege) -> privilege.getSubMenu().getFeatureCode())
+                        .thenComparing((Privilege privilege) -> privilege.getSubMenu().getName()))
+                .forEach(privilege -> childMenus.computeIfAbsent(
+                        privilege.getSubMenu().getId(),
+                        id -> toSidebarMenu(privilege.getSubMenu())
+                ).getPrivilegeCodes().add(privilege.getPrivilegeCode()));
+
+        List<SidebarMenuDto> featureMenus = new ArrayList<>(childMenus.values()).stream()
+                .filter(menu -> admin || hasAnyPrivilege(menu.getPrivilegeCodes(), userPrivilegeCodes))
                 .toList();
 
         return SidebarMenuDto.builder()
@@ -215,34 +295,21 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .build();
     }
 
-    private SidebarMenuDto buildFeatureMenu(PrivilegeFeatureDefinitionDto feature,
-                                            Set<String> userPrivilegeCodes,
-                                            boolean admin) {
-        List<SidebarMenuDto> children = feature.getMenuItems().stream()
-                .filter(menuItem -> admin || hasAnyPrivilege(menuItem.getPrivilegeCodes(), userPrivilegeCodes))
-                .map(this::toSidebarMenu)
-                .toList();
-
+    private SidebarMenuDto toSidebarMenu(SubMenu subMenu) {
         return SidebarMenuDto.builder()
-                .label(feature.getMenuLabel() == null ? feature.getFeatureName() : feature.getMenuLabel())
-                .icon(feature.getIcon())
-                .privilegeCodes(feature.getActions().stream()
-                        .map(action -> action.getPrivilegeCode())
-                        .toList())
-                .children(children)
+                .label(subMenu.getName())
+                .icon(subMenu.getIcon())
+                .path(subMenu.getUrl())
                 .build();
     }
 
-    private SidebarMenuDto toSidebarMenu(PrivilegeMenuItemDto menuItem) {
-        return SidebarMenuDto.builder()
-                .label(menuItem.getLabel())
-                .icon(menuItem.getIcon())
-                .path(menuItem.getPath())
-                .privilegeCodes(new ArrayList<>(menuItem.getPrivilegeCodes()))
-                .children(menuItem.getChildren().stream()
-                        .map(this::toSidebarMenu)
-                        .toList())
-                .build();
+    private SubMenu resolveSubMenu(Long subMenuId) {
+        if (subMenuId == null) {
+            return null;
+        }
+
+        return subMenuRepository.findById(subMenuId)
+                .orElseThrow(() -> new IllegalArgumentException("Sub menu not found: " + subMenuId));
     }
 
     private boolean hasAnyPrivilege(List<String> requiredPrivilegeCodes, Set<String> userPrivilegeCodes) {

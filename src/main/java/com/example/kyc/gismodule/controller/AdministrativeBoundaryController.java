@@ -24,13 +24,13 @@ public class AdministrativeBoundaryController {
     @PostMapping("/search")
     public ResponseEntity<ApiResponse<Page<AdministrativeBoundaryResponse>>> search(@RequestBody SearchDto dto) {
         ApiResponse<Page<AdministrativeBoundaryResponse>> data = service.search(dto);
-        return data.getResponseEntity();
+        return data.toResponseEntity();
     }
 
     @Operation(summary = "Get GIS location by id and gis code")
     @PostMapping("/get-by-id")
     public ResponseEntity<ApiResponse<AdministrativeBoundaryResponse>> getById(@RequestBody IdRequestDto dto) {
         ApiResponse<AdministrativeBoundaryResponse> data = service.getById(UUID.fromString(dto.getId()), dto.getType());
-        return data.getResponseEntity();
+        return data.toResponseEntity();
     }
 }

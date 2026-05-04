@@ -91,7 +91,7 @@ public class ApiResponse<T> {
         return message.stream().map(m->new ResponseMessage(messageType, m)).toList();
     }
 
-    public ResponseEntity<ApiResponse<T>> getResponseEntity(){
+    public ResponseEntity<ApiResponse<T>> toResponseEntity(){
         if(this.statusCode == 200){
             return ResponseEntity.status(HttpStatus.OK).body(this);
         }else{

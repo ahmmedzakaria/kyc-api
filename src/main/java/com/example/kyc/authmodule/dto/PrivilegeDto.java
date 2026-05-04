@@ -21,6 +21,9 @@ public class PrivilegeDto {
     private String featureName;
     private String actionCode;
     private String actionName;
+    private Long subMenuId;
+    private String subMenuName;
+    private String subMenuUrl;
     private boolean active;
 
     public static PrivilegeDto fromEntity(Privilege privilege) {
@@ -35,6 +38,9 @@ public class PrivilegeDto {
                 .featureName(privilege.getFeatureName())
                 .actionCode(privilege.getActionCode())
                 .actionName(privilege.getActionName())
+                .subMenuId(privilege.getSubMenu() == null ? null : privilege.getSubMenu().getId())
+                .subMenuName(privilege.getSubMenu() == null ? null : privilege.getSubMenu().getName())
+                .subMenuUrl(privilege.getSubMenu() == null ? null : privilege.getSubMenu().getUrl())
                 .active(privilege.isActive())
                 .build();
     }

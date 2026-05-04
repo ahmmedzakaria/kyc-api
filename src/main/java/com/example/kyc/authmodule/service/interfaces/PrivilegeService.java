@@ -1,5 +1,6 @@
 package com.example.kyc.authmodule.service.interfaces;
 
+import com.example.kyc.authmodule.dto.ApplicationContextDto;
 import com.example.kyc.authmodule.dto.PrivilegeAssignmentRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckResponseDto;
@@ -7,6 +8,8 @@ import com.example.kyc.authmodule.dto.PrivilegeDto;
 import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
 import com.example.kyc.authmodule.dto.PrivilegeRequestDto;
 import com.example.kyc.authmodule.dto.SidebarMenuDto;
+import com.example.kyc.authmodule.dto.SubMenuDto;
+import com.example.kyc.authmodule.dto.SubMenuRequestDto;
 
 import java.util.List;
 import java.util.Set;
@@ -19,6 +22,12 @@ public interface PrivilegeService {
     List<PrivilegeDto> getAllPrivileges();
 
     List<PrivilegeFeatureDefinitionDto> getModulePrivilegeDefinitions();
+
+    SubMenuDto saveSubMenu(SubMenuRequestDto requestDto, String username);
+
+    List<SubMenuDto> getAllSubMenus();
+
+    ApplicationContextDto getApplicationContext(String username);
 
     List<SidebarMenuDto> getUserSidebarMenu(String username);
 

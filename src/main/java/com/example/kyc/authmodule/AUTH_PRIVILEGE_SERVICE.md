@@ -151,7 +151,7 @@ Enums:
 | `FeatureType` | Setup, Operations, Reports |
 | `PrivilegeAction` | Action code registry |
 
-The common enums live in `commonmodule/enums`. Auth owns the provider interface, and each business module owns the implementation for its own features, actions, menus, and submenus.
+Shared privilege enums define the code registry. Auth owns the provider interface, and each business module owns the implementation for its own features, actions, menus, and submenus.
 
 ## Module Provider Contract
 
@@ -355,23 +355,24 @@ This replaces the user's direct privilege set.
 
 ## Login Response
 
-Login and refresh responses include `privilegeCodes`.
+Login and refresh responses include only tokens. After authentication, the frontend calls the application context API to load menus, sub menus, privilege codes, and future setup data.
 
 Example:
 
 ```json
 {
   "accessToken": "...",
-  "refreshToken": "...",
-  "privilegeCodes": [
-    "010200101",
-    "010200102",
-    "010200106"
-  ]
+  "refreshToken": "..."
 }
 ```
 
-The frontend can use these codes to show or hide modules, menus, buttons, and page actions.
+## Application Context
+
+```http
+POST /auth/privilege/context
+```
+
+Returns the authenticated user's dynamic sidebar menu and effective privilege codes.
 
 ## Frontend Usage
 

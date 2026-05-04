@@ -1,5 +1,6 @@
 package com.example.kyc.authmodule.controller;
 
+import com.example.kyc.authmodule.dto.ApplicationContextDto;
 import com.example.kyc.authmodule.dto.PrivilegeAssignmentRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckRequestDto;
 import com.example.kyc.authmodule.dto.PrivilegeCheckResponseDto;
@@ -7,6 +8,8 @@ import com.example.kyc.authmodule.dto.PrivilegeDto;
 import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
 import com.example.kyc.authmodule.dto.PrivilegeRequestDto;
 import com.example.kyc.authmodule.dto.SidebarMenuDto;
+import com.example.kyc.authmodule.dto.SubMenuDto;
+import com.example.kyc.authmodule.dto.SubMenuRequestDto;
 import com.example.kyc.authmodule.service.interfaces.PrivilegeService;
 import com.example.kyc.commonmodule.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -45,11 +48,36 @@ public class PrivilegeController {
         ));
     }
 
+    @PostMapping("/context")
+    public ResponseEntity<ApiResponse<ApplicationContextDto>> applicationContext(Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                privilegeService.getApplicationContext(authentication.getName()),
+                "Application context loaded"
+        ));
+    }
+
     @PostMapping("/sidebar-menu")
     public ResponseEntity<ApiResponse<List<SidebarMenuDto>>> sidebarMenu(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
                 privilegeService.getUserSidebarMenu(authentication.getName()),
                 "Sidebar menu loaded"
+        ));
+    }
+
+    @PostMapping("/sub-menu/save")
+    public ResponseEntity<ApiResponse<SubMenuDto>> saveSubMenu(@RequestBody SubMenuRequestDto requestDto,
+                                                               Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                privilegeService.saveSubMenu(requestDto, authentication.getName()),
+                "Sub menu saved"
+        ));
+    }
+
+    @PostMapping("/sub-menu/list")
+    public ResponseEntity<ApiResponse<List<SubMenuDto>>> listSubMenus() {
+        return ResponseEntity.ok(ApiResponse.success(
+                privilegeService.getAllSubMenus(),
+                "Sub menus loaded"
         ));
     }
 

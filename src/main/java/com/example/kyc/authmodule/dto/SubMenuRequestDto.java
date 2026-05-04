@@ -3,15 +3,16 @@ package com.example.kyc.authmodule.dto;
 import lombok.Data;
 
 @Data
-public class PrivilegeRequestDto {
+public class SubMenuRequestDto {
+    private Long id;
+    private String name;
+    private String url;
+    private String icon;
     private String moduleCode;
     private String moduleName;
     private String featureTypeCode;
     private String featureTypeName;
     private String featureCode;
     private String featureName;
-    private String actionCode;
-    private String actionName;
-    private Long subMenuId;
     private Boolean active;
 }

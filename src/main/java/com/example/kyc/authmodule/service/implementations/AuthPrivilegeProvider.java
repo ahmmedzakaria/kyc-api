@@ -4,9 +4,9 @@ import com.example.kyc.authmodule.dto.PrivilegeActionDefinitionDto;
 import com.example.kyc.authmodule.dto.PrivilegeFeatureDefinitionDto;
 import com.example.kyc.authmodule.dto.PrivilegeMenuItemDto;
 import com.example.kyc.authmodule.service.interfaces.ModulePrivilegeProvider;
-import com.example.kyc.commonmodule.enums.ApplicationModule;
-import com.example.kyc.commonmodule.enums.FeatureType;
-import com.example.kyc.commonmodule.enums.PrivilegeAction;
+import com.example.kyc.authmodule.enums.ApplicationModule;
+import com.example.kyc.authmodule.enums.FeatureType;
+import com.example.kyc.authmodule.enums.PrivilegeAction;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
