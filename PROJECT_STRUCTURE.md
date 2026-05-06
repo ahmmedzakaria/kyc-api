@@ -15,7 +15,7 @@ This backend is organized into core modules with clear responsibilities and depe
 
 ### `core module`
 - Contains application bootstrap and top-level entry wiring.
-- Main class: `KycApiApplication`.
+- Main class: `NexaCoreApplication`.
 
 ### `appconfigmodule`
 - Holds cross-cutting technical configuration.
@@ -84,10 +84,9 @@ This backend is organized into core modules with clear responsibilities and depe
 
 ## Current Package Mapping
 
-- `com.example.kyc` -> core module
-- `com.example.kyc.appconfigmodule` -> appconfigmodule
-- `com.example.kyc.authmodule` -> authmodule
-- `com.example.kyc.commonmodule` -> commonmodule
-- `com.example.kyc.kycmodule` -> independent KYC module
-- `com.example.kyc.gismodule` -> independent GIS module
-
+- `com.nexacore` -> core module
+- `com.nexacore.appconfigmodule` -> appconfigmodule
+- `com.nexacore.authmodule` -> authmodule
+- `com.nexacore.commonmodule` -> commonmodule
+- `com.nexacore.kycmodule` -> independent KYC module
+- `com.nexacore.gismodule` -> independent GIS module

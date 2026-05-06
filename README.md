@@ -1,5 +1,5 @@
 
-# KYC API
+# NexaCore API
 
 This project is a Spring Boot API for KYC (Know Your Customer) records.
 

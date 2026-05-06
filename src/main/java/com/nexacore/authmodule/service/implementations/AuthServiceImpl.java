@@ -1,0 +1,90 @@
+package com.nexacore.authmodule.service.implementations;
+
+
+import com.nexacore.authmodule.dto.AuthRequest;
+import com.nexacore.authmodule.dto.AuthResponse;
+import com.nexacore.authmodule.dto.RefreshTokenRequest;
+import com.nexacore.authmodule.service.interfaces.AuthService;
+import com.nexacore.commonmodule.dto.ApiResponse;
+import com.nexacore.appconfigmodule.jwt.JwtUtil;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthServiceImpl implements AuthService {
+
+	private final AuthenticationManager authenticationManager;
+	private final UserDetailsService userDetailsService;
+	private final JwtUtil jwtUtil;
+
+	@Override
+	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request) {
+		try {
+			Authentication authentication = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(request.username(), request.password())
+			);
+
+			if(authentication.isAuthenticated()){
+				var userDetails = userDetailsService.loadUserByUsername(request.username());
+
+				String accessToken = jwtUtil.generateToken(userDetails);
+				String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+
+				AuthResponse response =  AuthResponse.builder()
+						.accessToken(accessToken)
+						.refreshToken(refreshToken)
+						.build();
+
+				return ResponseEntity.ok(ApiResponse.success(response, "Authentication successful. Token generated"));
+
+			}else {
+				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"User authentication Failed"));
+			}
+
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),List.of("Exception occurred: " + e.getLocalizedMessage())));
+		}
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid RefreshTokenRequest requestDto) {
+		try {
+			String username = jwtUtil.extractUsername(requestDto.refreshToken());
+
+			var userDetails = userDetailsService.loadUserByUsername(username);
+
+			if (jwtUtil.validateToken(requestDto.refreshToken(), userDetails)) {
+				String newAccessToken = jwtUtil.generateToken(userDetails);
+				String newRefreshToken = jwtUtil.generateRefreshToken(userDetails);
+
+				AuthResponse response =  AuthResponse.builder()
+						.accessToken(newAccessToken)
+						.refreshToken(newRefreshToken)
+						.build();
+
+				return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(response,"access token is generated"));
+
+			} else {
+				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"No such user is exist!"));
+			}
+
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurs: " + e.getLocalizedMessage())));
+		}
+	}
+
+}

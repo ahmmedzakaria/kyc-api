@@ -28,7 +28,7 @@ ARG JAR_FILE
 COPY --from=build /app/target/*.jar app.jar
 
 # create upload dir (for filesystem photo storage)
-ENV UPLOAD_DIR=/opt/kyc/uploads
+ENV UPLOAD_DIR=/opt/nexacore/uploads
 RUN mkdir -p ${UPLOAD_DIR} && chown -R spring:spring ${UPLOAD_DIR}
 
 USER spring
