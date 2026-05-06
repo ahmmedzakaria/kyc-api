@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -62,6 +63,15 @@ public class User extends ActionInfo {
 
     @Column
     private boolean mobileVerified;
+
+    @Column
+    private String externalProvider;
+
+    @Column
+    private String externalSubject;
+
+    @Column
+    private LocalDateTime lastLoginAt;
 
 //    @Column(length = 255)
 //    private String pictureUrl;

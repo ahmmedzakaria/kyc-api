@@ -31,6 +31,8 @@ public class SecurityConfig {
     private final String[] AUTH_WHITELIST = {
             "/auth/login",
             "/auth/authenticate",
+            "/auth/config",
+            "/auth/sso/authenticate",
             "/oauth2/**",
             "/users/register",
             "/auth/test",

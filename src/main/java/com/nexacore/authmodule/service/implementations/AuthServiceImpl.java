@@ -1,9 +1,13 @@
 package com.nexacore.authmodule.service.implementations;
 
 
+import com.nexacore.appconfigmodule.security.AuthenticationProperties;
+import com.nexacore.appconfigmodule.security.KeycloakProperties;
+import com.nexacore.authmodule.dto.AuthConfigResponse;
 import com.nexacore.authmodule.dto.AuthRequest;
 import com.nexacore.authmodule.dto.AuthResponse;
 import com.nexacore.authmodule.dto.RefreshTokenRequest;
+import com.nexacore.authmodule.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.appconfigmodule.jwt.JwtUtil;
@@ -15,10 +19,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -29,9 +34,17 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationManager authenticationManager;
 	private final UserDetailsService userDetailsService;
 	private final JwtUtil jwtUtil;
+	private final AuthenticationProperties authenticationProperties;
+	private final KeycloakProperties keycloakProperties;
+	private final KeycloakSsoService keycloakSsoService;
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request) {
+		if (authenticationProperties.isSsoMode()) {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN)
+					.body(ApiResponse.error(HttpStatus.FORBIDDEN.value(), "LOCAL_LOGIN_DISABLED"));
+		}
+
 		try {
 			Authentication authentication = authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(request.username(), request.password())
@@ -56,6 +69,50 @@ public class AuthServiceImpl implements AuthService {
 
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),List.of("Exception occurred: " + e.getLocalizedMessage())));
+		}
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(String origin) {
+		String redirectUri = buildRedirectUri(origin);
+		AuthConfigResponse response = AuthConfigResponse.builder()
+				.authMode(authenticationProperties.getMode())
+				.issuerUri(keycloakProperties.getIssuerUri())
+				.clientId(resolveClientId(origin))
+				.redirectUri(redirectUri)
+				.build();
+
+		return ResponseEntity.ok(ApiResponse.success(response, "Authentication config loaded"));
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<AuthResponse>> ssoAuthenticate(SsoAuthenticateRequest request) {
+		if (!authenticationProperties.isSsoMode()) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SSO_LOGIN_DISABLED"));
+		}
+
+		try {
+			var profile = keycloakSsoService.verifyToken(request.accessToken());
+			var user = keycloakSsoService.syncUser(profile);
+			var userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+
+			String accessToken = jwtUtil.generateToken(userDetails);
+			String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+
+			AuthResponse response = AuthResponse.builder()
+					.accessToken(accessToken)
+					.refreshToken(refreshToken)
+					.build();
+
+			log.info("SSO login successful for username={}, keycloakSubject={}", user.getUsername(), profile.subject());
+			return ResponseEntity.ok(ApiResponse.success(response, "SSO authentication successful. Token generated"));
+		} catch (JwtException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+					.body(ApiResponse.error(HttpStatus.UNAUTHORIZED.value(), List.of(e.getMessage())));
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurred: " + e.getLocalizedMessage())));
 		}
 	}
 
@@ -85,6 +142,18 @@ public class AuthServiceImpl implements AuthService {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurs: " + e.getLocalizedMessage())));
 		}
+	}
+
+	private String buildRedirectUri(String origin) {
+		String baseOrigin = StringUtils.hasText(origin) ? origin : "http://localhost:4200";
+		return baseOrigin + "/auth/callback";
+	}
+
+	private String resolveClientId(String origin) {
+		if (StringUtils.hasText(origin) && origin.contains(":4300")) {
+			return "privilege-frontend";
+		}
+		return keycloakProperties.getClientId();
 	}
 
 }
