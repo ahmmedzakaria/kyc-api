@@ -112,10 +112,12 @@ public class KeycloakSsoService {
         List<String> audience = jwt.getAudience();
         String authorizedParty = jwt.getClaimAsString("azp");
         String clientId = keycloakProperties.getClientId();
+        List<String> allowedClientIds = keycloakProperties.getAllowedClientIds();
 
         if (!audience.contains(requiredAudience)
                 && !Objects.equals(authorizedParty, requiredAudience)
-                && !Objects.equals(authorizedParty, clientId)) {
+                && !Objects.equals(authorizedParty, clientId)
+                && (allowedClientIds == null || !allowedClientIds.contains(authorizedParty))) {
             throw new JwtException("Invalid Keycloak token audience");
         }
     }

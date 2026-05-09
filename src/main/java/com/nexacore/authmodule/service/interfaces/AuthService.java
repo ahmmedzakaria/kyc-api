@@ -12,6 +12,8 @@ public interface AuthService {
     public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request);
     public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(String origin);
     public ResponseEntity<ApiResponse<AuthResponse>> ssoAuthenticate(SsoAuthenticateRequest request);
+    public ResponseEntity<ApiResponse<Void>> logout(String username);
+    public ResponseEntity<ApiResponse<Void>> sessionStatus();
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(RefreshTokenRequest requestDto);
 
 }

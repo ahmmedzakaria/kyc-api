@@ -37,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationProperties authenticationProperties;
 	private final KeycloakProperties keycloakProperties;
 	private final KeycloakSsoService keycloakSsoService;
+	private final LogoutSessionService logoutSessionService;
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request) {
@@ -117,6 +118,20 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
+	public ResponseEntity<ApiResponse<Void>> logout(String username) {
+		if (StringUtils.hasText(username)) {
+			logoutSessionService.logout(username);
+			log.info("User logged out from shared session: {}", username);
+		}
+		return ResponseEntity.ok(ApiResponse.<Void>success("Logout successful"));
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<Void>> sessionStatus() {
+		return ResponseEntity.ok(ApiResponse.<Void>success("Session active"));
+	}
+
+	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid RefreshTokenRequest requestDto) {
 		try {
 			String username = jwtUtil.extractUsername(requestDto.refreshToken());
@@ -146,7 +161,7 @@ public class AuthServiceImpl implements AuthService {
 
 	private String buildRedirectUri(String origin) {
 		String baseOrigin = StringUtils.hasText(origin) ? origin : "http://localhost:4200";
-		return baseOrigin + "/auth/callback";
+		return baseOrigin + "/sso/callback";
 	}
 
 	private String resolveClientId(String origin) {

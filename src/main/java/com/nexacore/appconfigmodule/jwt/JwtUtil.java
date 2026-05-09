@@ -81,6 +81,10 @@ public class JwtUtil {
         return extractClaim(token, claims -> claims.get("roles", List.class));
     }
 
+    public Date extractIssuedAt(String token) {
+        return extractClaim(token, Claims::getIssuedAt);
+    }
+
     // 🔹 Validate token
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);

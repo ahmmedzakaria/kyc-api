@@ -2,6 +2,7 @@ package com.nexacore.appconfigmodule.filters;
 
 
 import com.nexacore.appconfigmodule.jwt.JwtUtil;
+import com.nexacore.authmodule.service.implementations.LogoutSessionService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -23,6 +25,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final LogoutSessionService logoutSessionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -37,6 +40,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String jwt = authHeader.substring(7);
                 String username = jwtUtil.extractUsername(jwt);
                 List<String> roles = jwtUtil.extractRoles(jwt);
+                Instant issuedAt = jwtUtil.extractIssuedAt(jwt).toInstant();
+
+                if (logoutSessionService.isLoggedOut(username, issuedAt)) {
+                    throw new JwtException("Token has been logged out");
+                }
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     var authorities = roles.stream()

@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,6 +46,19 @@ public class AuthController {
     @PostMapping("/sso/authenticate")
     public ResponseEntity<ApiResponse<AuthResponse>> ssoAuthenticate(@RequestBody @Valid SsoAuthenticateRequest requestDto) {
         return authService.ssoAuthenticate(requestDto);
+    }
+
+    @Operation(summary = "Logout user from shared application session")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
+        String username = authentication == null ? null : authentication.getName();
+        return authService.logout(username);
+    }
+
+    @Operation(summary = "Check current application session")
+    @PostMapping("/session-status")
+    public ResponseEntity<ApiResponse<Void>> sessionStatus() {
+        return authService.sessionStatus();
     }
 
     @Operation(summary = "Refresh Token")
