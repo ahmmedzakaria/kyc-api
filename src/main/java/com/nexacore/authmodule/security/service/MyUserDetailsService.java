@@ -1,4 +1,4 @@
-package com.nexacore.appconfigmodule.security;
+package com.nexacore.authmodule.security.service;
 
 import com.nexacore.authmodule.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

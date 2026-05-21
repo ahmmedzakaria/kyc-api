@@ -1,4 +1,4 @@
-package com.nexacore.appconfigmodule.security;
+package com.nexacore.appconfigmodule.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

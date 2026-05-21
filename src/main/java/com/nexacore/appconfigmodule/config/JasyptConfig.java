@@ -1,4 +1,4 @@
-package com.nexacore.appconfigmodule.security;
+package com.nexacore.appconfigmodule.config;
 
 import com.nexacore.appconfigmodule.ConfigConstants;
 import org.jasypt.encryption.StringEncryptor;
@@ -26,4 +26,3 @@ public class JasyptConfig {
         return encryptor;
     }
 }
-

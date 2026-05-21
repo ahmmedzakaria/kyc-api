@@ -1,5 +1,6 @@
-package com.nexacore.appconfigmodule.security;
+package com.nexacore.authmodule.security.config;
 
+import com.nexacore.authmodule.security.service.MyUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,4 +55,3 @@ public class AuthenticationProviderConfig {
 
 
 }
-

@@ -1,7 +1,7 @@
-package com.nexacore.appconfigmodule.filters;
+package com.nexacore.authmodule.security.filter;
 
 
-import com.nexacore.appconfigmodule.jwt.JwtUtil;
+import com.nexacore.authmodule.security.jwt.JwtUtil;
 import com.nexacore.authmodule.core.service.implementations.LogoutSessionService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;

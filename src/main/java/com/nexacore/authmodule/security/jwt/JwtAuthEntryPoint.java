@@ -1,4 +1,4 @@
-package com.nexacore.appconfigmodule.jwt;
+package com.nexacore.authmodule.security.jwt;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

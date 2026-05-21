@@ -1,4 +1,4 @@
-package com.nexacore.appconfigmodule.security;
+package com.nexacore.authmodule.security.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

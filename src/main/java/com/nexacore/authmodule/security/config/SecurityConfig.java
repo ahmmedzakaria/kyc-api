@@ -1,8 +1,8 @@
-package com.nexacore.appconfigmodule.security;
+package com.nexacore.authmodule.security.config;
 
 import com.nexacore.appconfigmodule.ConfigConstants;
-import com.nexacore.appconfigmodule.filters.JwtAuthenticationFilter;
-import com.nexacore.appconfigmodule.jwt.JwtAuthEntryPoint;
+import com.nexacore.authmodule.security.filter.JwtAuthenticationFilter;
+import com.nexacore.authmodule.security.jwt.JwtAuthEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

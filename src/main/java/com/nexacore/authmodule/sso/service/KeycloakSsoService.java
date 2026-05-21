@@ -1,6 +1,6 @@
 package com.nexacore.authmodule.sso.service;
 
-import com.nexacore.appconfigmodule.security.KeycloakProperties;
+import com.nexacore.authmodule.security.config.KeycloakProperties;
 import com.nexacore.authmodule.core.entity.Role;
 import com.nexacore.authmodule.core.entity.User;
 import com.nexacore.authmodule.core.repository.RoleRepository;

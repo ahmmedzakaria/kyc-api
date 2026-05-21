@@ -1,6 +1,6 @@
-package com.nexacore.appconfigmodule.oauth2;
+package com.nexacore.authmodule.security.oauth2;
 
-import com.nexacore.appconfigmodule.jwt.JwtUtil;
+import com.nexacore.authmodule.security.jwt.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

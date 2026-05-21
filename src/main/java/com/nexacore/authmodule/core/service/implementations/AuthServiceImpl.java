@@ -1,8 +1,8 @@
 package com.nexacore.authmodule.core.service.implementations;
 
 
-import com.nexacore.appconfigmodule.security.AuthenticationProperties;
-import com.nexacore.appconfigmodule.security.KeycloakProperties;
+import com.nexacore.authmodule.security.config.AuthenticationProperties;
+import com.nexacore.authmodule.security.config.KeycloakProperties;
 import com.nexacore.authmodule.core.dto.AuthConfigResponse;
 import com.nexacore.authmodule.core.dto.AuthRequest;
 import com.nexacore.authmodule.core.dto.AuthResponse;
@@ -11,7 +11,7 @@ import com.nexacore.authmodule.core.dto.LoginStatusResponse;
 import com.nexacore.authmodule.core.dto.RefreshTokenRequest;
 import com.nexacore.authmodule.core.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
-import com.nexacore.appconfigmodule.jwt.JwtUtil;
+import com.nexacore.authmodule.security.jwt.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

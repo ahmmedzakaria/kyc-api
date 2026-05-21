@@ -1,7 +1,7 @@
 package com.nexacore.authmodule.sso.service;
 
-import com.nexacore.appconfigmodule.jwt.JwtUtil;
-import com.nexacore.appconfigmodule.security.AuthenticationProperties;
+import com.nexacore.authmodule.security.jwt.JwtUtil;
+import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import com.nexacore.authmodule.core.dto.AuthResponse;
 import com.nexacore.authmodule.core.service.implementations.LogoutSessionService;
 import com.nexacore.authmodule.sso.dto.SsoAuthenticateRequest;

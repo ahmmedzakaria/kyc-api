@@ -1,4 +1,4 @@
-package com.nexacore.appconfigmodule.jwt;
+package com.nexacore.authmodule.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
