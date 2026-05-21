@@ -13,7 +13,7 @@ public class LogoutSessionService {
     private final Map<String, Instant> loginAfterByUsername = new ConcurrentHashMap<>();
 
     public void login(String username) {
-        loginAfterByUsername.put(username, Instant.now().truncatedTo(ChronoUnit.SECONDS));
+        loginAfterByUsername.putIfAbsent(username, Instant.now().truncatedTo(ChronoUnit.SECONDS));
     }
 
     public void logout(String username) {
