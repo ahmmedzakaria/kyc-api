@@ -42,8 +42,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 List<String> roles = jwtUtil.extractRoles(jwt);
                 Instant issuedAt = jwtUtil.extractIssuedAt(jwt).toInstant();
 
-                if (logoutSessionService.isLoggedOut(username, issuedAt)) {
-                    throw new JwtException("Token has been logged out");
+                if (!logoutSessionService.isSessionActive(username, issuedAt)) {
+                    throw new JwtException("User session is not active");
                 }
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

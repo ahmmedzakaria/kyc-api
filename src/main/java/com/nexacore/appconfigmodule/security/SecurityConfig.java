@@ -33,6 +33,7 @@ public class SecurityConfig {
             "/auth/authenticate",
             "/auth/config",
             "/auth/sso/authenticate",
+            "/auth/login-status",
             "/oauth2/**",
             "/users/register",
             "/auth/test",

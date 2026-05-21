@@ -6,6 +6,8 @@ import com.nexacore.appconfigmodule.security.KeycloakProperties;
 import com.nexacore.authmodule.dto.AuthConfigResponse;
 import com.nexacore.authmodule.dto.AuthRequest;
 import com.nexacore.authmodule.dto.AuthResponse;
+import com.nexacore.authmodule.dto.LoginStatusRequest;
+import com.nexacore.authmodule.dto.LoginStatusResponse;
 import com.nexacore.authmodule.dto.RefreshTokenRequest;
 import com.nexacore.authmodule.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.service.interfaces.AuthService;
@@ -54,6 +56,7 @@ public class AuthServiceImpl implements AuthService {
 			if(authentication.isAuthenticated()){
 				var userDetails = userDetailsService.loadUserByUsername(request.username());
 
+				logoutSessionService.login(userDetails.getUsername());
 				String accessToken = jwtUtil.generateToken(userDetails);
 				String refreshToken = jwtUtil.generateRefreshToken(userDetails);
 
@@ -98,6 +101,7 @@ public class AuthServiceImpl implements AuthService {
 			var user = keycloakSsoService.syncUser(profile);
 			var userDetails = userDetailsService.loadUserByUsername(user.getUsername());
 
+			logoutSessionService.login(userDetails.getUsername());
 			String accessToken = jwtUtil.generateToken(userDetails);
 			String refreshToken = jwtUtil.generateRefreshToken(userDetails);
 
@@ -124,6 +128,18 @@ public class AuthServiceImpl implements AuthService {
 			log.info("User logged out from shared session: {}", username);
 		}
 		return ResponseEntity.ok(ApiResponse.<Void>success("Logout successful"));
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(LoginStatusRequest request) {
+		boolean loggedIn = request != null
+				&& StringUtils.hasText(request.username())
+				&& logoutSessionService.isLoggedIn(request.username());
+
+		return ResponseEntity.ok(ApiResponse.success(
+				new LoginStatusResponse(loggedIn),
+				"Login status loaded"
+		));
 	}
 
 	@Override

@@ -4,6 +4,8 @@ package com.nexacore.authmodule.controller;
 import com.nexacore.authmodule.dto.AuthRequest;
 import com.nexacore.authmodule.dto.AuthResponse;
 import com.nexacore.authmodule.dto.AuthConfigResponse;
+import com.nexacore.authmodule.dto.LoginStatusRequest;
+import com.nexacore.authmodule.dto.LoginStatusResponse;
 import com.nexacore.authmodule.dto.RefreshTokenRequest;
 import com.nexacore.authmodule.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.service.interfaces.AuthService;
@@ -53,6 +55,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
         String username = authentication == null ? null : authentication.getName();
         return authService.logout(username);
+    }
+
+    @Operation(summary = "Check tracked login status for a username", security = {})
+    @PostMapping("/login-status")
+    public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(@RequestBody LoginStatusRequest requestDto) {
+        return authService.loginStatus(requestDto);
     }
 
     @Operation(summary = "Check current application session")
