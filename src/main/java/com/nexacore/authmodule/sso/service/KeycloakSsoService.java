@@ -1,11 +1,11 @@
-package com.nexacore.authmodule.service.implementations;
+package com.nexacore.authmodule.sso.service;
 
 import com.nexacore.appconfigmodule.security.KeycloakProperties;
-import com.nexacore.authmodule.dto.SsoUserProfileDto;
 import com.nexacore.authmodule.entity.Role;
 import com.nexacore.authmodule.entity.User;
 import com.nexacore.authmodule.repository.RoleRepository;
 import com.nexacore.authmodule.repository.UserRepository;
+import com.nexacore.authmodule.sso.dto.SsoUserProfileDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;

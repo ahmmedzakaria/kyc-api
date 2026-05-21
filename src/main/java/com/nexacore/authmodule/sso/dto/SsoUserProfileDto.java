@@ -1,4 +1,4 @@
-package com.nexacore.authmodule.dto;
+package com.nexacore.authmodule.sso.dto;
 
 public record SsoUserProfileDto(
         String subject,

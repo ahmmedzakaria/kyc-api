@@ -9,7 +9,6 @@ import com.nexacore.authmodule.dto.AuthResponse;
 import com.nexacore.authmodule.dto.LoginStatusRequest;
 import com.nexacore.authmodule.dto.LoginStatusResponse;
 import com.nexacore.authmodule.dto.RefreshTokenRequest;
-import com.nexacore.authmodule.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.appconfigmodule.jwt.JwtUtil;
@@ -21,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -38,7 +36,6 @@ public class AuthServiceImpl implements AuthService {
 	private final JwtUtil jwtUtil;
 	private final AuthenticationProperties authenticationProperties;
 	private final KeycloakProperties keycloakProperties;
-	private final KeycloakSsoService keycloakSsoService;
 	private final LogoutSessionService logoutSessionService;
 
 	@Override
@@ -87,38 +84,6 @@ public class AuthServiceImpl implements AuthService {
 				.build();
 
 		return ResponseEntity.ok(ApiResponse.success(response, "Authentication config loaded"));
-	}
-
-	@Override
-	public ResponseEntity<ApiResponse<AuthResponse>> ssoAuthenticate(SsoAuthenticateRequest request) {
-		if (!authenticationProperties.isSsoMode()) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-					.body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SSO_LOGIN_DISABLED"));
-		}
-
-		try {
-			var profile = keycloakSsoService.verifyToken(request.accessToken());
-			var user = keycloakSsoService.syncUser(profile);
-			var userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-
-			logoutSessionService.login(userDetails.getUsername());
-			String accessToken = jwtUtil.generateToken(userDetails);
-			String refreshToken = jwtUtil.generateRefreshToken(userDetails);
-
-			AuthResponse response = AuthResponse.builder()
-					.accessToken(accessToken)
-					.refreshToken(refreshToken)
-					.build();
-
-			log.info("SSO login successful for username={}, keycloakSubject={}", user.getUsername(), profile.subject());
-			return ResponseEntity.ok(ApiResponse.success(response, "SSO authentication successful. Token generated"));
-		} catch (JwtException e) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-					.body(ApiResponse.error(HttpStatus.UNAUTHORIZED.value(), List.of(e.getMessage())));
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurred: " + e.getLocalizedMessage())));
-		}
 	}
 
 	@Override

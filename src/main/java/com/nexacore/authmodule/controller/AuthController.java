@@ -7,7 +7,6 @@ import com.nexacore.authmodule.dto.AuthConfigResponse;
 import com.nexacore.authmodule.dto.LoginStatusRequest;
 import com.nexacore.authmodule.dto.LoginStatusResponse;
 import com.nexacore.authmodule.dto.RefreshTokenRequest;
-import com.nexacore.authmodule.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,12 +41,6 @@ public class AuthController {
     @PostMapping("/config")
     public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(@RequestHeader(value = "Origin", required = false) String origin) {
         return authService.getAuthConfig(origin);
-    }
-
-    @Operation(summary = "Authenticate user by Keycloak access token", security = {})
-    @PostMapping("/sso/authenticate")
-    public ResponseEntity<ApiResponse<AuthResponse>> ssoAuthenticate(@RequestBody @Valid SsoAuthenticateRequest requestDto) {
-        return authService.ssoAuthenticate(requestDto);
     }
 
     @Operation(summary = "Logout user from shared application session")
