@@ -1,6 +1,6 @@
 package com.nexacore.appconfigmodule.security;
 
-import com.nexacore.authmodule.repository.UserRepository;
+import com.nexacore.authmodule.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

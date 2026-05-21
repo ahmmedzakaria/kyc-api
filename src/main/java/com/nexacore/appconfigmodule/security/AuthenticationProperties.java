@@ -1,6 +1,6 @@
 package com.nexacore.appconfigmodule.security;
 
-import com.nexacore.authmodule.enums.AuthenticationMode;
+import com.nexacore.authmodule.core.enums.AuthenticationMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 

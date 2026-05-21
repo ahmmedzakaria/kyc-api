@@ -1,6 +1,6 @@
 package com.nexacore.authmodule.sso.controller;
 
-import com.nexacore.authmodule.dto.AuthResponse;
+import com.nexacore.authmodule.core.dto.AuthResponse;
 import com.nexacore.authmodule.sso.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.sso.service.SsoAuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;

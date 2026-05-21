@@ -1,12 +1,12 @@
 package com.nexacore.kycmodule.service.implementations;
 
-import com.nexacore.authmodule.dto.PrivilegeActionDefinitionDto;
-import com.nexacore.authmodule.dto.PrivilegeFeatureDefinitionDto;
-import com.nexacore.authmodule.dto.PrivilegeMenuItemDto;
-import com.nexacore.authmodule.service.interfaces.ModulePrivilegeProvider;
-import com.nexacore.authmodule.enums.ApplicationModule;
-import com.nexacore.authmodule.enums.FeatureType;
-import com.nexacore.authmodule.enums.PrivilegeAction;
+import com.nexacore.authmodule.core.dto.PrivilegeActionDefinitionDto;
+import com.nexacore.authmodule.core.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.authmodule.core.dto.PrivilegeMenuItemDto;
+import com.nexacore.authmodule.core.service.interfaces.ModulePrivilegeProvider;
+import com.nexacore.authmodule.core.enums.ApplicationModule;
+import com.nexacore.authmodule.core.enums.FeatureType;
+import com.nexacore.authmodule.core.enums.PrivilegeAction;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.nexacore.appconfigmodule.filters;
 
-import com.nexacore.authmodule.entity.ApiAuditLog;
-import com.nexacore.authmodule.repository.ApiAuditLogRepository;
+import com.nexacore.authmodule.core.entity.ApiAuditLog;
+import com.nexacore.authmodule.core.repository.ApiAuditLogRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
