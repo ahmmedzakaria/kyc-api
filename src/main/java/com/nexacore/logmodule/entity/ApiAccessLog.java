@@ -1,13 +1,19 @@
-package com.nexacore.authmodule.core.entity;
+package com.nexacore.logmodule.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+
 @Data
 @Entity
-@Table(name = "api_audit_log")
-public class ApiAuditLog {
+@Table(name = "api_access_log")
+public class ApiAccessLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -15,6 +21,7 @@ public class ApiAuditLog {
     private String method;
     private String uri;
     private int status;
+    private String username;
 
     @Column(columnDefinition = "TEXT")
     private String requestBody;
@@ -22,7 +29,5 @@ public class ApiAuditLog {
     @Column(columnDefinition = "TEXT")
     private String responseBody;
 
-    private String username;
     private LocalDateTime createdAt = LocalDateTime.now();
 }
-
