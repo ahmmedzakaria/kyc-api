@@ -178,9 +178,9 @@ messaging.mobile.gateway-url=${MOBILE_MESSAGING_GATEWAY_URL:}
 messaging.mobile.api-key=${MOBILE_MESSAGING_API_KEY:}
 messaging.mobile.auth-header-name=${MOBILE_MESSAGING_AUTH_HEADER_NAME:Authorization}
 messaging.mobile.auth-header-prefix=${MOBILE_MESSAGING_AUTH_HEADER_PREFIX:Bearer}
-messaging.mobile.sender-id=${MOBILE_MESSAGING_SENDER_ID:NexaCore}
+messaging.mobile.sender-id=${MOBILE_MESSAGING_SENDER_ID:${app.name}}
 messaging.mobile.timeout-seconds=${MOBILE_MESSAGING_TIMEOUT_SECONDS:10}
-messaging.mobile.otp-template=${MOBILE_MESSAGING_OTP_TEMPLATE:Your NexaCore OTP is %s. It will expire in %d minutes.}
+messaging.mobile.otp-template=${MOBILE_MESSAGING_OTP_TEMPLATE:Your ${app.name} OTP is %s. It will expire in %d minutes.}
 ```
 
 Docker Compose passes the same environment variables to the backend service.
@@ -233,4 +233,3 @@ When messaging is enabled:
 - Add provider-specific response parsing by enriching `MobileMessageResponse`.
 - Add persistence or audit logging around `sendMessage(...)` if delivery attempts must be tracked.
 - Add retry/rate-limit behavior outside this service or through a dedicated provider adapter if SMS delivery becomes business-critical.
-

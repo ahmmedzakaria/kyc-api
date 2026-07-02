@@ -23,10 +23,9 @@ public class MobileMessagingProperties {
 
     private String authHeaderPrefix = "Bearer";
 
-    private String senderId = "NexaCore";
+    private String senderId;
 
     private int timeoutSeconds = 10;
 
-    private String otpTemplate = "Your NexaCore OTP is %s. It will expire in %d minutes.";
+    private String otpTemplate;
 }
-
