@@ -1,0 +1,3 @@
+-- Baseline migration for auth_db.
+-- Existing auth tables are currently managed by JPA during the transition to Flyway.
+-- Add future auth schema changes as V2__, V3__, etc. in this folder.

@@ -1,0 +1,3 @@
+-- Baseline migration for kyc_db.
+-- Existing KYC tables are currently managed by JPA during the transition to Flyway.
+-- Add future KYC schema changes as V2__, V3__, etc. in this folder.

@@ -1,0 +1,3 @@
+-- Baseline migration for log_db.
+-- Existing log tables are currently managed by JPA during the transition to Flyway.
+-- Add future log schema changes as V2__, V3__, etc. in this folder.

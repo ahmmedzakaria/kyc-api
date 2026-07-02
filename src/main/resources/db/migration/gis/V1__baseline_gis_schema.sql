@@ -1,0 +1,3 @@
+-- Baseline migration for gisdb.
+-- Existing GIS tables are currently managed by JPA during the transition to Flyway.
+-- Add future GIS schema changes as V2__, V3__, etc. in this folder.
