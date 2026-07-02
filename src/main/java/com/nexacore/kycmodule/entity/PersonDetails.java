@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "person_details")
+@Table(name = "kyc_person_details")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -52,4 +52,3 @@ public class PersonDetails {
     private LocalDateTime updatedAt = LocalDateTime.now();
     private Long updatedBy;
 }
-

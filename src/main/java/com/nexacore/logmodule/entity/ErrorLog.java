@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "error_log")
+@Table(name = "log_error_log")
 public class ErrorLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -17,7 +17,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "privileges")
+@Table(name = "auth_privileges")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

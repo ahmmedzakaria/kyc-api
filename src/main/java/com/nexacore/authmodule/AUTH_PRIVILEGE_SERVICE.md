@@ -112,11 +112,11 @@ The privilege system uses these core tables:
 
 | Table | Purpose |
 | --- | --- |
-| `privileges` | Catalog of all available privileges |
-| `role_privileges` | Privileges assigned to roles |
-| `user_privileges` | Direct privileges assigned to users |
-| `roles` | Existing role table |
-| `users` | Existing user table |
+| `auth_privileges` | Catalog of all available privileges |
+| `auth_role_privileges` | Privileges assigned to roles |
+| `auth_user_privileges` | Direct privileges assigned to users |
+| `auth_roles` | Existing role table |
+| `auth_users` | Existing user table |
 
 Effective user access is calculated as:
 

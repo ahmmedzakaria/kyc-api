@@ -13,7 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "sub_menus")
+@Table(name = "auth_sub_menus")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -10,7 +10,7 @@ import org.hibernate.annotations.GenericGenerator;
 import java.util.UUID;
 
 @Entity
-@Table(name = "administrative_boundaries_level_5", schema = "public")
+@Table(name = "gis_administrative_boundaries_level_5", schema = "public")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -91,4 +91,3 @@ public class AdministrativeBoundariesLevel5 {
 
     */
 }
-

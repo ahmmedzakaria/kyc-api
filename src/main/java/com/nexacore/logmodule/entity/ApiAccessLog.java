@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "api_access_log")
+@Table(name = "log_api_access_log")
 public class ApiAccessLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
