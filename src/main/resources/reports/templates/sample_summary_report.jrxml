@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="sample_summary_report"
+              pageWidth="595"
+              pageHeight="842"
+              columnWidth="515"
+              leftMargin="40"
+              rightMargin="40"
+              topMargin="40"
+              bottomMargin="40"
+              uuid="d287e7ec-e24f-4cd5-9d92-1c146e3b3e5b">
+    <property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
+    <parameter name="REPORT_TITLE" class="java.lang.String"/>
+    <field name="label" class="java.lang.String"/>
+    <field name="value" class="java.lang.String"/>
+    <title>
+        <band height="60">
+            <textField>
+                <reportElement x="0" y="0" width="515" height="32" uuid="2149b623-a2b2-4240-88c3-00f9f879747e"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="18" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{REPORT_TITLE} == null ? "Report" : $P{REPORT_TITLE}]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+    <columnHeader>
+        <band height="24">
+            <staticText>
+                <reportElement x="0" y="0" width="260" height="24" uuid="11fbb139-2d31-48fb-bd74-7aab8f1f6e18"/>
+                <textElement verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Label]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="260" y="0" width="255" height="24" uuid="57d65441-02b6-4c0f-b8d9-e701280371dc"/>
+                <textElement verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Value]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+    <detail>
+        <band height="22">
+            <textField>
+                <reportElement x="0" y="0" width="260" height="22" uuid="f62a1675-e9da-470f-aeb2-59f528e4c04e"/>
+                <textElement verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{label}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="260" y="0" width="255" height="22" uuid="6028782a-01e6-4417-9f2f-c9a39f4a4867"/>
+                <textElement verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{value}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+</jasperReport>
