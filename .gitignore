@@ -1,2 +1,5 @@
 /target/
 /uploads/
+firebase-service-account.json
+**/firebase-service-account.json
+**/*service-account*.json
