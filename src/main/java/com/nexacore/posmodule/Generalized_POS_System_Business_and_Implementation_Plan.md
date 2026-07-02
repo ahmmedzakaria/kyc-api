@@ -830,7 +830,8 @@ Controller expectations:
 17. Use `fileservice` for product images, receipt files, and imported purchase documents.
 18. Use `cacheservice` for product lookup, branch settings, and active promotions.
 19. Use `logmodule` for API access/error logging and domain audit events.
-20. Add focused tests for service calculations, provider selection, and controller validation.
+20. Add Testcontainers-backed integration tests for database, Flyway, repository, and controller behavior.
+21. Add focused unit tests for service calculations, provider selection, and validation rules.
 
 ## Key Business Rules
 
@@ -863,6 +864,53 @@ Implementation approach:
 - Shared `reportservice` renders the output using the configured provider.
 - Use JasperReports first for PDF/XLSX operational reports.
 - Keep Metabase separate for dashboards and self-service analytics.
+
+## Testing Strategy
+
+Use regular unit tests for domain calculations and Testcontainers for integration tests that need a real PostgreSQL database.
+
+Current backend test foundation:
+
+```text
+src/test/java/com/nexacore/support/PostgresTestContainers.java
+src/test/java/com/nexacore/NexaCoreApplicationTest.java
+src/test/resources/application-test.properties
+```
+
+Testcontainers should start isolated PostgreSQL containers for the same datasource split used by the application:
+
+```text
+auth_db
+kyc_db
+gisdb
+log_db
+```
+
+Use Testcontainers for:
+
+- Flyway migration verification.
+- JPA repository tests.
+- multi-datasource transaction behavior.
+- POS repository and service integration tests.
+- report export persistence checks.
+- audit/log write verification.
+- tenant/business isolation queries.
+
+Do not use Testcontainers for:
+
+- simple pure Java calculations.
+- DTO mapper tests.
+- enum or validation helper tests.
+- provider selection logic that can be tested with mocks.
+
+Recommended test command:
+
+```bash
+cd backend
+mvn test
+```
+
+Docker must be running before executing Testcontainers tests.
 
 ## Frontend Fit
 
