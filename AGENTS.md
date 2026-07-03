@@ -102,6 +102,15 @@ Business modules must not depend on concrete provider classes such as `JasperRep
 - Store credentials through environment variables, ignored local files, vaults, or encrypted configuration.
 - Apply business and branch filtering for multi-business data access.
 
+## Internationalization Rules
+
+- Avoid hard-coded user-facing response, validation, notification, report, and ESB error text in new backend code.
+- Use stable message codes such as `auth.login.success`, `kyc.person.created`, `esb.route.disabled`, or `queueing.publish.failed`.
+- Keep shared i18n infrastructure in `commonmodule`.
+- Backend should resolve API/business/validation messages and return both message code and localized fallback text when response DTOs support it.
+- Frontend apps should own UI labels and send `Accept-Language` on API requests.
+- Add or update message bundle entries when introducing new user-facing messages.
+
 ## Documentation Rules
 
 - Keep implementation plans aligned with the current project structure.
