@@ -1147,6 +1147,61 @@ pos.tax-inclusive-pricing=${POS_TAX_INCLUSIVE_PRICING:false}
 pos.low-stock-threshold=${POS_LOW_STOCK_THRESHOLD:5}
 ```
 
+## Observability
+
+Use Spring Boot Actuator, Micrometer, OpenTelemetry, Prometheus, Tempo, and Grafana for backend observability.
+
+Recommended runtime flow:
+
+```text
+nexacore-backend
+  -> /actuator/prometheus
+  -> Prometheus
+  -> Grafana
+
+nexacore-backend
+  -> OTLP HTTP traces
+  -> OpenTelemetry Collector
+  -> Tempo
+  -> Grafana
+```
+
+Use observability for:
+
+- API latency by endpoint.
+- error rate by endpoint/module.
+- slow database/repository operations.
+- report generation duration.
+- payment/refund workflow tracing.
+- notification delivery tracing.
+- cache hit/miss analysis.
+- correlation between API access logs and trace ids.
+
+Do not log sensitive request/response bodies into traces. Trace attributes should use safe identifiers such as `business_id`, `branch_id`, `module_code`, `feature_code`, `request_id`, and masked references only.
+
+Local observability stack:
+
+```bash
+OTEL_TRACING_ENABLED=true docker compose --profile observability up -d
+```
+
+Local URLs:
+
+```text
+Prometheus: http://localhost:9090
+Grafana:    http://localhost:3002
+Tempo:      http://localhost:3200
+```
+
+Backend observability defaults:
+
+```properties
+management.endpoints.web.exposure.include=health,info,prometheus,metrics
+management.tracing.enabled=false
+management.tracing.sampling.probability=0.10
+management.opentelemetry.tracing.export.otlp.endpoint=http://localhost:4318/v1/traces
+```
+
 ## Suggested Platform Additions
 
 Adopt new tools in phases so the POS module improves reliability and reporting without adding too much operational complexity at once.
