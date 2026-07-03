@@ -36,6 +36,20 @@ public class ApiResponse<T> {
         return response;
     }
 
+    public static <T> ApiResponse<T> successCode(T data, String code, String message) {
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setStatusCode(200);
+        response.setStatus("SUCCESS");
+        response.message.add(new ResponseMessage(MessageType.SUCCESS, code, message));
+        response.setData(data);
+
+        return response;
+    }
+
+    public static <T> ApiResponse<T> successCode(String code, String message) {
+        return successCode(null, code, message);
+    }
+
     public static <T> ApiResponse<T> success( String message) {
         ApiResponse<T> response = new ApiResponse<>();
         response.setStatusCode(200);
@@ -59,7 +73,7 @@ public class ApiResponse<T> {
 
     public static <T> ApiResponse<T> error(T data, int status, List<String> message) {
         ApiResponse<T> response = new ApiResponse<>();
-        response.setStatusCode(500);
+        response.setStatusCode(status);
         response.setStatus("ERROR");
         response.message.addAll(buildResponseMessage(message, MessageType.ERROR));
         response.setData(data);
@@ -81,10 +95,24 @@ public class ApiResponse<T> {
         ApiResponse<T> response = new ApiResponse<>();
         response.setStatusCode(status);
         response.setStatus("ERROR");
-        response.message.add(new ResponseMessage(MessageType.SUCCESS, message));
+        response.message.add(new ResponseMessage(MessageType.ERROR, message));
         response.setData(null);
 
         return response;
+    }
+
+    public static <T> ApiResponse<T> errorCode(T data, int status, String code, String message) {
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setStatusCode(status);
+        response.setStatus("ERROR");
+        response.message.add(new ResponseMessage(MessageType.ERROR, code, message));
+        response.setData(data);
+
+        return response;
+    }
+
+    public static <T> ApiResponse<T> errorCode(int status, String code, String message) {
+        return errorCode(null, status, code, message);
     }
 
     public static List<ResponseMessage> buildResponseMessage( List<String> message,MessageType messageType) {
