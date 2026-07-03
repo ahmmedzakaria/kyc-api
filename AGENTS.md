@@ -108,6 +108,17 @@ Business modules must not depend on concrete provider classes such as `JasperRep
 - When adding planned tables to documents, include module-prefixed table names and the required audit columns.
 - When proposing new infrastructure, clarify whether it belongs in code, Docker Compose, gateway/reverse proxy, or future deployment infrastructure.
 
+## Unit Test Rules
+
+- Add unit tests for every new backend module, submodule, reusable service, provider, and feature implementation.
+- Place tests in the matching package under `src/test/java`.
+- Test service behavior through public interfaces where practical.
+- Mock external infrastructure in unit tests, including RabbitMQ, SMTP, SMS gateways, payment gateways, file storage providers, and HTTP clients.
+- Use Testcontainers only for integration tests that explicitly need real infrastructure.
+- Cover disabled configuration paths, missing provider/configuration failures, success responses, failure responses, validation rules, and sensitive-data masking.
+- For provider-based services, test both the service resolver and the provider implementation.
+- Run `mvn test` before completing backend implementation work.
+
 ## Verification
 
 Run the narrowest meaningful checks for the files touched:

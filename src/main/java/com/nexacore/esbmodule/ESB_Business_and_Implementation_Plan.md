@@ -112,6 +112,7 @@ Use `servicesmodule` for concrete provider execution:
 
 ```text
 esbmodule
+  -> servicesmodule.queueingservice
   -> servicesmodule.emailservice
   -> servicesmodule.messagingservice
   -> servicesmodule.reportservice
@@ -472,6 +473,8 @@ Initial async implementation can use database polling over `esb_request`. Rabbit
 Business module
   -> EsbRoutingService.submit(..., requestedMode=ASYNC)
   -> esb_request row
+  -> QueueingService
+  -> RabbitMqQueueProvider
   -> RabbitMQ message containing request_id
   -> ESB worker
   -> load esb_request
@@ -487,6 +490,7 @@ Business module
 | `authmodule` | Provides authenticated user and privilege context; ESB must not bypass auth |
 | `commonmodule.business` | Provides business/branch/subscription context |
 | `logmodule` | Owns API access/error/audit logs; ESB may add integration-specific logs |
+| `servicesmodule.queueingservice` | ESB can publish async request ids or background jobs to RabbitMQ |
 | `servicesmodule.messagingservice` | ESB can route SMS/mobile messages |
 | `servicesmodule.emailservice` | ESB can route email notifications |
 | `servicesmodule.reportservice` | ESB can route report rendering/export jobs |
@@ -554,6 +558,23 @@ esb.async.default-retry-delay-seconds=${ESB_ASYNC_DEFAULT_RETRY_DELAY_SECONDS:60
 
 Keep ESB disabled by default until routes and provider mappings are added.
 
+Queueing service configuration for RabbitMQ-backed async dispatch:
+
+```properties
+queueing.service.enabled=${QUEUEING_SERVICE_ENABLED:false}
+queueing.service.provider-name=${QUEUEING_SERVICE_PROVIDER:rabbitmq}
+queueing.service.auto-declare=${QUEUEING_SERVICE_AUTO_DECLARE:false}
+queueing.service.default-exchange=${QUEUEING_SERVICE_DEFAULT_EXCHANGE:}
+queueing.service.default-queue=${QUEUEING_SERVICE_DEFAULT_QUEUE:nexacore.default}
+queueing.service.default-routing-key=${QUEUEING_SERVICE_DEFAULT_ROUTING_KEY:nexacore.default}
+
+spring.rabbitmq.host=${RABBITMQ_HOST:localhost}
+spring.rabbitmq.port=${RABBITMQ_PORT:5672}
+spring.rabbitmq.username=${RABBITMQ_USERNAME:guest}
+spring.rabbitmq.password=${RABBITMQ_PASSWORD:guest}
+spring.rabbitmq.virtual-host=${RABBITMQ_VIRTUAL_HOST:/}
+```
+
 ## Docker And Deployment Plan
 
 ### Current Phase
@@ -601,6 +622,7 @@ RabbitMQ
 - Add Flyway migration for `esb_*` tables.
 - Add route repository and service interfaces.
 - Add configuration properties.
+- Add unit tests for route resolution, request mode resolution, repository/service behavior, and validation rules.
 
 ### Phase 3: Provider Routing
 
@@ -610,6 +632,7 @@ RabbitMQ
 - Implement `PRIMARY_ONLY` and `FAILOVER` strategies first.
 - Connect to existing `emailservice`, `messagingservice`, and `reportservice`.
 - Add sanitized integration logging.
+- Add unit tests for provider selection, failover decisions, disabled routes, missing providers, and sanitized logging.
 
 ### Phase 4: Database-Backed Async Requests
 
@@ -619,6 +642,7 @@ RabbitMQ
 - Add polling worker for pending async requests.
 - Add retry and dead-letter state transitions.
 - Keep RabbitMQ out until async volume justifies it.
+- Add unit tests for request status transitions, retry count handling, dead-letter movement, idempotency checks, and status lookup responses.
 
 ### Phase 5: Resilience
 
@@ -627,6 +651,7 @@ RabbitMQ
 - Add circuit breaker support.
 - Add provider health checks.
 - Add OpenTelemetry metrics and traces.
+- Add unit tests for timeout handling, retry limits, circuit-breaker state decisions, provider health evaluation, and safe trace attributes.
 
 ### Phase 6: Load-Balanced Runtime
 
@@ -639,10 +664,47 @@ RabbitMQ
 ### Phase 7: RabbitMQ Async ESB
 
 - Add RabbitMQ.
-- Publish async request ids to queue after `esb_request` persistence.
+- Use `servicesmodule.queueingservice.QueueingService` to publish async request ids after `esb_request` persistence.
 - Add retry queue and dead-letter queue.
 - Add delayed retry scheduling.
 - Move high-volume async report and notification jobs from polling to RabbitMQ.
+- Add unit tests with mocked RabbitMQ/AMQP components. Do not require a running RabbitMQ broker for normal unit tests.
+
+## Unit Test Convention
+
+Unit tests are required for every new backend module, submodule, reusable service, provider, and feature implementation.
+
+Project convention:
+
+- Add tests in the matching package under `src/test/java`.
+- Test service behavior through public interfaces where practical.
+- Test provider behavior without requiring external systems. Mock RabbitMQ, SMTP, SMS gateways, payment gateways, file storage, and HTTP clients in unit tests.
+- Keep Testcontainers for integration tests that explicitly need real infrastructure.
+- Cover disabled configuration paths, missing provider/configuration failures, success responses, failure responses, validation rules, and sensitive-data masking.
+- For ESB, test `SYNC` and `ASYNC` mode resolution separately from actual provider execution.
+- For queueing, test the generalized `QueueingService` contract and provider implementations such as `RabbitMqQueueProvider`.
+- Run `mvn test` before completing backend implementation work.
+
+Current queueing-service test pattern:
+
+```text
+src/test/java/com/nexacore/servicesmodule/queueingservice
+├── provider/implementations/RabbitMqQueueProviderTest.java
+└── service/implementations/QueueingServiceImplTest.java
+```
+
+Required ESB test areas:
+
+| Area | Test examples |
+| --- | --- |
+| Route resolution | enabled route, disabled route, missing route |
+| Request mode | default `SYNC`, default `ASYNC`, override allowed, override blocked |
+| Provider selection | primary only, failover, missing provider, weighted strategy later |
+| Async request state | received, processing, success, failed, retry pending, dead letter |
+| Idempotency | duplicate sensitive request blocked or reused safely |
+| Security | sensitive payload not logged, safe metadata only |
+| Queue dispatch | async request id published through `QueueingService`, RabbitMQ failure handled |
+| Observability | safe route/provider/status attributes only |
 
 ## Recommended First Routes
 
@@ -676,6 +738,7 @@ RabbitMQ
 - Use ESB for provider routing, failover, transformation, retry, audit, and future async jobs.
 - Make every ESB route configurable as `SYNC` or `ASYNC`, with optional caller override only when the route explicitly allows it.
 - Start async execution with database-backed `esb_request` persistence before introducing RabbitMQ.
+- Use generalized `queueingservice` for RabbitMQ dispatch instead of calling RabbitMQ directly from ESB.
 - Reuse existing `servicesmodule` provider abstractions instead of duplicating provider code.
 - Start with synchronous `PRIMARY_ONLY` and `FAILOVER` routes.
 - Add RabbitMQ only when async jobs are actually implemented.
