@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RolePrivilegeRepository extends JpaRepository<RolePrivilege, RolePrivilegeId> {
     void deleteByIdRoleId(Long roleId);
+
+    long countByIdRoleId(Long roleId);
 }

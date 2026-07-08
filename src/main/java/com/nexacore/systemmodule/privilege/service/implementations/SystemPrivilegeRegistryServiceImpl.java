@@ -89,6 +89,12 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public long countRolePrivileges(Long roleId) {
+        return rolePrivilegeRepository.countByIdRoleId(roleId);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public long countSubMenus() {
         return subMenuRepository.count();
     }

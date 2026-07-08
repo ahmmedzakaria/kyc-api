@@ -33,11 +33,6 @@ public class DataSeeder {
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            if (isAlreadySeeded(roleRepository, userRepository, systemPrivilegeRegistryService)) {
-                System.out.println("Auth seed data already exists. Skipping data seeding.");
-                return;
-            }
-
             Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_ADMIN"));
             Role kycOperatorRole = roleRepository.findByName("ROLE_KYC_OPERATOR")
@@ -49,7 +44,7 @@ public class DataSeeder {
 
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
             systemPrivilegeRegistryService.assignRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
-            assignRolePrivileges(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
+            assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
@@ -59,7 +54,7 @@ public class DataSeeder {
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
             ));
-            assignRolePrivileges(systemPrivilegeRegistryService, kycApproverRole, Set.of(
+            assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, kycApproverRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.REJECT),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEND_BACK),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
@@ -67,14 +62,10 @@ public class DataSeeder {
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
             ));
-            assignRolePrivileges(systemPrivilegeRegistryService, reportViewerRole, Set.of(
+            assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, reportViewerRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.VIEW),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.SEARCH)
             ));
-            roleRepository.save(adminRole);
-            roleRepository.save(kycOperatorRole);
-            roleRepository.save(kycApproverRole);
-            roleRepository.save(reportViewerRole);
 
             seedDefaultUser(userRepository, passwordEncoder,
                     "admin", "123", "admin@example.com", "01700000000", adminRole);
@@ -94,15 +85,6 @@ public class DataSeeder {
         };
     }
 
-    private boolean isAlreadySeeded(RoleRepository roleRepository,
-                                    UserRepository userRepository,
-                                    SystemPrivilegeRegistryService systemPrivilegeRegistryService) {
-        return roleRepository.findByName("ROLE_ADMIN").isPresent()
-                && userRepository.findByUsername("admin").isPresent()
-                && systemPrivilegeRegistryService.countPrivileges() > 0
-                && systemPrivilegeRegistryService.countSubMenus() > 0;
-    }
-
     private void seedDefaultUser(UserRepository userRepository,
                                  PasswordEncoder passwordEncoder,
                                  String username,
@@ -111,7 +93,14 @@ public class DataSeeder {
                                  String mobile,
                                  Role... roles) {
 
-        User user = userRepository.findByUsername(username).orElseGet(User::new);
+        User existingUser = userRepository.findByUsername(username).orElse(null);
+        if (existingUser != null) {
+            existingUser.getRoles().addAll(List.of(roles));
+            userRepository.save(existingUser);
+            return;
+        }
+
+        User user = new User();
         user.setUsername(username);
         user.setEmail(email);
         user.setMobileNumber(mobile);
@@ -218,7 +207,10 @@ public class DataSeeder {
         return systemPrivilegeRegistryService.savePrivilege(privilege);
     }
 
-    private void assignRolePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService, Role role, Set<String> privilegeCodes) {
+    private void assignRolePrivilegesIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService, Role role, Set<String> privilegeCodes) {
+        if (systemPrivilegeRegistryService.countRolePrivileges(role.getId()) > 0) {
+            return;
+        }
         systemPrivilegeRegistryService.assignRolePrivileges(role.getId(), privilegeCodes);
     }
 
