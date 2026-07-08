@@ -10,6 +10,8 @@ public class SubMenuRequestDto {
     private String icon;
     private String moduleCode;
     private String moduleName;
+    private String submoduleCode;
+    private String submoduleName;
     private String featureTypeCode;
     private String featureTypeName;
     private String featureCode;

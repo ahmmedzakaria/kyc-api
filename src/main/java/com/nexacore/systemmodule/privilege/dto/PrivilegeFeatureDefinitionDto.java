@@ -15,6 +15,8 @@ import java.util.List;
 public class PrivilegeFeatureDefinitionDto {
     private String moduleCode;
     private String moduleName;
+    private String submoduleCode;
+    private String submoduleName;
     private String featureTypeCode;
     private String featureTypeName;
     private String featureCode;

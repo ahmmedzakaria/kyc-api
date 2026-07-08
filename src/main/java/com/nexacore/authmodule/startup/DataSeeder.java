@@ -12,6 +12,7 @@ import com.nexacore.authmodule.core.repository.SubMenuRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
+import com.nexacore.systemmodule.privilege.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.enums.PrivilegeAction;
 import org.springframework.boot.CommandLineRunner;
@@ -50,26 +51,26 @@ public class DataSeeder {
 
             seedModulePrivileges(privilegeRepository, subMenuRepository, adminRole, modulePrivilegeProviders);
             assignRolePrivileges(privilegeRepository, kycOperatorRole, Set.of(
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "002", PrivilegeAction.CREATE),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "002", PrivilegeAction.UPDATE),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.CREATE),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.UPDATE),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
             ));
             assignRolePrivileges(privilegeRepository, kycApproverRole, Set.of(
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.REJECT),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.SEND_BACK),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.REJECT),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEND_BACK),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
             ));
             assignRolePrivileges(privilegeRepository, reportViewerRole, Set.of(
-                    code(ApplicationModule.KYC, FeatureType.REPORT, "003", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, FeatureType.REPORT, "003", PrivilegeAction.SEARCH)
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.VIEW),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.SEARCH)
             ));
             roleRepository.save(adminRole);
             roleRepository.save(kycOperatorRole);
@@ -162,8 +163,9 @@ public class DataSeeder {
         String url = menuItem == null ? "/" + feature.getFeatureName().toLowerCase().replace(" ", "-") : menuItem.getPath();
         String icon = menuItem == null ? feature.getIcon() : menuItem.getIcon();
 
-        SubMenu subMenu = subMenuRepository.findFirstByModuleCodeAndFeatureTypeCodeAndFeatureCodeAndUrl(
+        SubMenu subMenu = subMenuRepository.findFirstByModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndFeatureCodeAndUrl(
                         feature.getModuleCode(),
+                        feature.getSubmoduleCode(),
                         feature.getFeatureTypeCode(),
                         feature.getFeatureCode(),
                         url
@@ -175,6 +177,8 @@ public class DataSeeder {
         subMenu.setIcon(icon);
         subMenu.setModuleCode(feature.getModuleCode());
         subMenu.setModuleName(feature.getModuleName());
+        subMenu.setSubmoduleCode(feature.getSubmoduleCode());
+        subMenu.setSubmoduleName(feature.getSubmoduleName());
         subMenu.setFeatureTypeCode(feature.getFeatureTypeCode());
         subMenu.setFeatureTypeName(feature.getFeatureTypeName());
         subMenu.setFeatureCode(feature.getFeatureCode());
@@ -193,13 +197,15 @@ public class DataSeeder {
                                              String actionCode,
                                              String actionName,
                                              SubMenu subMenu) {
-        String privilegeCode = feature.getModuleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
+        String privilegeCode = feature.getModuleCode() + feature.getSubmoduleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
 
         Privilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
                 .orElseGet(() -> Privilege.builder()
                         .privilegeCode(privilegeCode)
                         .moduleCode(feature.getModuleCode())
                         .moduleName(feature.getModuleName())
+                        .submoduleCode(feature.getSubmoduleCode())
+                        .submoduleName(feature.getSubmoduleName())
                         .featureTypeCode(feature.getFeatureTypeCode())
                         .featureTypeName(feature.getFeatureTypeName())
                         .featureCode(feature.getFeatureCode())
@@ -219,9 +225,10 @@ public class DataSeeder {
     }
 
     private String code(ApplicationModule applicationModule,
+                        ApplicationSubmodule applicationSubmodule,
                         FeatureType featureType,
                         String featureCode,
                         PrivilegeAction privilegeAction) {
-        return applicationModule.getCode() + featureType.getCode() + featureCode + privilegeAction.getCode();
+        return applicationModule.getCode() + applicationSubmodule.getCode() + featureType.getCode() + featureCode + privilegeAction.getCode();
     }
 }

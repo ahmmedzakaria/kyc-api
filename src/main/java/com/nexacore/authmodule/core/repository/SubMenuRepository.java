@@ -7,12 +7,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SubMenuRepository extends JpaRepository<SubMenu, Long> {
-    Optional<SubMenu> findFirstByModuleCodeAndFeatureTypeCodeAndFeatureCodeAndUrl(
+    Optional<SubMenu> findFirstByModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndFeatureCodeAndUrl(
             String moduleCode,
+            String submoduleCode,
             String featureTypeCode,
             String featureCode,
             String url
     );
 
-    List<SubMenu> findByActiveTrueOrderByModuleCodeAscFeatureTypeCodeAscFeatureCodeAscNameAsc();
+    List<SubMenu> findByActiveTrueOrderByModuleCodeAscSubmoduleCodeAscFeatureTypeCodeAscFeatureCodeAscNameAsc();
 }

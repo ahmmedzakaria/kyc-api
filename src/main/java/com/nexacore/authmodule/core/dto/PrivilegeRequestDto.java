@@ -6,6 +6,8 @@ import lombok.Data;
 public class PrivilegeRequestDto {
     private String moduleCode;
     private String moduleName;
+    private String submoduleCode;
+    private String submoduleName;
     private String featureTypeCode;
     private String featureTypeName;
     private String featureCode;

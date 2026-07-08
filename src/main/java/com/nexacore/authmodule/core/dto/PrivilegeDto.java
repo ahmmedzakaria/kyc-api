@@ -15,6 +15,8 @@ public class PrivilegeDto {
     private String privilegeCode;
     private String moduleCode;
     private String moduleName;
+    private String submoduleCode;
+    private String submoduleName;
     private String featureTypeCode;
     private String featureTypeName;
     private String featureCode;
@@ -32,6 +34,8 @@ public class PrivilegeDto {
                 .privilegeCode(privilege.getPrivilegeCode())
                 .moduleCode(privilege.getModuleCode())
                 .moduleName(privilege.getModuleName())
+                .submoduleCode(privilege.getSubmoduleCode())
+                .submoduleName(privilege.getSubmoduleName())
                 .featureTypeCode(privilege.getFeatureTypeCode())
                 .featureTypeName(privilege.getFeatureTypeName())
                 .featureCode(privilege.getFeatureCode())

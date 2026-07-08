@@ -17,6 +17,8 @@ public class SubMenuDto {
     private String icon;
     private String moduleCode;
     private String moduleName;
+    private String submoduleCode;
+    private String submoduleName;
     private String featureTypeCode;
     private String featureTypeName;
     private String featureCode;
@@ -33,6 +35,8 @@ public class SubMenuDto {
                 .icon(subMenu.getIcon())
                 .moduleCode(subMenu.getModuleCode())
                 .moduleName(subMenu.getModuleName())
+                .submoduleCode(subMenu.getSubmoduleCode())
+                .submoduleName(subMenu.getSubmoduleName())
                 .featureTypeCode(subMenu.getFeatureTypeCode())
                 .featureTypeName(subMenu.getFeatureTypeName())
                 .featureCode(subMenu.getFeatureCode())

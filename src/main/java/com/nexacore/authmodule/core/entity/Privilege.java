@@ -28,7 +28,7 @@ public class Privilege extends ActionInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 9)
+    @Column(nullable = false, unique = true, length = 11)
     private String privilegeCode;
 
     @Column(nullable = false, length = 2)
@@ -36,6 +36,12 @@ public class Privilege extends ActionInfo {
 
     @Column(nullable = false)
     private String moduleName;
+
+    @Column(nullable = false, length = 2)
+    private String submoduleCode;
+
+    @Column(nullable = false)
+    private String submoduleName;
 
     @Column(nullable = false, length = 2)
     private String featureTypeCode;

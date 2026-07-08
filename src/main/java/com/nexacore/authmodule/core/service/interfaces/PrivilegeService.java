@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 public interface PrivilegeService {
-    String buildPrivilegeCode(String moduleCode, String featureTypeCode, String featureCode, String actionCode);
+    String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode);
 
     PrivilegeDto savePrivilege(PrivilegeRequestDto requestDto);
 

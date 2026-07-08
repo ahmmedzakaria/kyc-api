@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
+import com.nexacore.systemmodule.privilege.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.enums.PrivilegeAction;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,8 @@ public class AuthPrivilegeProvider implements ModulePrivilegeProvider {
         return PrivilegeFeatureDefinitionDto.builder()
                 .moduleCode(ApplicationModule.AUTH.getCode())
                 .moduleName(ApplicationModule.AUTH.getDisplayName())
+                .submoduleCode(ApplicationSubmodule.SYS_PRIVILEGE.getCode())
+                .submoduleName(ApplicationSubmodule.SYS_PRIVILEGE.getDisplayName())
                 .featureTypeCode(FeatureType.SETUP.getCode())
                 .featureTypeName(FeatureType.SETUP.getDisplayName())
                 .featureCode(PRIVILEGE_FEATURE_CODE)
@@ -61,6 +64,7 @@ public class AuthPrivilegeProvider implements ModulePrivilegeProvider {
 
     private String privilegeCode(PrivilegeAction action) {
         return ApplicationModule.AUTH.getCode()
+                + ApplicationSubmodule.SYS_PRIVILEGE.getCode()
                 + FeatureType.SETUP.getCode()
                 + PRIVILEGE_FEATURE_CODE
                 + action.getCode();

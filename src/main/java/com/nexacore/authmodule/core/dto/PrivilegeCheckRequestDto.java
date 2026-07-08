@@ -7,6 +7,7 @@ public class PrivilegeCheckRequestDto {
     private String username;
     private String privilegeCode;
     private String moduleCode;
+    private String submoduleCode;
     private String featureTypeCode;
     private String featureCode;
     private String actionCode;

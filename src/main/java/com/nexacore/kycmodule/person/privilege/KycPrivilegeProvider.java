@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
+import com.nexacore.systemmodule.privilege.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.enums.PrivilegeAction;
 import org.springframework.stereotype.Component;
@@ -111,6 +112,8 @@ public class KycPrivilegeProvider implements ModulePrivilegeProvider {
         return PrivilegeFeatureDefinitionDto.builder()
                 .moduleCode(ApplicationModule.KYC.getCode())
                 .moduleName(ApplicationModule.KYC.getDisplayName())
+                .submoduleCode(ApplicationSubmodule.KYC_PERSON.getCode())
+                .submoduleName(ApplicationSubmodule.KYC_PERSON.getDisplayName())
                 .featureTypeCode(featureType.getCode())
                 .featureTypeName(featureType.getDisplayName())
                 .featureCode(featureCode)
@@ -140,6 +143,10 @@ public class KycPrivilegeProvider implements ModulePrivilegeProvider {
     }
 
     private String privilegeCode(FeatureType featureType, String featureCode, PrivilegeAction action) {
-        return ApplicationModule.KYC.getCode() + featureType.getCode() + featureCode + action.getCode();
+        return ApplicationModule.KYC.getCode()
+                + ApplicationSubmodule.KYC_PERSON.getCode()
+                + featureType.getCode()
+                + featureCode
+                + action.getCode();
     }
 }

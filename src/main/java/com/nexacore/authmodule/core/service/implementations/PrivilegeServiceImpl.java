@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 public class PrivilegeServiceImpl implements PrivilegeService {
 
     private static final int MODULE_CODE_LENGTH = 2;
+    private static final int SUBMODULE_CODE_LENGTH = 2;
     private static final int FEATURE_TYPE_CODE_LENGTH = 2;
     private static final int FEATURE_CODE_LENGTH = 3;
     private static final int ACTION_CODE_LENGTH = 2;
@@ -51,13 +52,14 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
 
     @Override
-    public String buildPrivilegeCode(String moduleCode, String featureTypeCode, String featureCode, String actionCode) {
+    public String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode) {
         validateCodePart(moduleCode, MODULE_CODE_LENGTH, "moduleCode");
+        validateCodePart(submoduleCode, SUBMODULE_CODE_LENGTH, "submoduleCode");
         validateCodePart(featureTypeCode, FEATURE_TYPE_CODE_LENGTH, "featureTypeCode");
         validateCodePart(featureCode, FEATURE_CODE_LENGTH, "featureCode");
         validateCodePart(actionCode, ACTION_CODE_LENGTH, "actionCode");
 
-        return moduleCode + featureTypeCode + featureCode + actionCode;
+        return moduleCode + submoduleCode + featureTypeCode + featureCode + actionCode;
     }
 
     @Override
@@ -65,6 +67,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public PrivilegeDto savePrivilege(PrivilegeRequestDto requestDto) {
         String privilegeCode = buildPrivilegeCode(
                 requestDto.getModuleCode(),
+                requestDto.getSubmoduleCode(),
                 requestDto.getFeatureTypeCode(),
                 requestDto.getFeatureCode(),
                 requestDto.getActionCode()
@@ -76,6 +79,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         privilege.setPrivilegeCode(privilegeCode);
         privilege.setModuleCode(requestDto.getModuleCode());
         privilege.setModuleName(requestDto.getModuleName());
+        privilege.setSubmoduleCode(requestDto.getSubmoduleCode());
+        privilege.setSubmoduleName(requestDto.getSubmoduleName());
         privilege.setFeatureTypeCode(requestDto.getFeatureTypeCode());
         privilege.setFeatureTypeName(requestDto.getFeatureTypeName());
         privilege.setFeatureCode(requestDto.getFeatureCode());
@@ -120,6 +125,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         subMenu.setIcon(requestDto.getIcon());
         subMenu.setModuleCode(requestDto.getModuleCode());
         subMenu.setModuleName(requestDto.getModuleName());
+        subMenu.setSubmoduleCode(requestDto.getSubmoduleCode());
+        subMenu.setSubmoduleName(requestDto.getSubmoduleName());
         subMenu.setFeatureTypeCode(requestDto.getFeatureTypeCode());
         subMenu.setFeatureTypeName(requestDto.getFeatureTypeName());
         subMenu.setFeatureCode(requestDto.getFeatureCode());
@@ -139,6 +146,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public List<SubMenuDto> getAllSubMenus() {
         return subMenuRepository.findAll().stream()
                 .sorted(Comparator.comparing(SubMenu::getModuleCode)
+                        .thenComparing(SubMenu::getSubmoduleCode)
                         .thenComparing(SubMenu::getFeatureTypeCode)
                         .thenComparing(SubMenu::getFeatureCode)
                         .thenComparing(SubMenu::getName))
@@ -198,6 +206,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         if (privilegeCode == null || privilegeCode.isBlank()) {
             privilegeCode = buildPrivilegeCode(
                     requestDto.getModuleCode(),
+                    requestDto.getSubmoduleCode(),
                     requestDto.getFeatureTypeCode(),
                     requestDto.getFeatureCode(),
                     requestDto.getActionCode()
@@ -277,6 +286,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .filter(privilege -> privilege.getSubMenu().isActive())
                 .filter(privilege -> featureType.getCode().equals(privilege.getSubMenu().getFeatureTypeCode()))
                 .sorted(Comparator.comparing((Privilege privilege) -> privilege.getSubMenu().getModuleCode())
+                        .thenComparing((Privilege privilege) -> privilege.getSubMenu().getSubmoduleCode())
                         .thenComparing((Privilege privilege) -> privilege.getSubMenu().getFeatureCode())
                         .thenComparing((Privilege privilege) -> privilege.getSubMenu().getName()))
                 .forEach(privilege -> childMenus.computeIfAbsent(

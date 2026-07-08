@@ -40,6 +40,12 @@ public class SubMenu extends ActionInfo {
     private String moduleName;
 
     @Column(nullable = false, length = 2)
+    private String submoduleCode;
+
+    @Column(nullable = false)
+    private String submoduleName;
+
+    @Column(nullable = false, length = 2)
     private String featureTypeCode;
 
     @Column(nullable = false)

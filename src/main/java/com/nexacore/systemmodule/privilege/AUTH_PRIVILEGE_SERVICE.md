@@ -27,23 +27,24 @@ KYC module -> Operations -> Person feature -> Create action
 Privilege codes use this structure:
 
 ```text
-moduleCode(2) + featureTypeCode(2) + featureCode(3) + actionCode(2)
+moduleCode(2) + submoduleCode(2) + featureTypeCode(2) + featureCode(3) + actionCode(2)
 ```
 
 Example:
 
 ```text
-010200101
+01010200101
 ```
 
 Segment breakdown:
 
 ```text
-01 02 001 01
-|  |  |   |
-|  |  |   action code
-|  |  feature/object code
-|  feature type code
+01 01 02 001 01
+|  |  |  |   |
+|  |  |  |   action code
+|  |  |  feature/object code
+|  |  feature type code
+|  submodule code
 module code
 ```
 
@@ -52,14 +53,15 @@ Meaning:
 | Segment | Length | Value | Meaning |
 | --- | ---: | --- | --- |
 | Module | 2 | `01` | KYC module |
+| Submodule | 2 | `01` | Person submodule |
 | Feature type | 2 | `02` | Operations |
 | Feature/object | 3 | `001` | Person |
 | Action | 2 | `01` | Create |
 
-So `010200101` means:
+So `01010200101` means:
 
 ```text
-KYC -> Operations -> Person -> Create
+KYC -> Person -> Operations -> Person -> Create
 ```
 
 ## Current Code Standards
@@ -72,6 +74,15 @@ KYC -> Operations -> Person -> Create
 | Auth | `02` |
 | GIS | `03` |
 | Services | `04` |
+
+### Submodules
+
+Submodule codes are two-digit values scoped by module.
+
+| Module | Submodule | Code |
+| --- | --- | --- |
+| KYC | Person | `01` |
+| Auth | Privilege | `01` |
 
 ### Feature Types
 
@@ -96,15 +107,15 @@ KYC -> Operations -> Person -> Create
 
 ### Feature Codes
 
-Feature codes are module-owned, three-digit values.
+Feature codes are module/submodule-owned, three-digit values.
 
 Example:
 
-| Module | Feature Type | Feature | Code |
-| --- | --- | --- | --- |
-| KYC | Operations | Person | `001` |
+| Module | Submodule | Feature Type | Feature | Code |
+| --- | --- | --- | --- | --- |
+| KYC | Person | Operations | Person | `001` |
 
-New feature codes should be assigned deliberately and should not be reused for a different feature inside the same module/type.
+New feature codes should be assigned deliberately and should not be reused for a different feature inside the same module/submodule/type.
 
 ## Backend Model
 
@@ -148,10 +159,11 @@ Enums:
 | Enum | Purpose |
 | --- | --- |
 | `ApplicationModule` | Module code registry |
+| `ApplicationSubmodule` | Submodule code registry |
 | `FeatureType` | Setup, Operations, Reports |
 | `PrivilegeAction` | Action code registry |
 
-Shared privilege enums define the code registry. Auth owns the provider interface, and each business module owns the implementation for its own features, actions, menus, and submenus.
+System privilege enums define the code registry. `systemmodule` owns the provider interface, and each business module owns the implementation for its own features, actions, menus, and submenus.
 
 ## Module Provider Contract
 
@@ -166,6 +178,7 @@ public interface ModulePrivilegeProvider {
 Each module implementation provides:
 
 - module code and name
+- submodule code and name
 - feature type code and name
 - feature/object code and name
 - supported action codes
@@ -198,6 +211,8 @@ Request:
 {
   "moduleCode": "01",
   "moduleName": "KYC",
+  "submoduleCode": "01",
+  "submoduleName": "Person",
   "featureTypeCode": "02",
   "featureTypeName": "Operations",
   "featureCode": "001",
@@ -211,7 +226,7 @@ Request:
 The backend generates:
 
 ```text
-010200101
+01010200101
 ```
 
 If the code already exists, the catalog row is updated.
@@ -271,7 +286,7 @@ Option 1, check by full code:
 ```json
 {
   "username": "admin",
-  "privilegeCode": "010200101"
+  "privilegeCode": "01010200101"
 }
 ```
 
@@ -281,6 +296,7 @@ Option 2, check by code parts:
 {
   "username": "admin",
   "moduleCode": "01",
+  "submoduleCode": "01",
   "featureTypeCode": "02",
   "featureCode": "001",
   "actionCode": "01"
@@ -294,7 +310,7 @@ Response data:
 ```json
 {
   "username": "admin",
-  "privilegeCode": "010200101",
+  "privilegeCode": "01010200101",
   "allowed": true
 }
 ```
@@ -323,9 +339,9 @@ Request:
 {
   "roleId": 1,
   "privilegeCodes": [
-    "010200101",
-    "010200102",
-    "010200106"
+    "01010200101",
+    "01010200102",
+    "01010200106"
   ]
 }
 ```
@@ -346,7 +362,7 @@ Request:
 {
   "userId": 1,
   "privilegeCodes": [
-    "010200101"
+    "01010200101"
   ]
 }
 ```
@@ -410,10 +426,10 @@ Example UI checks:
 
 | UI Element | Required Code |
 | --- | --- |
-| Person menu | `010200106` or `010200108` |
-| Person create button | `010200101` |
-| Person edit button | `010200102` |
-| Person delete button | `010200103` |
+| Person menu | `01010200106` or `01010200108` |
+| Person create button | `01010200101` |
+| Person edit button | `01010200102` |
+| Person delete button | `01010200103` |
 
 ## Recommended Access Pattern
 
@@ -452,7 +468,7 @@ The non-admin roles intentionally receive different privilege sets so access can
 ## Important Rules
 
 - Each module must own its own feature, action, menu, and submenu definitions.
-- Common enums must stay in `commonmodule`.
+- System privilege enums must stay in `systemmodule.privilege`.
 - Auth should communicate with modules only through `ModulePrivilegeProvider`.
 - The frontend should render menus from backend data, not hardcode module menus.
 - Keep privilege codes fixed after they are used in production.
@@ -470,10 +486,10 @@ Examples:
 
 | Code | Meaning |
 | --- | --- |
-| `010200101` | KYC Operations Person Create |
-| `010200102` | KYC Operations Person Update |
-| `010200103` | KYC Operations Person Delete |
-| `010200104` | KYC Operations Person Reject |
-| `010200105` | KYC Operations Person Send Back |
-| `010200106` | KYC Operations Person View |
-| `010200108` | KYC Operations Person Search |
+| `01010200101` | KYC Person Operations Person Create |
+| `01010200102` | KYC Person Operations Person Update |
+| `01010200103` | KYC Person Operations Person Delete |
+| `01010200104` | KYC Person Operations Person Reject |
+| `01010200105` | KYC Person Operations Person Send Back |
+| `01010200106` | KYC Person Operations Person View |
+| `01010200108` | KYC Person Operations Person Search |
