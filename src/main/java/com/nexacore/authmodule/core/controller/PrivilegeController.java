@@ -5,7 +5,7 @@ import com.nexacore.authmodule.core.dto.PrivilegeAssignmentRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
 import com.nexacore.authmodule.core.dto.PrivilegeDto;
-import com.nexacore.authmodule.core.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;

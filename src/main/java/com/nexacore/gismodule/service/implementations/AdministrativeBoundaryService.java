@@ -10,7 +10,7 @@ import com.nexacore.gismodule.enums.GisEntity;
 import com.nexacore.gismodule.repository.AdministrativeBoundariesLevel5Repository;
 import com.nexacore.gismodule.repository.AdministrativeBoundariesLevel6Repository;
 import com.nexacore.commonmodule.dto.SearchDto;
-import com.nexacore.kycmodule.entity.KycRecord;
+import com.nexacore.kycmodule.person.kyc.entity.KycRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

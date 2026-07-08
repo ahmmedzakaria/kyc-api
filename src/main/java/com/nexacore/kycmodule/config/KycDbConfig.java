@@ -19,7 +19,7 @@ import javax.sql.DataSource;
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(
-        basePackages = "com.nexacore.kycmodule.repository",
+        basePackages = "com.nexacore.kycmodule",
         entityManagerFactoryRef = "kycEntityManagerFactory",
         transactionManagerRef = "kycTransactionManager"
 )
@@ -39,7 +39,7 @@ public class KycDbConfig {
 
         return builder
                 .dataSource(dataSource)
-                .packages("com.nexacore.kycmodule.entity")
+                .packages("com.nexacore.kycmodule")
                 .persistenceUnit("kyc")
                 .build();
     }

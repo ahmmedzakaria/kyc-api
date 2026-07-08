@@ -1,12 +1,12 @@
 package com.nexacore.authmodule.core.service.implementations;
 
-import com.nexacore.authmodule.core.dto.PrivilegeActionDefinitionDto;
-import com.nexacore.authmodule.core.dto.PrivilegeFeatureDefinitionDto;
-import com.nexacore.authmodule.core.dto.PrivilegeMenuItemDto;
-import com.nexacore.authmodule.core.service.interfaces.ModulePrivilegeProvider;
-import com.nexacore.authmodule.core.enums.ApplicationModule;
-import com.nexacore.authmodule.core.enums.FeatureType;
-import com.nexacore.authmodule.core.enums.PrivilegeAction;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeActionDefinitionDto;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
+import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
+import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
+import com.nexacore.systemmodule.privilege.enums.FeatureType;
+import com.nexacore.systemmodule.privilege.enums.PrivilegeAction;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
