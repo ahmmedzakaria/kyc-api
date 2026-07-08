@@ -24,7 +24,7 @@ CREATE TABLE staging.medicine_raw
     package_size        TEXT
 );
 
-\copy staging.medicine_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/medicine.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
+\copy staging.medicine_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/medicine.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8'
 
 -- ============================================================
 -- MANUFACTURER

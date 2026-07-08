@@ -144,3 +144,93 @@ CREATE INDEX idx_indication_trgm
 CREATE INDEX idx_dosage_form_trgm
     ON dosage_form
     USING gin (name gin_trgm_ops);
+
+
+
+-- ============================================================
+-- MEDICINE
+-- ============================================================
+
+CREATE TABLE medicine
+(
+    id                  BIGINT PRIMARY KEY,
+
+    brand_name          VARCHAR(255) NOT NULL,
+
+    medicine_type       VARCHAR(50),
+
+    slug                VARCHAR(255),
+
+    generic_id          BIGINT NOT NULL,
+
+    dosage_form_id      BIGINT,
+
+    manufacturer_id     BIGINT,
+
+    strength            VARCHAR(255),
+
+    package_container   TEXT,
+
+    package_size        TEXT,
+
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_medicine_generic
+        FOREIGN KEY (generic_id)
+        REFERENCES generic(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_medicine_dosage_form
+        FOREIGN KEY (dosage_form_id)
+        REFERENCES dosage_form(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_medicine_manufacturer
+        FOREIGN KEY (manufacturer_id)
+        REFERENCES manufacturer(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+);
+
+-- ============================================================
+-- INDEXES
+-- ============================================================
+
+CREATE INDEX idx_medicine_brand_name
+ON medicine(brand_name);
+
+CREATE INDEX idx_medicine_slug
+ON medicine(slug);
+
+CREATE INDEX idx_medicine_generic
+ON medicine(generic_id);
+
+CREATE INDEX idx_medicine_manufacturer
+ON medicine(manufacturer_id);
+
+CREATE INDEX idx_medicine_dosage_form
+ON medicine(dosage_form_id);
+
+-- Case-insensitive search
+
+CREATE INDEX idx_medicine_brand_lower
+ON medicine (LOWER(brand_name));
+
+-- Trigram search
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX idx_medicine_brand_trgm
+ON medicine
+USING gin (brand_name gin_trgm_ops);
+
+-- Prevent duplicate brand names from the same manufacturer
+CREATE UNIQUE INDEX uq_medicine_brand_manufacturer_strength
+ON medicine
+(
+    LOWER(brand_name),
+    manufacturer_id,
+    COALESCE(LOWER(strength), '')
+);
