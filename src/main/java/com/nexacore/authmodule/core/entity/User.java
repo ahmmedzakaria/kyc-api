@@ -42,7 +42,7 @@ public class User extends ActionInfo {
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "auth_user_privileges",
+            name = "sys_user_privileges",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "privilege_id")
     )

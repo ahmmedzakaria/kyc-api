@@ -1,6 +1,6 @@
-# Auth Privilege System
+# System Privilege Service
 
-The privilege system controls access to modules, menus, features, and actions through a fixed-width privilege code. It lives in the Auth module because privileges are part of authentication and authorization, not part of any single business module.
+The privilege system controls access to modules, menus, features, and actions through a fixed-width privilege code. Privilege contracts live in `systemmodule`, while auth integrates them with users, roles, and authorization checks.
 
 ## Concept
 
@@ -123,9 +123,10 @@ The privilege system uses these core tables:
 
 | Table | Purpose |
 | --- | --- |
-| `auth_privileges` | Catalog of all available privileges |
-| `auth_role_privileges` | Privileges assigned to roles |
-| `auth_user_privileges` | Direct privileges assigned to users |
+| `sys_privileges` | Catalog of all available privileges |
+| `sys_sub_menus` | Menu entries exposed by privilege providers |
+| `sys_role_privileges` | Privileges assigned to roles |
+| `sys_user_privileges` | Direct privileges assigned to users |
 | `auth_roles` | Existing role table |
 | `auth_users` | Existing user table |
 
