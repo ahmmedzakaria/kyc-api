@@ -12,6 +12,7 @@ CREATE SCHEMA staging;
 
 CREATE TABLE staging.medicine_raw
 (
+    import_id           BIGSERIAL PRIMARY KEY,
     brand_id            BIGINT,
     brand_name          TEXT,
     medicine_type       TEXT,
@@ -24,7 +25,7 @@ CREATE TABLE staging.medicine_raw
     package_size        TEXT
 );
 
-\copy staging.medicine_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/medicine.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8'
+\copy staging.medicine_raw (brand_id, brand_name, medicine_type, slug, dosage_form, generic_name, strength, manufacturer_name, package_container, package_size) FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/medicine.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
 
 -- ============================================================
 -- MANUFACTURER
@@ -32,6 +33,7 @@ CREATE TABLE staging.medicine_raw
 
 CREATE TABLE staging.manufacturer_raw
 (
+    import_id           BIGSERIAL PRIMARY KEY,
     manufacturer_id     BIGINT,
     manufacturer_name   TEXT,
     slug                TEXT,
@@ -39,7 +41,7 @@ CREATE TABLE staging.manufacturer_raw
     brand_count         INTEGER
 );
 
-\copy staging.manufacturer_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/manufacturer.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
+\copy staging.manufacturer_raw (manufacturer_id, manufacturer_name, slug, generic_count, brand_count) FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/manufacturer.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
 
 -- ============================================================
 -- DOSAGE FORM
@@ -47,13 +49,14 @@ CREATE TABLE staging.manufacturer_raw
 
 CREATE TABLE staging.dosage_form_raw
 (
+    import_id           BIGSERIAL PRIMARY KEY,
     dosage_form_id      BIGINT,
     dosage_form_name    TEXT,
     slug                TEXT,
     brand_count         INTEGER
 );
 
-\copy staging.dosage_form_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/dosage form.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
+\copy staging.dosage_form_raw (dosage_form_id, dosage_form_name, slug, brand_count) FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/dosage form.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
 
 -- ============================================================
 -- DRUG CLASS
@@ -61,13 +64,14 @@ CREATE TABLE staging.dosage_form_raw
 
 CREATE TABLE staging.drug_class_raw
 (
+    import_id           BIGSERIAL PRIMARY KEY,
     drug_class_id       BIGINT,
     drug_class_name     TEXT,
     slug                TEXT,
     generic_count       INTEGER
 );
 
-\copy staging.drug_class_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/drug class.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
+\copy staging.drug_class_raw (drug_class_id, drug_class_name, slug, generic_count) FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/drug class.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
 
 -- ============================================================
 -- INDICATION
@@ -75,13 +79,14 @@ CREATE TABLE staging.drug_class_raw
 
 CREATE TABLE staging.indication_raw
 (
+    import_id           BIGSERIAL PRIMARY KEY,
     indication_id       BIGINT,
     indication_name     TEXT,
     slug                TEXT,
     generic_count       INTEGER
 );
 
-\copy staging.indication_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/indication.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
+\copy staging.indication_raw (indication_id, indication_name, slug, generic_count) FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/indication.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
 
 -- ============================================================
 -- GENERIC
@@ -89,6 +94,7 @@ CREATE TABLE staging.indication_raw
 
 CREATE TABLE staging.generic_raw
 (
+    import_id                      BIGSERIAL PRIMARY KEY,
     generic_id                     BIGINT,
     generic_name                   TEXT,
     slug                           TEXT,
@@ -113,7 +119,7 @@ CREATE TABLE staging.generic_raw
     descriptions_count             INTEGER
 );
 
-\copy staging.generic_raw FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/generic.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
+\copy staging.generic_raw (generic_id, generic_name, slug, monograph_link, drug_class, indication, indication_description, therapeutic_class_description, pharmacology_description, dosage_description, administration_description, interaction_description, contraindications_description, side_effects_description, pregnancy_lactation_description, precautions_description, pediatric_usage_description, overdose_effects_description, duration_of_treatment_description, reconstitution_description, storage_conditions_description, descriptions_count) FROM '/home/zahmmed/volume2/kyc-project/assorted-medicine-dataset-of-bangladesh/generic.csv' DELIMITER ',' CSV HEADER ENCODING 'UTF8';
 
 -- ============================================================
 -- Verify imports

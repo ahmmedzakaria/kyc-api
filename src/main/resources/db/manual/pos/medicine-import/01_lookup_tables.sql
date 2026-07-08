@@ -3,6 +3,7 @@
 -- Lookup Tables
 -- ============================================================
 
+DROP TABLE IF EXISTS medicine CASCADE;
 DROP TABLE IF EXISTS generic CASCADE;
 DROP TABLE IF EXISTS indication CASCADE;
 DROP TABLE IF EXISTS drug_class CASCADE;
