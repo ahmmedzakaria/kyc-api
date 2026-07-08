@@ -1,4 +1,4 @@
-package com.nexacore.authmodule.privilege.api;
+package com.nexacore.systemmodule.privilege.api;
 
 import com.nexacore.gatewaymodule.privilege.service.interfaces.PrivilegeModuleGateway;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
@@ -10,8 +10,8 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
-public class AuthPrivilegeModuleGateway implements PrivilegeModuleGateway {
+@Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+public class SystemPrivilegeModuleGateway implements PrivilegeModuleGateway {
 
     private final PrivilegeService privilegeService;
 

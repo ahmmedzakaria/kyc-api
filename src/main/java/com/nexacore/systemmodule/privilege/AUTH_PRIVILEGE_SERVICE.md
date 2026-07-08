@@ -151,7 +151,9 @@ Main implementation files:
 | `systemmodule.privilege.service.interfaces.PrivilegeService` | System privilege API/admin service contract |
 | `systemmodule.privilege.service.implementations.PrivilegeServiceImpl` | Code generation, assignment, and check logic |
 | `gatewaymodule.privilege.service.interfaces.PrivilegeModuleGateway` | Loose-coupled synchronous privilege decision gateway contract |
-| `authmodule.privilege.api.AuthPrivilegeModuleGateway` | Auth-owned gateway implementation for synchronous privilege decisions |
+| `gatewaymodule.auth.service.interfaces.AuthModuleGateway` | Loose-coupled auth user/role lookup gateway contract |
+| `systemmodule.privilege.api.SystemPrivilegeModuleGateway` | System-owned gateway implementation for synchronous privilege decisions |
+| `authmodule.api.AuthModuleGatewayImpl` | Auth-owned gateway implementation for user and role lookups |
 | `ModulePrivilegeProvider.java` | Interface implemented by business modules |
 | `systemmodule.privilege.controller.PrivilegeController` | System-owned privilege HTTP APIs |
 | `DataSeeder.java` | Seeds provider-owned privileges for admin |

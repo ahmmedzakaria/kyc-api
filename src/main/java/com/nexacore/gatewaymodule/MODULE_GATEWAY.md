@@ -42,6 +42,16 @@ auth privilege service internals:
 ```text
 business module
   -> PrivilegeModuleGateway
-  -> authmodule/privilege/api/AuthPrivilegeModuleGateway
+  -> systemmodule/privilege/api/SystemPrivilegeModuleGateway
   -> privilege catalog and assignments
+```
+
+Auth user and role lookups should use `AuthModuleGateway` instead of depending on
+auth repositories or entities directly:
+
+```text
+caller module
+  -> AuthModuleGateway
+  -> authmodule/api/AuthModuleGatewayImpl
+  -> auth user and role data
 ```
