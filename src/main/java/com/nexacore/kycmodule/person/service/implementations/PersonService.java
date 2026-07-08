@@ -1,5 +1,6 @@
 package com.nexacore.kycmodule.person.service.implementations;
 
+import com.nexacore.kycmodule.person.api.PersonRegisteredEvent;
 import com.nexacore.kycmodule.person.dto.PersonDocumentDto;
 import com.nexacore.kycmodule.person.dto.PersonDto;
 import com.nexacore.kycmodule.person.entity.Person;
@@ -14,12 +15,15 @@ import com.nexacore.servicesmodule.fileservice.service.interfaces.FileManagement
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +37,9 @@ public class PersonService {
     private final PersonDocumentRepository personDocumentRepository;
     private final ModelMapper mapper;
     private final FileManagementService fileManagementService;
+    private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional(transactionManager = "kycTransactionManager", rollbackFor = IOException.class)
     public PersonDto create(PersonDto dto, MultipartFile photo) throws IOException {
         Person person = mapPerson(dto, new Person());
         Person savedPerson = personRepository.save(person);
@@ -41,7 +47,13 @@ public class PersonService {
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(savedPerson, PersonDocumentType.PROFILE_PHOTO, photo);
         }
-        return toDto(savedPerson);
+        PersonDto result = toDto(savedPerson);
+        eventPublisher.publishEvent(new PersonRegisteredEvent(
+                savedPerson.getId(),
+                savedPerson.getUsername(),
+                Instant.now()
+        ));
+        return result;
     }
 
     public PersonDto update(PersonDto dto, MultipartFile photo) throws IOException {

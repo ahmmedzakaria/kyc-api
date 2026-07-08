@@ -15,6 +15,7 @@ This guide applies to the NexaCore backend Maven project under `backend/`.
   - `appconfigmodule`
   - `authmodule`
   - `commonmodule`
+  - `gatewaymodule`
   - `gismodule`
   - `kycmodule`
   - `logmodule`

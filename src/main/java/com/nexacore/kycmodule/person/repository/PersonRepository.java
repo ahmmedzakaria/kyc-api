@@ -6,6 +6,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Optional;
+
 public interface PersonRepository extends JpaRepository<Person, Long> {
     @Query("""
         SELECT p FROM Person p
@@ -20,4 +22,8 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
 
     boolean existsByUsername(String username);
     boolean existsByUsernameAndIdNot(String username, Long id);
+
+    Optional<Person> findByUsername(String username);
+    Optional<Person> findByEmail(String email);
+    Optional<Person> findByMobileNumber(String mobileNumber);
 }
