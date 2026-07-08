@@ -1,15 +1,15 @@
-package com.nexacore.authmodule.core.service.interfaces;
+package com.nexacore.systemmodule.privilege.service.interfaces;
 
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.dto.PrivilegeAssignmentRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
 import com.nexacore.authmodule.core.dto.PrivilegeDto;
-import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 
 import java.util.List;
 import java.util.Set;

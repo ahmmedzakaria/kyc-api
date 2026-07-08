@@ -1,26 +1,32 @@
-package com.nexacore.authmodule.core.service.implementations;
+package com.nexacore.systemmodule.privilege.service.implementations;
 
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.dto.PrivilegeAssignmentRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
 import com.nexacore.authmodule.core.dto.PrivilegeDto;
-import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
-import com.nexacore.authmodule.core.entity.Privilege;
 import com.nexacore.authmodule.core.entity.Role;
-import com.nexacore.authmodule.core.entity.SubMenu;
 import com.nexacore.authmodule.core.entity.User;
-import com.nexacore.authmodule.core.repository.PrivilegeRepository;
 import com.nexacore.authmodule.core.repository.RoleRepository;
-import com.nexacore.authmodule.core.repository.SubMenuRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
-import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
-import com.nexacore.authmodule.core.service.interfaces.PrivilegeService;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.entity.Privilege;
+import com.nexacore.systemmodule.privilege.entity.RolePrivilege;
+import com.nexacore.systemmodule.privilege.entity.RolePrivilegeId;
+import com.nexacore.systemmodule.privilege.entity.SubMenu;
+import com.nexacore.systemmodule.privilege.entity.UserPrivilege;
+import com.nexacore.systemmodule.privilege.entity.UserPrivilegeId;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
+import com.nexacore.systemmodule.privilege.repository.PrivilegeRepository;
+import com.nexacore.systemmodule.privilege.repository.RolePrivilegeRepository;
+import com.nexacore.systemmodule.privilege.repository.SubMenuRepository;
+import com.nexacore.systemmodule.privilege.repository.UserPrivilegeRepository;
+import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
+import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +52,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private static final int ACTION_CODE_LENGTH = 2;
 
     private final PrivilegeRepository privilegeRepository;
+    private final RolePrivilegeRepository rolePrivilegeRepository;
+    private final UserPrivilegeRepository userPrivilegeRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final SubMenuRepository subMenuRepository;
@@ -63,7 +71,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional
+    @Transactional(transactionManager = "systemTransactionManager")
     public PrivilegeDto savePrivilege(PrivilegeRequestDto requestDto) {
         String privilegeCode = buildPrivilegeCode(
                 requestDto.getModuleCode(),
@@ -94,7 +102,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<PrivilegeDto> getAllPrivileges() {
         return privilegeRepository.findAll().stream()
                 .map(PrivilegeDto::fromEntity)
@@ -109,7 +117,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional
+    @Transactional(transactionManager = "systemTransactionManager")
     public SubMenuDto saveSubMenu(SubMenuRequestDto requestDto, String username) {
         Long loginUserId = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username))
@@ -142,7 +150,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<SubMenuDto> getAllSubMenus() {
         return subMenuRepository.findAll().stream()
                 .sorted(Comparator.comparing(SubMenu::getModuleCode)
@@ -155,7 +163,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public ApplicationContextDto getApplicationContext(String username) {
         return ApplicationContextDto.builder()
                 .menus(getUserSidebarMenu(username))
@@ -164,7 +172,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<SidebarMenuDto> getUserSidebarMenu(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
@@ -180,21 +188,20 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public Set<String> getUserPrivilegeCodes(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
 
-        Set<String> directPrivileges = user.getPrivileges().stream()
-                .filter(Privilege::isActive)
-                .map(Privilege::getPrivilegeCode)
+        Set<String> directPrivileges = new HashSet<>(privilegeRepository.findActivePrivilegeCodesByUserId(user.getId()));
+
+        Set<Long> roleIds = user.getRoles().stream()
+                .map(Role::getId)
                 .collect(Collectors.toSet());
 
-        Set<String> rolePrivileges = user.getRoles().stream()
-                .flatMap(role -> role.getPrivileges().stream())
-                .filter(Privilege::isActive)
-                .map(Privilege::getPrivilegeCode)
-                .collect(Collectors.toSet());
+        Set<String> rolePrivileges = roleIds.isEmpty()
+                ? Set.of()
+                : new HashSet<>(privilegeRepository.findActivePrivilegeCodesByRoleIdIn(roleIds));
 
         return Stream.concat(directPrivileges.stream(), rolePrivileges.stream())
                 .collect(Collectors.toSet());
@@ -223,7 +230,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
-    @Transactional
+    @Transactional(transactionManager = "systemTransactionManager")
     public void assignPrivilegesToRole(PrivilegeAssignmentRequestDto requestDto) {
         if (requestDto.getRoleId() == null) {
             throw new IllegalArgumentException("roleId is required");
@@ -232,12 +239,17 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         Role role = roleRepository.findById(requestDto.getRoleId())
                 .orElseThrow(() -> new IllegalArgumentException("Role not found: " + requestDto.getRoleId()));
 
-        role.setPrivileges(loadPrivileges(requestDto.getPrivilegeCodes()));
-        roleRepository.save(role);
+        Set<Privilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
+        rolePrivilegeRepository.deleteByIdRoleId(role.getId());
+        rolePrivilegeRepository.saveAll(privileges.stream()
+                .map(privilege -> RolePrivilege.builder()
+                        .id(new RolePrivilegeId(role.getId(), privilege.getId()))
+                        .build())
+                .toList());
     }
 
     @Override
-    @Transactional
+    @Transactional(transactionManager = "systemTransactionManager")
     public void assignPrivilegesToUser(PrivilegeAssignmentRequestDto requestDto) {
         if (requestDto.getUserId() == null) {
             throw new IllegalArgumentException("userId is required");
@@ -246,8 +258,13 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         User user = userRepository.findById(requestDto.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + requestDto.getUserId()));
 
-        user.setPrivileges(loadPrivileges(requestDto.getPrivilegeCodes()));
-        userRepository.save(user);
+        Set<Privilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
+        userPrivilegeRepository.deleteByIdUserId(user.getId());
+        userPrivilegeRepository.saveAll(privileges.stream()
+                .map(privilege -> UserPrivilege.builder()
+                        .id(new UserPrivilegeId(user.getId(), privilege.getId()))
+                        .build())
+                .toList());
     }
 
     private Set<Privilege> loadPrivileges(Set<String> privilegeCodes) {

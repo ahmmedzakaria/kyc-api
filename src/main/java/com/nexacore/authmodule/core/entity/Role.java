@@ -23,12 +23,4 @@ public class Role {
     @Column(nullable = false, unique = true)
     private String name; // ROLE_USER, ROLE_ADMIN
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "sys_role_privileges",
-            joinColumns = @JoinColumn(name = "role_id"),
-            inverseJoinColumns = @JoinColumn(name = "privilege_id")
-    )
-    @Builder.Default
-    private Set<Privilege> privileges = new HashSet<>();
 }

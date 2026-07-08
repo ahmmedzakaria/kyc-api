@@ -1,4 +1,4 @@
-package com.nexacore.authmodule.core.entity;
+package com.nexacore.systemmodule.privilege.entity;
 
 import com.nexacore.commonmodule.dto.ActionInfo;
 import jakarta.persistence.Column;

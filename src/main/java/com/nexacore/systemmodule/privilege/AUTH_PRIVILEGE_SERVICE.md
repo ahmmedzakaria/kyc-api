@@ -123,10 +123,10 @@ The privilege system uses these core tables:
 
 | Table | Purpose |
 | --- | --- |
-| `sys_privileges` | Catalog of all available privileges |
-| `sys_sub_menus` | Menu entries exposed by privilege providers |
-| `sys_role_privileges` | Privileges assigned to roles |
-| `sys_user_privileges` | Direct privileges assigned to users |
+| `system_db.sys_privileges` | Catalog of all available privileges |
+| `system_db.sys_sub_menus` | Menu entries exposed by privilege providers |
+| `system_db.sys_role_privileges` | Privileges assigned to auth role IDs |
+| `system_db.sys_user_privileges` | Direct privileges assigned to auth user IDs |
 | `auth_roles` | Existing role table |
 | `auth_users` | Existing user table |
 
@@ -147,11 +147,13 @@ Main implementation files:
 | `Privilege.java` | Privilege catalog entity |
 | `Role.java` | Role to privilege mapping |
 | `User.java` | User to privilege mapping |
-| `PrivilegeRepository.java` | Privilege persistence |
-| `PrivilegeService.java` | Service contract |
-| `PrivilegeServiceImpl.java` | Code generation, assignment, and check logic |
+| `systemmodule.privilege.repository.PrivilegeRepository` | System-owned privilege persistence |
+| `systemmodule.privilege.service.interfaces.PrivilegeService` | System privilege API/admin service contract |
+| `systemmodule.privilege.service.implementations.PrivilegeServiceImpl` | Code generation, assignment, and check logic |
+| `gatewaymodule.privilege.service.interfaces.PrivilegeModuleGateway` | Loose-coupled synchronous privilege decision gateway contract |
+| `authmodule.privilege.api.AuthPrivilegeModuleGateway` | Auth-owned gateway implementation for synchronous privilege decisions |
 | `ModulePrivilegeProvider.java` | Interface implemented by business modules |
-| `PrivilegeController.java` | HTTP APIs |
+| `systemmodule.privilege.controller.PrivilegeController` | System-owned privilege HTTP APIs |
 | `DataSeeder.java` | Seeds provider-owned privileges for admin |
 | `KycPrivilegeProvider.java` | KYC module implementation of the provider interface |
 
@@ -203,7 +205,7 @@ All APIs use `POST`.
 Endpoint:
 
 ```text
-POST /auth/privilege/save
+POST /system/privilege/save
 ```
 
 Request:
@@ -237,7 +239,7 @@ If the code already exists, the catalog row is updated.
 Endpoint:
 
 ```text
-POST /auth/privilege/list
+POST /system/privilege/list
 ```
 
 Returns all privilege catalog records.
@@ -247,7 +249,7 @@ Returns all privilege catalog records.
 Endpoint:
 
 ```text
-POST /auth/privilege/definitions
+POST /system/privilege/definitions
 ```
 
 Returns all feature/action/menu definitions provided by application modules.
@@ -259,7 +261,7 @@ This is used by the privilege management frontend to understand what modules and
 Endpoint:
 
 ```text
-POST /auth/privilege/sidebar-menu
+POST /system/privilege/sidebar-menu
 ```
 
 Returns the authenticated user's sidebar menu.
@@ -279,7 +281,7 @@ The frontend should render this response directly instead of hardcoding menus.
 Endpoint:
 
 ```text
-POST /auth/privilege/check
+POST /system/privilege/check
 ```
 
 Option 1, check by full code:
@@ -321,7 +323,7 @@ Response data:
 Endpoint:
 
 ```text
-POST /auth/privilege/my-codes
+POST /system/privilege/my-codes
 ```
 
 Returns the effective privilege codes for the logged-in user.
@@ -331,7 +333,7 @@ Returns the effective privilege codes for the logged-in user.
 Endpoint:
 
 ```text
-POST /auth/privilege/assign-role
+POST /system/privilege/assign-role
 ```
 
 Request:
@@ -354,7 +356,7 @@ This replaces the role's privilege set.
 Endpoint:
 
 ```text
-POST /auth/privilege/assign-user
+POST /system/privilege/assign-user
 ```
 
 Request:
@@ -386,7 +388,7 @@ Example:
 ## Application Context
 
 ```http
-POST /auth/privilege/context
+POST /system/privilege/context
 ```
 
 Returns the authenticated user's dynamic sidebar menu and effective privilege codes.
@@ -418,7 +420,7 @@ Frontend code should treat privilege codes as the source of truth for access dec
 The KYC frontend sidebar is generated dynamically from:
 
 ```text
-POST /auth/privilege/sidebar-menu
+POST /system/privilege/sidebar-menu
 ```
 
 The sidebar does not own menu definitions. Modules provide menu metadata to Auth, Auth filters the menu by the logged-in user's effective privileges, and the frontend renders the returned tree.

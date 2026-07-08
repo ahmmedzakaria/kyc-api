@@ -1,17 +1,17 @@
-package com.nexacore.authmodule.core.controller;
+package com.nexacore.systemmodule.privilege.controller;
 
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.dto.PrivilegeAssignmentRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
 import com.nexacore.authmodule.core.dto.PrivilegeDto;
-import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
-import com.nexacore.authmodule.core.service.interfaces.PrivilegeService;
 import com.nexacore.commonmodule.dto.ApiResponse;
+import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,7 +25,7 @@ import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/auth/privilege")
+@RequestMapping("/system/privilege")
 public class PrivilegeController {
 
     private final PrivilegeService privilegeService;

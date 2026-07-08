@@ -2,15 +2,14 @@ package com.nexacore.authmodule.startup;
 
 import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
-import com.nexacore.authmodule.core.entity.Privilege;
 import com.nexacore.authmodule.core.entity.Role;
-import com.nexacore.authmodule.core.entity.SubMenu;
 import com.nexacore.authmodule.core.entity.User;
-import com.nexacore.authmodule.core.repository.PrivilegeRepository;
 import com.nexacore.authmodule.core.repository.RoleRepository;
-import com.nexacore.authmodule.core.repository.SubMenuRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
+import com.nexacore.systemmodule.privilege.entity.Privilege;
+import com.nexacore.systemmodule.privilege.entity.SubMenu;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
+import com.nexacore.systemmodule.privilege.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
@@ -30,12 +29,11 @@ public class DataSeeder {
     @Bean
     CommandLineRunner initDatabase(RoleRepository roleRepository,
                                    UserRepository userRepository,
-                                   PrivilegeRepository privilegeRepository,
-                                   SubMenuRepository subMenuRepository,
+                                   SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            if (isAlreadySeeded(roleRepository, userRepository, privilegeRepository, subMenuRepository)) {
+            if (isAlreadySeeded(roleRepository, userRepository, systemPrivilegeRegistryService)) {
                 System.out.println("Auth seed data already exists. Skipping data seeding.");
                 return;
             }
@@ -49,8 +47,9 @@ public class DataSeeder {
             Role reportViewerRole = roleRepository.findByName("ROLE_REPORT_VIEWER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_REPORT_VIEWER"));
 
-            seedModulePrivileges(privilegeRepository, subMenuRepository, adminRole, modulePrivilegeProviders);
-            assignRolePrivileges(privilegeRepository, kycOperatorRole, Set.of(
+            Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
+            systemPrivilegeRegistryService.assignRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
+            assignRolePrivileges(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
@@ -60,7 +59,7 @@ public class DataSeeder {
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
             ));
-            assignRolePrivileges(privilegeRepository, kycApproverRole, Set.of(
+            assignRolePrivileges(systemPrivilegeRegistryService, kycApproverRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.REJECT),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEND_BACK),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
@@ -68,7 +67,7 @@ public class DataSeeder {
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
             ));
-            assignRolePrivileges(privilegeRepository, reportViewerRole, Set.of(
+            assignRolePrivileges(systemPrivilegeRegistryService, reportViewerRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.VIEW),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.SEARCH)
             ));
@@ -97,12 +96,11 @@ public class DataSeeder {
 
     private boolean isAlreadySeeded(RoleRepository roleRepository,
                                     UserRepository userRepository,
-                                    PrivilegeRepository privilegeRepository,
-                                    SubMenuRepository subMenuRepository) {
+                                    SystemPrivilegeRegistryService systemPrivilegeRegistryService) {
         return roleRepository.findByName("ROLE_ADMIN").isPresent()
                 && userRepository.findByUsername("admin").isPresent()
-                && privilegeRepository.count() > 0
-                && subMenuRepository.count() > 0;
+                && systemPrivilegeRegistryService.countPrivileges() > 0
+                && systemPrivilegeRegistryService.countSubMenus() > 0;
     }
 
     private void seedDefaultUser(UserRepository userRepository,
@@ -134,26 +132,26 @@ public class DataSeeder {
         return roleRepository.save(role);
     }
 
-    private void seedModulePrivileges(PrivilegeRepository privilegeRepository,
-                                      SubMenuRepository subMenuRepository,
-                                      Role adminRole,
-                                      List<ModulePrivilegeProvider> modulePrivilegeProviders) {
+    private Set<String> seedModulePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
+                                             List<ModulePrivilegeProvider> modulePrivilegeProviders) {
+        Set<String> privilegeCodes = new HashSet<>();
         modulePrivilegeProviders.stream()
                 .flatMap(provider -> provider.getPrivilegeFeatures().stream())
                 .forEach(feature -> feature.getActions().forEach(action -> {
-                    SubMenu subMenu = seedSubMenuIfMissing(subMenuRepository, feature);
+                    SubMenu subMenu = seedSubMenuIfMissing(systemPrivilegeRegistryService, feature);
                     Privilege privilege = savePrivilegeIfMissing(
-                            privilegeRepository,
+                            systemPrivilegeRegistryService,
                             feature,
                             action.getActionCode(),
                             action.getActionName(),
                             subMenu
                     );
-                    adminRole.getPrivileges().add(privilege);
+                    privilegeCodes.add(privilege.getPrivilegeCode());
                 }));
+        return privilegeCodes;
     }
 
-    private SubMenu seedSubMenuIfMissing(SubMenuRepository subMenuRepository,
+    private SubMenu seedSubMenuIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                          PrivilegeFeatureDefinitionDto feature) {
         PrivilegeMenuItemDto menuItem = feature.getMenuItems().stream()
                 .findFirst()
@@ -163,7 +161,7 @@ public class DataSeeder {
         String url = menuItem == null ? "/" + feature.getFeatureName().toLowerCase().replace(" ", "-") : menuItem.getPath();
         String icon = menuItem == null ? feature.getIcon() : menuItem.getIcon();
 
-        SubMenu subMenu = subMenuRepository.findFirstByModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndFeatureCodeAndUrl(
+        SubMenu subMenu = systemPrivilegeRegistryService.findSubMenu(
                         feature.getModuleCode(),
                         feature.getSubmoduleCode(),
                         feature.getFeatureTypeCode(),
@@ -189,17 +187,17 @@ public class DataSeeder {
         }
         subMenu.setUpdatedBy(0L);
 
-        return subMenuRepository.save(subMenu);
+        return systemPrivilegeRegistryService.saveSubMenu(subMenu);
     }
 
-    private Privilege savePrivilegeIfMissing(PrivilegeRepository privilegeRepository,
+    private Privilege savePrivilegeIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                              PrivilegeFeatureDefinitionDto feature,
                                              String actionCode,
                                              String actionName,
                                              SubMenu subMenu) {
         String privilegeCode = feature.getModuleCode() + feature.getSubmoduleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
 
-        Privilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
+        Privilege privilege = systemPrivilegeRegistryService.findPrivilegeByCode(privilegeCode)
                 .orElseGet(() -> Privilege.builder()
                         .privilegeCode(privilegeCode)
                         .moduleCode(feature.getModuleCode())
@@ -217,11 +215,11 @@ public class DataSeeder {
 
         privilege.setSubMenu(subMenu);
         privilege.setActive(true);
-        return privilegeRepository.save(privilege);
+        return systemPrivilegeRegistryService.savePrivilege(privilege);
     }
 
-    private void assignRolePrivileges(PrivilegeRepository privilegeRepository, Role role, Set<String> privilegeCodes) {
-        role.setPrivileges(new HashSet<>(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes)));
+    private void assignRolePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService, Role role, Set<String> privilegeCodes) {
+        systemPrivilegeRegistryService.assignRolePrivileges(role.getId(), privilegeCodes);
     }
 
     private String code(ApplicationModule applicationModule,

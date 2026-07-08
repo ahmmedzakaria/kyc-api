@@ -40,15 +40,6 @@ public class User extends ActionInfo {
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "sys_user_privileges",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "privilege_id")
-    )
-    @Builder.Default
-    private Set<Privilege> privileges = new HashSet<>();
-
     @Column(nullable = false)
     private boolean enabled;
 

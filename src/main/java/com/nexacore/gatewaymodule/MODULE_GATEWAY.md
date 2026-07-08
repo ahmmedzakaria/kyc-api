@@ -35,3 +35,13 @@ authmodule
   -> kycmodule-owned implementation
   -> kyc_person data
 ```
+
+Privilege decisions should use `PrivilegeModuleGateway` instead of depending on
+auth privilege service internals:
+
+```text
+business module
+  -> PrivilegeModuleGateway
+  -> authmodule/privilege/api/AuthPrivilegeModuleGateway
+  -> privilege catalog and assignments
+```

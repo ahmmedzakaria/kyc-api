@@ -22,6 +22,11 @@ public class FlywayMigrationConfig {
         return createFlyway(dataSource, "classpath:db/migration/auth");
     }
 
+    @Bean(name = "systemFlyway", initMethod = "migrate")
+    public Flyway systemFlyway(@Qualifier("systemDataSource") DataSource dataSource) {
+        return createFlyway(dataSource, "classpath:db/migration/system");
+    }
+
     @Bean(name = "kycFlyway", initMethod = "migrate")
     public Flyway kycFlyway(@Qualifier("kycDataSource") DataSource dataSource) {
         return createFlyway(dataSource, "classpath:db/migration/kyc");

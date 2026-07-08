@@ -1,6 +1,6 @@
-package com.nexacore.authmodule.core.repository;
+package com.nexacore.systemmodule.privilege.repository;
 
-import com.nexacore.authmodule.core.entity.SubMenu;
+import com.nexacore.systemmodule.privilege.entity.SubMenu;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

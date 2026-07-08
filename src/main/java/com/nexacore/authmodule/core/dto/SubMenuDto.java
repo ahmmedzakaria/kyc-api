@@ -1,6 +1,6 @@
 package com.nexacore.authmodule.core.dto;
 
-import com.nexacore.authmodule.core.entity.SubMenu;
+import com.nexacore.systemmodule.privilege.entity.SubMenu;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
