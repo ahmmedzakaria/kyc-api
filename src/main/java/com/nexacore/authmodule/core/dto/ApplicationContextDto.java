@@ -15,9 +15,21 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class ApplicationContextDto {
+    private String clientCode;
+    private String clientType;
+
     @Builder.Default
     private List<SidebarMenuDto> menus = new ArrayList<>();
 
     @Builder.Default
     private Set<String> privilegeCodes = new HashSet<>();
+
+    @Builder.Default
+    private Set<String> enabledModules = new HashSet<>();
+
+    @Builder.Default
+    private Set<String> enabledSubmodules = new HashSet<>();
+
+    @Builder.Default
+    private Set<String> enabledFeatures = new HashSet<>();
 }

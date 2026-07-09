@@ -3,6 +3,9 @@ package com.nexacore.authmodule.security.config;
 import com.nexacore.appconfigmodule.ConfigConstants;
 import com.nexacore.authmodule.security.filter.JwtAuthenticationFilter;
 import com.nexacore.authmodule.security.jwt.JwtAuthEntryPoint;
+import com.nexacore.systemmodule.clientaccess.security.ClientApiAccessFilter;
+import com.nexacore.systemmodule.clientaccess.security.ClientApplicationAuthenticationFilter;
+import com.nexacore.systemmodule.clientaccess.security.UserPrivilegeApiAccessFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +28,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ClientApplicationAuthenticationFilter clientApplicationAuthenticationFilter;
+    private final ClientApiAccessFilter clientApiAccessFilter;
+    private final UserPrivilegeApiAccessFilter userPrivilegeApiAccessFilter;
     private final AuthenticationProviderConfig authenticationProviderConfig;
     private final JwtAuthEntryPoint authenticationEntryPoint;
 
@@ -58,12 +64,16 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProviderConfig.authenticationProvider())
+                .addFilterBefore(clientApplicationAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(clientApiAccessFilter, ClientApplicationAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(userPrivilegeApiAccessFilter, JwtAuthenticationFilter.class)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:4300"));
                     config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-                    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Silent"));
+                    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Silent", "X-Client-Code", "X-API-Key", "X-Trace-Id"));
+                    config.setExposedHeaders(List.of("X-Trace-Id"));
                     return config;
                 }));
 

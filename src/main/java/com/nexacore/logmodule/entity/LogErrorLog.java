@@ -21,7 +21,23 @@ public class LogErrorLog {
     private String method;
     private String uri;
     private int status;
+    private String traceId;
+    private String clientCode;
+    private String clientType;
+    private Long userId;
     private String username;
+    private String apiCode;
+    private String moduleCode;
+    private String moduleName;
+    private String submoduleCode;
+    private String submoduleName;
+    private String featureCode;
+    private String featureName;
+    private String actionCode;
+    private String actionName;
+    private String accessMode;
+    private Long businessId;
+    private Long branchId;
     private String errorType;
 
     @Column(columnDefinition = "TEXT")

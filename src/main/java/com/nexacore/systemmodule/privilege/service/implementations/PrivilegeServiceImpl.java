@@ -11,6 +11,8 @@ import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
+import com.nexacore.systemmodule.clientaccess.dto.ClientApplicationContextDto;
+import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import com.nexacore.systemmodule.privilege.entity.SysRolePrivilege;
@@ -55,6 +57,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final AuthModuleGateway authModuleGateway;
     private final SubMenuRepository subMenuRepository;
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
+    private final ClientApplicationContextService clientApplicationContextService;
 
     @Override
     public String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode) {
@@ -164,9 +167,16 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public ApplicationContextDto getApplicationContext(String username) {
+        Set<String> privilegeCodes = getUserPrivilegeCodes(username);
+        ClientApplicationContextDto clientContext = clientApplicationContextService.getCurrentClientContext().orElse(null);
         return ApplicationContextDto.builder()
+                .clientCode(clientContext == null ? null : clientContext.getClientCode())
+                .clientType(clientContext == null ? null : clientContext.getClientType().name())
                 .menus(getUserSidebarMenu(username))
-                .privilegeCodes(getUserPrivilegeCodes(username))
+                .privilegeCodes(privilegeCodes)
+                .enabledModules(resolveEnabledModules(privilegeCodes))
+                .enabledSubmodules(resolveEnabledSubmodules(privilegeCodes))
+                .enabledFeatures(resolveEnabledFeatures(privilegeCodes))
                 .build();
     }
 
@@ -197,8 +207,10 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 ? Set.of()
                 : new HashSet<>(privilegeRepository.findActivePrivilegeCodesByRoleIdIn(userAccess.roleIds()));
 
-        return Stream.concat(directPrivileges.stream(), rolePrivileges.stream())
+        Set<String> privilegeCodes = Stream.concat(directPrivileges.stream(), rolePrivileges.stream())
                 .collect(Collectors.toSet());
+
+        return clientApplicationContextService.getCurrentClientPrivilegeCodes(privilegeCodes);
     }
 
     @Override
@@ -287,6 +299,15 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         List<SysPrivilege> privileges = admin
                 ? privilegeRepository.findAll()
                 : privilegeRepository.findByPrivilegeCodeIn(userPrivilegeCodes);
+        if (admin && clientApplicationContextService.hasCurrentClient()) {
+            Set<String> allPrivilegeCodes = privileges.stream()
+                    .map(SysPrivilege::getPrivilegeCode)
+                    .collect(Collectors.toSet());
+            Set<String> clientPrivilegeCodes = clientApplicationContextService.getCurrentClientPrivilegeCodes(allPrivilegeCodes);
+            privileges = privileges.stream()
+                    .filter(privilege -> clientPrivilegeCodes.contains(privilege.getPrivilegeCode()))
+                    .toList();
+        }
 
         Map<Long, SidebarMenuDto> childMenus = new LinkedHashMap<>();
         privileges.stream()
@@ -347,6 +368,30 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private boolean hasAnyPrivilege(List<String> requiredPrivilegeCodes, Set<String> userPrivilegeCodes) {
         return requiredPrivilegeCodes != null
                 && requiredPrivilegeCodes.stream().anyMatch(userPrivilegeCodes::contains);
+    }
+
+    private Set<String> resolveEnabledModules(Set<String> privilegeCodes) {
+        return privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
+                .map(SysPrivilege::getModuleCode)
+                .collect(Collectors.toSet());
+    }
+
+    private Set<String> resolveEnabledSubmodules(Set<String> privilegeCodes) {
+        return privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
+                .map(privilege -> privilege.getModuleCode() + ":" + privilege.getSubmoduleCode())
+                .collect(Collectors.toSet());
+    }
+
+    private Set<String> resolveEnabledFeatures(Set<String> privilegeCodes) {
+        return privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
+                .map(privilege -> privilege.getModuleCode()
+                        + ":"
+                        + privilege.getSubmoduleCode()
+                        + ":"
+                        + privilege.getFeatureTypeCode()
+                        + ":"
+                        + privilege.getFeatureCode())
+                .collect(Collectors.toSet());
     }
 
     private int defaultOrder(Integer order) {

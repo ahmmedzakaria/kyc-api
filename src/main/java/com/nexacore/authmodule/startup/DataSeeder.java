@@ -6,6 +6,14 @@ import com.nexacore.authmodule.core.entity.AuthRole;
 import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
+import com.nexacore.systemmodule.clientaccess.dto.ApiRegistryDto;
+import com.nexacore.systemmodule.clientaccess.dto.ClientApplicationRequestDto;
+import com.nexacore.systemmodule.clientaccess.dto.ClientPermissionAssignmentRequestDto;
+import com.nexacore.systemmodule.clientaccess.enums.ClientApplicationStatus;
+import com.nexacore.systemmodule.clientaccess.enums.ClientApplicationType;
+import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApiRegistryService;
+import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApplicationService;
+import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
@@ -22,6 +30,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Configuration
 public class DataSeeder {
@@ -31,6 +40,9 @@ public class DataSeeder {
                                    UserRepository userRepository,
                                    SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
+                                   ClientApplicationService clientApplicationService,
+                                   ClientPermissionService clientPermissionService,
+                                   ClientApiRegistryService clientApiRegistryService,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
             AuthRole adminRole = roleRepository.findByName("ROLE_ADMIN")
@@ -82,6 +94,13 @@ public class DataSeeder {
             seedDefaultUser(userRepository, passwordEncoder,
                     "kyc_manager", "123", "manager@example.com", "01700000004",
                     kycOperatorRole, kycApproverRole, reportViewerRole);
+
+            seedDefaultWebClient(
+                    clientApplicationService,
+                    clientPermissionService,
+                    clientApiRegistryService,
+                    adminPrivilegeCodes
+            );
         };
     }
 
@@ -119,6 +138,35 @@ public class DataSeeder {
         AuthRole role = new AuthRole();
         role.setName(roleName);
         return roleRepository.save(role);
+    }
+
+    private void seedDefaultWebClient(ClientApplicationService clientApplicationService,
+                                      ClientPermissionService clientPermissionService,
+                                      ClientApiRegistryService clientApiRegistryService,
+                                      Set<String> privilegeCodes) {
+        ClientApplicationRequestDto requestDto = new ClientApplicationRequestDto();
+        requestDto.setClientCode("WEB");
+        requestDto.setClientName("Default Web Application");
+        requestDto.setClientType(ClientApplicationType.WEB);
+        requestDto.setStatus(ClientApplicationStatus.ACTIVE);
+        requestDto.setAllowedOrigins("http://localhost:4200,http://localhost:4300");
+        requestDto.setDescription("Default first-party web frontend client.");
+        clientApplicationService.save(requestDto, "admin");
+
+        ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
+        featureAssignment.setClientCode("WEB");
+        featureAssignment.setPrivilegeCodes(privilegeCodes);
+        clientPermissionService.assignFeaturePermissions(featureAssignment, "admin");
+
+        Set<Long> apiRegistryIds = clientApiRegistryService.syncFromAnnotations("admin").stream()
+                .map(ApiRegistryDto::getId)
+                .collect(Collectors.toSet());
+        if (!apiRegistryIds.isEmpty()) {
+            ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+            apiAssignment.setClientCode("WEB");
+            apiAssignment.setApiRegistryIds(apiRegistryIds);
+            clientPermissionService.assignApiPermissions(apiAssignment, "admin");
+        }
     }
 
     private Set<String> seedModulePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService,

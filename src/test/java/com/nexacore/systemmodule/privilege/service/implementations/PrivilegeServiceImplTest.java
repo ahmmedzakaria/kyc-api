@@ -3,6 +3,7 @@ package com.nexacore.systemmodule.privilege.service.implementations;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
+import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
@@ -26,13 +27,15 @@ class PrivilegeServiceImplTest {
     private final UserPrivilegeRepository userPrivilegeRepository = mock(UserPrivilegeRepository.class);
     private final AuthModuleGateway authModuleGateway = mock(AuthModuleGateway.class);
     private final SubMenuRepository subMenuRepository = mock(SubMenuRepository.class);
+    private final ClientApplicationContextService clientApplicationContextService = mock(ClientApplicationContextService.class);
     private final PrivilegeServiceImpl service = new PrivilegeServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
             userPrivilegeRepository,
             authModuleGateway,
             subMenuRepository,
-            List.of()
+            List.of(),
+            clientApplicationContextService
     );
 
     @Test
@@ -51,6 +54,7 @@ class PrivilegeServiceImplTest {
                 .build());
         when(privilegeRepository.findActivePrivilegeCodesByUserId(10L)).thenReturn(List.copyOf(privilegeCodes));
         when(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes)).thenReturn(List.of(laterPrivilege, earlierPrivilege));
+        when(clientApplicationContextService.getCurrentClientPrivilegeCodes(privilegeCodes)).thenReturn(privilegeCodes);
 
         List<SidebarMenuDto> menus = service.getUserSidebarMenu("operator");
 

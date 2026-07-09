@@ -1,6 +1,12 @@
 package com.nexacore.logmodule.filter;
 
+import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
+import com.nexacore.logmodule.dto.LogContextDto;
 import com.nexacore.logmodule.service.LogService;
+import com.nexacore.systemmodule.clientaccess.entity.SysApiRegistry;
+import com.nexacore.systemmodule.clientaccess.entity.SysClientApplication;
+import com.nexacore.systemmodule.clientaccess.security.ClientApplicationContext;
+import com.nexacore.systemmodule.clientaccess.security.ClientApplicationContextHolder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,9 +23,11 @@ import java.nio.charset.StandardCharsets;
 public class ApiLoggingFilter extends OncePerRequestFilter {
 
     private final LogService logService;
+    private final AuthModuleGateway authModuleGateway;
 
-    public ApiLoggingFilter(LogService logService) {
+    public ApiLoggingFilter(LogService logService, AuthModuleGateway authModuleGateway) {
         this.logService = logService;
+        this.authModuleGateway = authModuleGateway;
     }
 
     @Override
@@ -63,6 +71,7 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
             String requestBody = getRequestBody(requestWrapper);
             String responseBody = getResponseBody(responseWrapper);
             String username = getUsername();
+            LogContextDto context = buildLogContext(username);
             int status = failure == null ? responseWrapper.getStatus() : HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 
             logService.writeApiAccessLog(
@@ -71,7 +80,8 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
                     status,
                     username,
                     requestBody,
-                    responseBody
+                    responseBody,
+                    context
             );
 
             if (failure != null || status >= 500) {
@@ -83,7 +93,8 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
                         failure == null ? "HTTP_" + status : failure.getClass().getName(),
                         failure == null ? responseBody : failure.getMessage(),
                         requestBody,
-                        responseBody
+                        responseBody,
+                        context
                 );
             }
         } catch (Exception e) {
@@ -94,6 +105,42 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
     private String getUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.isAuthenticated() ? auth.getName() : "anonymous";
+    }
+
+    private LogContextDto buildLogContext(String username) {
+        ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
+        SysClientApplication clientApplication = context == null ? null : context.clientApplication();
+        SysApiRegistry apiRegistry = context == null ? null : context.apiRegistry();
+
+        return LogContextDto.builder()
+                .traceId(context == null ? null : context.traceId())
+                .clientCode(clientApplication == null ? null : clientApplication.getClientCode())
+                .clientType(clientApplication == null || clientApplication.getClientType() == null ? null : clientApplication.getClientType().name())
+                .userId(resolveUserId(username))
+                .apiCode(apiRegistry == null ? null : apiRegistry.getApiCode())
+                .moduleCode(apiRegistry == null ? null : apiRegistry.getModuleCode())
+                .moduleName(apiRegistry == null ? null : apiRegistry.getModuleName())
+                .submoduleCode(apiRegistry == null ? null : apiRegistry.getSubmoduleCode())
+                .submoduleName(apiRegistry == null ? null : apiRegistry.getSubmoduleName())
+                .featureCode(apiRegistry == null ? null : apiRegistry.getFeatureCode())
+                .featureName(apiRegistry == null ? null : apiRegistry.getFeatureName())
+                .actionCode(apiRegistry == null ? null : apiRegistry.getActionCode())
+                .actionName(apiRegistry == null ? null : apiRegistry.getActionName())
+                .accessMode(username == null || "anonymous".equals(username) ? "CLIENT_CREDENTIAL" : "USER")
+                .decision(context == null ? null : context.decision())
+                .denyReason(context == null ? null : context.denyReason())
+                .build();
+    }
+
+    private Long resolveUserId(String username) {
+        if (username == null || "anonymous".equals(username)) {
+            return null;
+        }
+        try {
+            return authModuleGateway.getUserId(username);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private String getRequestBody(ContentCachingRequestWrapper request) {

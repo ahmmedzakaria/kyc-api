@@ -1,5 +1,6 @@
 package com.nexacore.logmodule.service;
 
+import com.nexacore.logmodule.dto.LogContextDto;
 import com.nexacore.logmodule.entity.LogApiAccessLog;
 import com.nexacore.logmodule.entity.LogAuditLog;
 import com.nexacore.logmodule.entity.LogErrorLog;
@@ -31,6 +32,17 @@ public class LogService {
                                   String username,
                                   String requestBody,
                                   String responseBody) {
+        writeApiAccessLog(method, uri, status, username, requestBody, responseBody, null);
+    }
+
+    @Transactional(transactionManager = "logTransactionManager")
+    public void writeApiAccessLog(String method,
+                                  String uri,
+                                  int status,
+                                  String username,
+                                  String requestBody,
+                                  String responseBody,
+                                  LogContextDto context) {
         LogApiAccessLog log = new LogApiAccessLog();
         log.setMethod(method);
         log.setUri(uri);
@@ -38,6 +50,7 @@ public class LogService {
         log.setUsername(username);
         log.setRequestBody(requestBody);
         log.setResponseBody(responseBody);
+        applyContext(log, context);
 
         apiAccessLogRepository.save(log);
     }
@@ -54,6 +67,7 @@ public class LogService {
         log.setEntityName(entityName);
         log.setEntityId(entityId);
         log.setDetails(details);
+        applyContext(log, null);
 
         auditLogRepository.save(log);
     }
@@ -67,6 +81,19 @@ public class LogService {
                               String message,
                               String requestBody,
                               String responseBody) {
+        writeErrorLog(method, uri, status, username, errorType, message, requestBody, responseBody, null);
+    }
+
+    @Transactional(transactionManager = "logTransactionManager")
+    public void writeErrorLog(String method,
+                              String uri,
+                              int status,
+                              String username,
+                              String errorType,
+                              String message,
+                              String requestBody,
+                              String responseBody,
+                              LogContextDto context) {
         LogErrorLog log = new LogErrorLog();
         log.setMethod(method);
         log.setUri(uri);
@@ -76,7 +103,75 @@ public class LogService {
         log.setMessage(message);
         log.setRequestBody(requestBody);
         log.setResponseBody(responseBody);
+        applyContext(log, context);
 
         errorLogRepository.save(log);
+    }
+
+    private void applyContext(LogApiAccessLog log, LogContextDto context) {
+        if (context == null) {
+            return;
+        }
+        log.setTraceId(context.getTraceId());
+        log.setClientCode(context.getClientCode());
+        log.setClientType(context.getClientType());
+        log.setUserId(context.getUserId());
+        log.setApiCode(context.getApiCode());
+        log.setModuleCode(context.getModuleCode());
+        log.setModuleName(context.getModuleName());
+        log.setSubmoduleCode(context.getSubmoduleCode());
+        log.setSubmoduleName(context.getSubmoduleName());
+        log.setFeatureCode(context.getFeatureCode());
+        log.setFeatureName(context.getFeatureName());
+        log.setActionCode(context.getActionCode());
+        log.setActionName(context.getActionName());
+        log.setAccessMode(context.getAccessMode());
+        log.setDecision(context.getDecision());
+        log.setDenyReason(context.getDenyReason());
+        log.setBusinessId(context.getBusinessId());
+        log.setBranchId(context.getBranchId());
+    }
+
+    private void applyContext(LogErrorLog log, LogContextDto context) {
+        if (context == null) {
+            return;
+        }
+        log.setTraceId(context.getTraceId());
+        log.setClientCode(context.getClientCode());
+        log.setClientType(context.getClientType());
+        log.setUserId(context.getUserId());
+        log.setApiCode(context.getApiCode());
+        log.setModuleCode(context.getModuleCode());
+        log.setModuleName(context.getModuleName());
+        log.setSubmoduleCode(context.getSubmoduleCode());
+        log.setSubmoduleName(context.getSubmoduleName());
+        log.setFeatureCode(context.getFeatureCode());
+        log.setFeatureName(context.getFeatureName());
+        log.setActionCode(context.getActionCode());
+        log.setActionName(context.getActionName());
+        log.setAccessMode(context.getAccessMode());
+        log.setBusinessId(context.getBusinessId());
+        log.setBranchId(context.getBranchId());
+    }
+
+    private void applyContext(LogAuditLog log, LogContextDto context) {
+        if (context == null) {
+            return;
+        }
+        log.setTraceId(context.getTraceId());
+        log.setClientCode(context.getClientCode());
+        log.setClientType(context.getClientType());
+        log.setUserId(context.getUserId());
+        log.setModuleCode(context.getModuleCode());
+        log.setModuleName(context.getModuleName());
+        log.setSubmoduleCode(context.getSubmoduleCode());
+        log.setSubmoduleName(context.getSubmoduleName());
+        log.setFeatureCode(context.getFeatureCode());
+        log.setFeatureName(context.getFeatureName());
+        log.setActionCode(context.getActionCode());
+        log.setActionName(context.getActionName());
+        log.setAccessMode(context.getAccessMode());
+        log.setBusinessId(context.getBusinessId());
+        log.setBranchId(context.getBranchId());
     }
 }
