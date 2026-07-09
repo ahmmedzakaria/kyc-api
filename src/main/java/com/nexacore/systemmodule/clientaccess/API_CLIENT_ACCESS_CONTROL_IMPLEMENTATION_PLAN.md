@@ -575,19 +575,143 @@ This prevents one frontend or partner application from accessing another tenant'
 
 Access decisions should be logged through `logmodule`.
 
-Log fields:
+Add structured access context fields to log tables so API access, audit, and error logs can be filtered by client application, module, submodule, feature, action, user, and request trace.
+
+Use Java field name `traceId` and database column name `trace_id`. Avoid `tracerId` in the database because `trace_id` is the more common correlation naming convention.
+
+Recommended shared log context fields:
 
 ```text
+trace_id
 client_code
+client_type
+user_id
+username
+module_code
+module_name
+submodule_code
+submodule_name
+feature_code
+feature_name
+action_code
+action_name
+access_mode
+```
+
+Use `access_mode` for the request source or execution mode:
+
+```text
+USER
+CLIENT_CREDENTIAL
+SYSTEM
+SCHEDULED_JOB
+INTEGRATION
+```
+
+Do not use `mode` when the value actually means module. Keep module and access mode separate:
+
+```text
+module_code/module_name -> KYC, Auth, POS, GIS
+access_mode             -> USER, SYSTEM, INTEGRATION
+```
+
+Add these fields to:
+
+```text
+log_api_access_log
+log_error_log
+log_audit_log
+```
+
+`log_api_access_log` should include request/API decision fields:
+
+```text
+trace_id
+client_code
+client_type
+user_id
+username
 api_code
 http_method
 path
-username
-business_id
+module_code
+module_name
+submodule_code
+submodule_name
+feature_code
+feature_name
+action_code
+action_name
+access_mode
+status
 decision
 deny_reason
-timestamp
+business_id
+branch_id
+created_at
 ```
+
+`log_error_log` should include the same context plus error fields:
+
+```text
+trace_id
+client_code
+client_type
+user_id
+username
+api_code
+http_method
+path
+module_code
+module_name
+submodule_code
+submodule_name
+feature_code
+feature_name
+action_code
+action_name
+access_mode
+status
+error_type
+message
+business_id
+branch_id
+created_at
+```
+
+`log_audit_log` should include business/action context:
+
+```text
+trace_id
+client_code
+client_type
+user_id
+username
+module_code
+module_name
+submodule_code
+submodule_name
+feature_code
+feature_name
+action_code
+action_name
+access_mode
+entity_name
+entity_id
+details
+business_id
+branch_id
+created_at
+```
+
+Resolve these values on the backend. Do not trust frontend-provided values for client, module, submodule, feature, action, user, business, or branch. Populate log context from:
+
+- Resolved client application context.
+- Authenticated user context.
+- `sys_api_registry`.
+- `@ClientSecuredApi` metadata.
+- Existing `SysPrivilege` metadata.
+- Tenant, business, and branch context.
 
 Do not log:
 
@@ -624,6 +748,7 @@ Suggested migration order:
 9. Seed initial Web client application.
 10. Seed required public/system APIs.
 11. Seed initial permissions for existing frontend applications.
+12. Add structured log context columns to `log_api_access_log`, `log_error_log`, and `log_audit_log`.
 
 Use a clear system actor value for seed data.
 
@@ -651,6 +776,9 @@ Required tests:
 - Sidebar context sorts child menus by `subMenuOrder`.
 - Sidebar context uses stable fallback sorting when order values are equal.
 - Tenant/business access is rejected when the client is not mapped.
+- API access logs include trace, client, module, submodule, feature, action, access mode, and user context.
+- Error logs include the same request context as API access logs.
+- Audit logs include trace, client, module, submodule, feature, action, access mode, user, and entity context.
 - Sensitive credential values are never logged or returned.
 
 Run:
