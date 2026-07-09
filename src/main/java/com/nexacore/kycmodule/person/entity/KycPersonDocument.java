@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PersonDocument {
+public class KycPersonDocument {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,7 +20,7 @@ public class PersonDocument {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_id", nullable = false)
-    private Person person;
+    private KycPerson person;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)

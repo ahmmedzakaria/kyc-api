@@ -2,12 +2,12 @@ package com.nexacore.authmodule.startup;
 
 import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
-import com.nexacore.authmodule.core.entity.Role;
-import com.nexacore.authmodule.core.entity.User;
+import com.nexacore.authmodule.core.entity.AuthRole;
+import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
-import com.nexacore.systemmodule.privilege.entity.Privilege;
-import com.nexacore.systemmodule.privilege.entity.SubMenu;
+import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
@@ -33,13 +33,13 @@ public class DataSeeder {
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+            AuthRole adminRole = roleRepository.findByName("ROLE_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_ADMIN"));
-            Role kycOperatorRole = roleRepository.findByName("ROLE_KYC_OPERATOR")
+            AuthRole kycOperatorRole = roleRepository.findByName("ROLE_KYC_OPERATOR")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_OPERATOR"));
-            Role kycApproverRole = roleRepository.findByName("ROLE_KYC_APPROVER")
+            AuthRole kycApproverRole = roleRepository.findByName("ROLE_KYC_APPROVER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_APPROVER"));
-            Role reportViewerRole = roleRepository.findByName("ROLE_REPORT_VIEWER")
+            AuthRole reportViewerRole = roleRepository.findByName("ROLE_REPORT_VIEWER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_REPORT_VIEWER"));
 
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
@@ -91,16 +91,16 @@ public class DataSeeder {
                                  String password,
                                  String email,
                                  String mobile,
-                                 Role... roles) {
+                                 AuthRole... roles) {
 
-        User existingUser = userRepository.findByUsername(username).orElse(null);
+        AuthUser existingUser = userRepository.findByUsername(username).orElse(null);
         if (existingUser != null) {
             existingUser.getRoles().addAll(List.of(roles));
             userRepository.save(existingUser);
             return;
         }
 
-        User user = new User();
+        AuthUser user = new AuthUser();
         user.setUsername(username);
         user.setEmail(email);
         user.setMobileNumber(mobile);
@@ -115,8 +115,8 @@ public class DataSeeder {
         System.out.println("Seeded default user: " + username + " / " + password);
     }
 
-    private Role createRole(RoleRepository roleRepository, String roleName) {
-        Role role = new Role();
+    private AuthRole createRole(RoleRepository roleRepository, String roleName) {
+        AuthRole role = new AuthRole();
         role.setName(roleName);
         return roleRepository.save(role);
     }
@@ -127,8 +127,8 @@ public class DataSeeder {
         modulePrivilegeProviders.stream()
                 .flatMap(provider -> provider.getPrivilegeFeatures().stream())
                 .forEach(feature -> feature.getActions().forEach(action -> {
-                    SubMenu subMenu = seedSubMenuIfMissing(systemPrivilegeRegistryService, feature);
-                    Privilege privilege = savePrivilegeIfMissing(
+                    SysSubMenu subMenu = seedSubMenuIfMissing(systemPrivilegeRegistryService, feature);
+                    SysPrivilege privilege = savePrivilegeIfMissing(
                             systemPrivilegeRegistryService,
                             feature,
                             action.getActionCode(),
@@ -140,7 +140,7 @@ public class DataSeeder {
         return privilegeCodes;
     }
 
-    private SubMenu seedSubMenuIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
+    private SysSubMenu seedSubMenuIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                          PrivilegeFeatureDefinitionDto feature) {
         PrivilegeMenuItemDto menuItem = feature.getMenuItems().stream()
                 .findFirst()
@@ -150,14 +150,14 @@ public class DataSeeder {
         String url = menuItem == null ? "/" + feature.getFeatureName().toLowerCase().replace(" ", "-") : menuItem.getPath();
         String icon = menuItem == null ? feature.getIcon() : menuItem.getIcon();
 
-        SubMenu subMenu = systemPrivilegeRegistryService.findSubMenu(
+        SysSubMenu subMenu = systemPrivilegeRegistryService.findSubMenu(
                         feature.getModuleCode(),
                         feature.getSubmoduleCode(),
                         feature.getFeatureTypeCode(),
                         feature.getFeatureCode(),
                         url
                 )
-                .orElseGet(SubMenu::new);
+                .orElseGet(SysSubMenu::new);
 
         subMenu.setName(name == null ? feature.getFeatureName() : name);
         subMenu.setUrl(url);
@@ -179,15 +179,15 @@ public class DataSeeder {
         return systemPrivilegeRegistryService.saveSubMenu(subMenu);
     }
 
-    private Privilege savePrivilegeIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
+    private SysPrivilege savePrivilegeIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                              PrivilegeFeatureDefinitionDto feature,
                                              String actionCode,
                                              String actionName,
-                                             SubMenu subMenu) {
+                                             SysSubMenu subMenu) {
         String privilegeCode = feature.getModuleCode() + feature.getSubmoduleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
 
-        Privilege privilege = systemPrivilegeRegistryService.findPrivilegeByCode(privilegeCode)
-                .orElseGet(() -> Privilege.builder()
+        SysPrivilege privilege = systemPrivilegeRegistryService.findPrivilegeByCode(privilegeCode)
+                .orElseGet(() -> SysPrivilege.builder()
                         .privilegeCode(privilegeCode)
                         .moduleCode(feature.getModuleCode())
                         .moduleName(feature.getModuleName())
@@ -207,7 +207,7 @@ public class DataSeeder {
         return systemPrivilegeRegistryService.savePrivilege(privilege);
     }
 
-    private void assignRolePrivilegesIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService, Role role, Set<String> privilegeCodes) {
+    private void assignRolePrivilegesIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService, AuthRole role, Set<String> privilegeCodes) {
         if (systemPrivilegeRegistryService.countRolePrivileges(role.getId()) > 0) {
             return;
         }

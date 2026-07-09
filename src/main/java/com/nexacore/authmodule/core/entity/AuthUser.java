@@ -18,7 +18,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User extends ActionInfo {
+public class AuthUser extends ActionInfo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,7 +38,7 @@ public class User extends ActionInfo {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     @Builder.Default
-    private Set<Role> roles = new HashSet<>();
+    private Set<AuthRole> roles = new HashSet<>();
 
     @Column(nullable = false)
     private boolean enabled;

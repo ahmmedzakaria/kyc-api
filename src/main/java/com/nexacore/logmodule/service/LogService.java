@@ -1,8 +1,8 @@
 package com.nexacore.logmodule.service;
 
-import com.nexacore.logmodule.entity.ApiAccessLog;
-import com.nexacore.logmodule.entity.AuditLog;
-import com.nexacore.logmodule.entity.ErrorLog;
+import com.nexacore.logmodule.entity.LogApiAccessLog;
+import com.nexacore.logmodule.entity.LogAuditLog;
+import com.nexacore.logmodule.entity.LogErrorLog;
 import com.nexacore.logmodule.repository.ApiAccessLogRepository;
 import com.nexacore.logmodule.repository.AuditLogRepository;
 import com.nexacore.logmodule.repository.ErrorLogRepository;
@@ -31,7 +31,7 @@ public class LogService {
                                   String username,
                                   String requestBody,
                                   String responseBody) {
-        ApiAccessLog log = new ApiAccessLog();
+        LogApiAccessLog log = new LogApiAccessLog();
         log.setMethod(method);
         log.setUri(uri);
         log.setStatus(status);
@@ -48,7 +48,7 @@ public class LogService {
                               String entityName,
                               String entityId,
                               String details) {
-        AuditLog log = new AuditLog();
+        LogAuditLog log = new LogAuditLog();
         log.setUsername(username);
         log.setAction(action);
         log.setEntityName(entityName);
@@ -67,7 +67,7 @@ public class LogService {
                               String message,
                               String requestBody,
                               String responseBody) {
-        ErrorLog log = new ErrorLog();
+        LogErrorLog log = new LogErrorLog();
         log.setMethod(method);
         log.setUri(uri);
         log.setStatus(status);

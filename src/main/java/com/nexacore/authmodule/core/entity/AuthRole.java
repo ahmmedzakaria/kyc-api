@@ -15,7 +15,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Role {
+public class AuthRole {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

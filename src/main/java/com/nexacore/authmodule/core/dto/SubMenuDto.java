@@ -1,6 +1,6 @@
 package com.nexacore.authmodule.core.dto;
 
-import com.nexacore.systemmodule.privilege.entity.SubMenu;
+import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +27,7 @@ public class SubMenuDto {
     private Long createdBy;
     private Long updatedBy;
 
-    public static SubMenuDto fromEntity(SubMenu subMenu) {
+    public static SubMenuDto fromEntity(SysSubMenu subMenu) {
         return SubMenuDto.builder()
                 .id(subMenu.getId())
                 .name(subMenu.getName())

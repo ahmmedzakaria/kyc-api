@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.privilege.service.implementations;
 
-import com.nexacore.systemmodule.privilege.entity.Privilege;
+import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import com.nexacore.systemmodule.privilege.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.RolePrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.SubMenuRepository;
@@ -28,7 +28,7 @@ class SystemPrivilegeRegistryServiceImplTest {
 
     @Test
     void delegatesPrivilegeQueriesToSystemRepository() {
-        Privilege privilege = Privilege.builder()
+        SysPrivilege privilege = SysPrivilege.builder()
                 .privilegeCode("01010100101")
                 .active(true)
                 .build();
@@ -52,7 +52,7 @@ class SystemPrivilegeRegistryServiceImplTest {
 
     @Test
     void delegatesSaveToSystemRepository() {
-        Privilege privilege = Privilege.builder()
+        SysPrivilege privilege = SysPrivilege.builder()
                 .privilegeCode("01010100101")
                 .active(true)
                 .build();

@@ -1,26 +1,33 @@
 package com.nexacore.gismodule.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
-
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
 import java.util.UUID;
 
 @Entity
-@Table(name = "gis_administrative_boundaries_level_5", schema = "public")
+@Table(name = "gis_administrative_boundaries_level_6", schema = "public")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AdministrativeBoundariesLevel5 {
+public class GisAdministrativeBoundariesLevel6 {
 
     @Id
     @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
     private UUID id;
+
+    @Column(name = "village_code")
+    private String villageCode;
+
+    @Column(name = "village_name")
+    private String villageName;
+
+    @Column(name = "union_id")
+    private UUID unionId;
 
     @Column(name = "union_code")
     private String unionCode;

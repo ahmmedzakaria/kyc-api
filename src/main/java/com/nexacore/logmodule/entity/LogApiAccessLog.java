@@ -12,19 +12,22 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "log_audit_log")
-public class AuditLog {
+@Table(name = "log_api_access_log")
+public class LogApiAccessLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String method;
+    private String uri;
+    private int status;
     private String username;
-    private String action;
-    private String entityName;
-    private String entityId;
 
     @Column(columnDefinition = "TEXT")
-    private String details;
+    private String requestBody;
+
+    @Column(columnDefinition = "TEXT")
+    private String responseBody;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.privilege.repository;
 
-import com.nexacore.systemmodule.privilege.entity.Privilege;
+import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PrivilegeRepository extends JpaRepository<Privilege, Long> {
-    Optional<Privilege> findByPrivilegeCode(String privilegeCode);
+public interface PrivilegeRepository extends JpaRepository<SysPrivilege, Long> {
+    Optional<SysPrivilege> findByPrivilegeCode(String privilegeCode);
 
-    List<Privilege> findByPrivilegeCodeIn(Collection<String> privilegeCodes);
+    List<SysPrivilege> findByPrivilegeCodeIn(Collection<String> privilegeCodes);
 
     @Query(value = """
             SELECT DISTINCT p.privilege_code

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserPrivilege {
+public class SysUserPrivilege {
 
     @EmbeddedId
     private UserPrivilegeId id;

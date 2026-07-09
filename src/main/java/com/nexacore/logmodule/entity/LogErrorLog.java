@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "log_api_access_log")
-public class ApiAccessLog {
+@Table(name = "log_error_log")
+public class LogErrorLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,6 +22,10 @@ public class ApiAccessLog {
     private String uri;
     private int status;
     private String username;
+    private String errorType;
+
+    @Column(columnDefinition = "TEXT")
+    private String message;
 
     @Column(columnDefinition = "TEXT")
     private String requestBody;

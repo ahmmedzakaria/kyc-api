@@ -1,6 +1,6 @@
 package com.nexacore.kycmodule.person.api;
 
-import com.nexacore.kycmodule.person.entity.Person;
+import com.nexacore.kycmodule.person.entity.KycPerson;
 import com.nexacore.kycmodule.person.repository.PersonRepository;
 import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
 import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
@@ -60,7 +60,7 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
         return StringUtils.hasText(username) && personRepository.existsByUsername(username.trim());
     }
 
-    private PersonSummaryDto toSummary(Person person) {
+    private PersonSummaryDto toSummary(KycPerson person) {
         return PersonSummaryDto.builder()
                 .id(person.getId())
                 .username(person.getUsername())

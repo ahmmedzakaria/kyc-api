@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Person {
+public class KycPerson {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,5 +40,5 @@ public class Person {
     private Boolean mobileVerified = false;
 
     @OneToMany(mappedBy = "person", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PersonDocument> documents = new ArrayList<>();
+    private List<KycPersonDocument> documents = new ArrayList<>();
 }

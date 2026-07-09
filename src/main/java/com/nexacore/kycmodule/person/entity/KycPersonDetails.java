@@ -13,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PersonDetails {
+public class KycPersonDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,7 +21,7 @@ public class PersonDetails {
 
     @OneToOne
     @JoinColumn(name = "person_id", nullable = false, unique = true)
-    private Person person;
+    private KycPerson person;
 
     // Family Info
     private String fatherName;

@@ -1,7 +1,7 @@
 package com.nexacore.authmodule.api;
 
-import com.nexacore.authmodule.core.entity.Role;
-import com.nexacore.authmodule.core.entity.User;
+import com.nexacore.authmodule.core.entity.AuthRole;
+import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
@@ -24,13 +24,13 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
 
     @Override
     public AuthUserAccessDto getUserAccess(String username) {
-        User user = userRepository.findByUsername(username)
+        AuthUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
 
         return AuthUserAccessDto.builder()
                 .userId(user.getId())
                 .roleIds(user.getRoles().stream()
-                        .map(Role::getId)
+                        .map(AuthRole::getId)
                         .collect(Collectors.toSet()))
                 .admin(user.getRoles().stream().anyMatch(role -> ADMIN_ROLE.equals(role.getName())))
                 .build();

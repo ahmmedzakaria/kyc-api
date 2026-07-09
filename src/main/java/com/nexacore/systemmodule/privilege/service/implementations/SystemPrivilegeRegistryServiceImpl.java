@@ -1,9 +1,9 @@
 package com.nexacore.systemmodule.privilege.service.implementations;
 
-import com.nexacore.systemmodule.privilege.entity.Privilege;
-import com.nexacore.systemmodule.privilege.entity.RolePrivilege;
+import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.entity.SysRolePrivilege;
 import com.nexacore.systemmodule.privilege.entity.RolePrivilegeId;
-import com.nexacore.systemmodule.privilege.entity.SubMenu;
+import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
 import com.nexacore.systemmodule.privilege.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.RolePrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.SubMenuRepository;
@@ -32,31 +32,31 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<Privilege> findPrivilegeByCode(String privilegeCode) {
+    public Optional<SysPrivilege> findPrivilegeByCode(String privilegeCode) {
         return privilegeRepository.findByPrivilegeCode(privilegeCode);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public List<Privilege> findPrivilegesByCodes(Collection<String> privilegeCodes) {
+    public List<SysPrivilege> findPrivilegesByCodes(Collection<String> privilegeCodes) {
         return privilegeRepository.findByPrivilegeCodeIn(privilegeCodes);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public List<Privilege> getAllPrivileges() {
+    public List<SysPrivilege> getAllPrivileges() {
         return privilegeRepository.findAll();
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
-    public Privilege savePrivilege(Privilege privilege) {
+    public SysPrivilege savePrivilege(SysPrivilege privilege) {
         return privilegeRepository.save(privilege);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SubMenu> findSubMenu(String moduleCode,
+    public Optional<SysSubMenu> findSubMenu(String moduleCode,
                                          String submoduleCode,
                                          String featureTypeCode,
                                          String featureCode,
@@ -72,7 +72,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
-    public SubMenu saveSubMenu(SubMenu subMenu) {
+    public SysSubMenu saveSubMenu(SysSubMenu subMenu) {
         return subMenuRepository.save(subMenu);
     }
 
@@ -81,7 +81,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     public void assignRolePrivileges(Long roleId, Collection<String> privilegeCodes) {
         rolePrivilegeRepository.deleteByIdRoleId(roleId);
         rolePrivilegeRepository.saveAll(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
-                .map(privilege -> RolePrivilege.builder()
+                .map(privilege -> SysRolePrivilege.builder()
                         .id(new RolePrivilegeId(roleId, privilege.getId()))
                         .build())
                 .toList());

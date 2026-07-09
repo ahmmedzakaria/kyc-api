@@ -4,8 +4,8 @@ package com.nexacore.gismodule.service.implementations;
 
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.gismodule.dto.AdministrativeBoundaryResponse;
-import com.nexacore.gismodule.entity.AdministrativeBoundariesLevel5;
-import com.nexacore.gismodule.entity.AdministrativeBoundariesLevel6;
+import com.nexacore.gismodule.entity.GisAdministrativeBoundariesLevel5;
+import com.nexacore.gismodule.entity.GisAdministrativeBoundariesLevel6;
 import com.nexacore.gismodule.enums.GisEntity;
 import com.nexacore.gismodule.repository.AdministrativeBoundariesLevel5Repository;
 import com.nexacore.gismodule.repository.AdministrativeBoundariesLevel6Repository;
@@ -33,7 +33,7 @@ public class AdministrativeBoundaryService {
       try{
         Page<KycRecord> pageData = null;
         Pageable pageable = PageRequest.of(dto.page(), dto.size());
-        Page<AdministrativeBoundariesLevel5> page = administrativeBoundariesLevel5Repository.searchByAnyLevel(dto.searchText(), pageable);
+        Page<GisAdministrativeBoundariesLevel5> page = administrativeBoundariesLevel5Repository.searchByAnyLevel(dto.searchText(), pageable);
 
         Page<AdministrativeBoundaryResponse> response =  page.map(a -> new AdministrativeBoundaryResponse(
                 a.getId(),
@@ -74,7 +74,7 @@ public class AdministrativeBoundaryService {
         }
     }
 
-    private AdministrativeBoundaryResponse toLevel5Response(AdministrativeBoundariesLevel5 a) {
+    private AdministrativeBoundaryResponse toLevel5Response(GisAdministrativeBoundariesLevel5 a) {
         return new AdministrativeBoundaryResponse(
                 a.getId(),
                 GisEntity.ADMINISTRATIVE_BOUNDARY_LEVEL_5.getGisCode(),
@@ -86,7 +86,7 @@ public class AdministrativeBoundaryService {
         );
     }
 
-    private AdministrativeBoundaryResponse toLevel6Response(AdministrativeBoundariesLevel6 a) {
+    private AdministrativeBoundaryResponse toLevel6Response(GisAdministrativeBoundariesLevel6 a) {
         return new AdministrativeBoundaryResponse(
                 a.getId(),
                 GisEntity.ADMINISTRATIVE_BOUNDARY_LEVEL_6.getGisCode(),

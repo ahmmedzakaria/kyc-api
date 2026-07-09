@@ -12,11 +12,11 @@ import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
-import com.nexacore.systemmodule.privilege.entity.Privilege;
-import com.nexacore.systemmodule.privilege.entity.RolePrivilege;
+import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.entity.SysRolePrivilege;
 import com.nexacore.systemmodule.privilege.entity.RolePrivilegeId;
-import com.nexacore.systemmodule.privilege.entity.SubMenu;
-import com.nexacore.systemmodule.privilege.entity.UserPrivilege;
+import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
+import com.nexacore.systemmodule.privilege.entity.SysUserPrivilege;
 import com.nexacore.systemmodule.privilege.entity.UserPrivilegeId;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.repository.PrivilegeRepository;
@@ -78,8 +78,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 requestDto.getActionCode()
         );
 
-        Privilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
-                .orElseGet(Privilege::new);
+        SysPrivilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
+                .orElseGet(SysPrivilege::new);
 
         privilege.setPrivilegeCode(privilegeCode);
         privilege.setModuleCode(requestDto.getModuleCode());
@@ -118,8 +118,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public SubMenuDto saveSubMenu(SubMenuRequestDto requestDto, String username) {
         Long loginUserId = authModuleGateway.getUserId(username);
 
-        SubMenu subMenu = requestDto.getId() == null
-                ? new SubMenu()
+        SysSubMenu subMenu = requestDto.getId() == null
+                ? new SysSubMenu()
                 : subMenuRepository.findById(requestDto.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Sub menu not found: " + requestDto.getId()));
 
@@ -148,11 +148,11 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<SubMenuDto> getAllSubMenus() {
         return subMenuRepository.findAll().stream()
-                .sorted(Comparator.comparing(SubMenu::getModuleCode)
-                        .thenComparing(SubMenu::getSubmoduleCode)
-                        .thenComparing(SubMenu::getFeatureTypeCode)
-                        .thenComparing(SubMenu::getFeatureCode)
-                        .thenComparing(SubMenu::getName))
+                .sorted(Comparator.comparing(SysSubMenu::getModuleCode)
+                        .thenComparing(SysSubMenu::getSubmoduleCode)
+                        .thenComparing(SysSubMenu::getFeatureTypeCode)
+                        .thenComparing(SysSubMenu::getFeatureCode)
+                        .thenComparing(SysSubMenu::getName))
                 .map(SubMenuDto::fromEntity)
                 .toList();
     }
@@ -226,10 +226,10 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         authModuleGateway.requireRoleExists(requestDto.getRoleId());
 
-        Set<Privilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
+        Set<SysPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
         rolePrivilegeRepository.deleteByIdRoleId(requestDto.getRoleId());
         rolePrivilegeRepository.saveAll(privileges.stream()
-                .map(privilege -> RolePrivilege.builder()
+                .map(privilege -> SysRolePrivilege.builder()
                         .id(new RolePrivilegeId(requestDto.getRoleId(), privilege.getId()))
                         .build())
                 .toList());
@@ -244,24 +244,24 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         authModuleGateway.requireUserExists(requestDto.getUserId());
 
-        Set<Privilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
+        Set<SysPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
         userPrivilegeRepository.deleteByIdUserId(requestDto.getUserId());
         userPrivilegeRepository.saveAll(privileges.stream()
-                .map(privilege -> UserPrivilege.builder()
+                .map(privilege -> SysUserPrivilege.builder()
                         .id(new UserPrivilegeId(requestDto.getUserId(), privilege.getId()))
                         .build())
                 .toList());
     }
 
-    private Set<Privilege> loadPrivileges(Set<String> privilegeCodes) {
+    private Set<SysPrivilege> loadPrivileges(Set<String> privilegeCodes) {
         if (privilegeCodes == null || privilegeCodes.isEmpty()) {
             return new HashSet<>();
         }
 
-        List<Privilege> privileges = privilegeRepository.findByPrivilegeCodeIn(privilegeCodes);
+        List<SysPrivilege> privileges = privilegeRepository.findByPrivilegeCodeIn(privilegeCodes);
         if (privileges.size() != privilegeCodes.size()) {
             Set<String> foundCodes = privileges.stream()
-                    .map(Privilege::getPrivilegeCode)
+                    .map(SysPrivilege::getPrivilegeCode)
                     .collect(Collectors.toSet());
 
             Set<String> missingCodes = privilegeCodes.stream()
@@ -278,20 +278,20 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                                          String icon,
                                          Set<String> userPrivilegeCodes,
                                          boolean admin) {
-        List<Privilege> privileges = admin
+        List<SysPrivilege> privileges = admin
                 ? privilegeRepository.findAll()
                 : privilegeRepository.findByPrivilegeCodeIn(userPrivilegeCodes);
 
         Map<Long, SidebarMenuDto> childMenus = new LinkedHashMap<>();
         privileges.stream()
-                .filter(Privilege::isActive)
+                .filter(SysPrivilege::isActive)
                 .filter(privilege -> privilege.getSubMenu() != null)
                 .filter(privilege -> privilege.getSubMenu().isActive())
                 .filter(privilege -> featureType.getCode().equals(privilege.getSubMenu().getFeatureTypeCode()))
-                .sorted(Comparator.comparing((Privilege privilege) -> privilege.getSubMenu().getModuleCode())
-                        .thenComparing((Privilege privilege) -> privilege.getSubMenu().getSubmoduleCode())
-                        .thenComparing((Privilege privilege) -> privilege.getSubMenu().getFeatureCode())
-                        .thenComparing((Privilege privilege) -> privilege.getSubMenu().getName()))
+                .sorted(Comparator.comparing((SysPrivilege privilege) -> privilege.getSubMenu().getModuleCode())
+                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getSubmoduleCode())
+                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getFeatureCode())
+                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getName()))
                 .forEach(privilege -> childMenus.computeIfAbsent(
                         privilege.getSubMenu().getId(),
                         id -> toSidebarMenu(privilege.getSubMenu())
@@ -308,7 +308,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .build();
     }
 
-    private SidebarMenuDto toSidebarMenu(SubMenu subMenu) {
+    private SidebarMenuDto toSidebarMenu(SysSubMenu subMenu) {
         return SidebarMenuDto.builder()
                 .label(subMenu.getName())
                 .icon(subMenu.getIcon())
@@ -316,7 +316,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .build();
     }
 
-    private SubMenu resolveSubMenu(Long subMenuId) {
+    private SysSubMenu resolveSubMenu(Long subMenuId) {
         if (subMenuId == null) {
             return null;
         }

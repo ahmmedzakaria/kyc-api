@@ -1,8 +1,8 @@
 package com.nexacore.authmodule.sso.service;
 
 import com.nexacore.authmodule.security.config.KeycloakProperties;
-import com.nexacore.authmodule.core.entity.Role;
-import com.nexacore.authmodule.core.entity.User;
+import com.nexacore.authmodule.core.entity.AuthRole;
+import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.authmodule.sso.dto.SsoUserProfileDto;
@@ -56,8 +56,8 @@ public class KeycloakSsoService {
     }
 
     @Transactional
-    public User syncUser(SsoUserProfileDto profile) {
-        Optional<User> existingUser = userRepository
+    public AuthUser syncUser(SsoUserProfileDto profile) {
+        Optional<AuthUser> existingUser = userRepository
                 .findByExternalProviderAndExternalSubject(PROVIDER, profile.subject());
 
         if (existingUser.isEmpty() && StringUtils.hasText(profile.email())) {
@@ -72,7 +72,7 @@ public class KeycloakSsoService {
             throw new JwtException("SSO_USER_NOT_MAPPED");
         }
 
-        User user = existingUser.orElseGet(User::new);
+        AuthUser user = existingUser.orElseGet(AuthUser::new);
         user.setUsername(profile.username());
         user.setEmail(profile.email());
         user.setEmailVerified(profile.emailVerified());
@@ -86,7 +86,7 @@ public class KeycloakSsoService {
         }
 
         if (user.getRoles().isEmpty() && StringUtils.hasText(keycloakProperties.getDefaultRole())) {
-            Role defaultRole = roleRepository.findByName(keycloakProperties.getDefaultRole())
+            AuthRole defaultRole = roleRepository.findByName(keycloakProperties.getDefaultRole())
                     .orElseThrow(() -> new JwtException("DEFAULT_ROLE_NOT_FOUND"));
             user.getRoles().add(defaultRole);
         }
