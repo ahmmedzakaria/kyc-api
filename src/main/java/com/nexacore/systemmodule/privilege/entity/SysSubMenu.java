@@ -60,6 +60,14 @@ public class SysSubMenu extends ActionInfo {
     @Column(nullable = false)
     private boolean active;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer menuOrder = 0;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer subMenuOrder = 0;
+
     @Column
     private Long createdBy;
 

@@ -17,4 +17,6 @@ public class SubMenuRequestDto {
     private String featureCode;
     private String featureName;
     private Boolean active;
+    private Integer menuOrder;
+    private Integer subMenuOrder;
 }

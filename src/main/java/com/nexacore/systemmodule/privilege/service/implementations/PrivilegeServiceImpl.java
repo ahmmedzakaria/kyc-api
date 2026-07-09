@@ -135,6 +135,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         subMenu.setFeatureCode(requestDto.getFeatureCode());
         subMenu.setFeatureName(requestDto.getFeatureName());
         subMenu.setActive(requestDto.getActive() == null || requestDto.getActive());
+        subMenu.setMenuOrder(defaultOrder(requestDto.getMenuOrder()));
+        subMenu.setSubMenuOrder(defaultOrder(requestDto.getSubMenuOrder()));
 
         if (subMenu.getId() == null) {
             subMenu.setCreatedBy(loginUserId);
@@ -148,7 +150,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<SubMenuDto> getAllSubMenus() {
         return subMenuRepository.findAll().stream()
-                .sorted(Comparator.comparing(SysSubMenu::getModuleCode)
+                .sorted(Comparator.comparingInt((SysSubMenu subMenu) -> defaultOrder(subMenu.getMenuOrder()))
+                        .thenComparingInt(subMenu -> defaultOrder(subMenu.getSubMenuOrder()))
+                        .thenComparing(SysSubMenu::getModuleCode)
                         .thenComparing(SysSubMenu::getSubmoduleCode)
                         .thenComparing(SysSubMenu::getFeatureTypeCode)
                         .thenComparing(SysSubMenu::getFeatureCode)
@@ -177,7 +181,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 buildMainMenu(FeatureType.SETUP, "fa fa-sliders", userPrivilegeCodes, userAccess.admin()),
                 buildMainMenu(FeatureType.OPERATIONS, "fa fa-briefcase", userPrivilegeCodes, userAccess.admin()),
                 buildMainMenu(FeatureType.REPORT, "fa fa-chart-line", userPrivilegeCodes, userAccess.admin())
-        );
+        ).stream()
+                .sorted(Comparator.comparingInt(menu -> defaultOrder(menu.getMenuOrder())))
+                .toList();
     }
 
     @Override
@@ -288,7 +294,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .filter(privilege -> privilege.getSubMenu() != null)
                 .filter(privilege -> privilege.getSubMenu().isActive())
                 .filter(privilege -> featureType.getCode().equals(privilege.getSubMenu().getFeatureTypeCode()))
-                .sorted(Comparator.comparing((SysPrivilege privilege) -> privilege.getSubMenu().getModuleCode())
+                .sorted(Comparator.comparingInt((SysPrivilege privilege) -> defaultOrder(privilege.getSubMenu().getMenuOrder()))
+                        .thenComparingInt(privilege -> defaultOrder(privilege.getSubMenu().getSubMenuOrder()))
+                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getModuleCode())
                         .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getSubmoduleCode())
                         .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getFeatureCode())
                         .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getName()))
@@ -304,6 +312,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         return SidebarMenuDto.builder()
                 .label(featureType.getDisplayName())
                 .icon(icon)
+                .menuOrder(resolveMainMenuOrder(featureMenus))
                 .children(featureMenus)
                 .build();
     }
@@ -313,7 +322,17 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .label(subMenu.getName())
                 .icon(subMenu.getIcon())
                 .path(subMenu.getUrl())
+                .menuOrder(defaultOrder(subMenu.getMenuOrder()))
+                .subMenuOrder(defaultOrder(subMenu.getSubMenuOrder()))
                 .build();
+    }
+
+    private int resolveMainMenuOrder(List<SidebarMenuDto> childMenus) {
+        return childMenus.stream()
+                .map(SidebarMenuDto::getMenuOrder)
+                .mapToInt(this::defaultOrder)
+                .min()
+                .orElse(0);
     }
 
     private SysSubMenu resolveSubMenu(Long subMenuId) {
@@ -328,6 +347,10 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private boolean hasAnyPrivilege(List<String> requiredPrivilegeCodes, Set<String> userPrivilegeCodes) {
         return requiredPrivilegeCodes != null
                 && requiredPrivilegeCodes.stream().anyMatch(userPrivilegeCodes::contains);
+    }
+
+    private int defaultOrder(Integer order) {
+        return order == null ? 0 : order;
     }
 
     private void validateCodePart(String value, int expectedLength, String fieldName) {

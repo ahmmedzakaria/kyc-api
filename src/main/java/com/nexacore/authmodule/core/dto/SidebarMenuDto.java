@@ -16,6 +16,8 @@ public class SidebarMenuDto {
     private String label;
     private String icon;
     private String path;
+    private Integer menuOrder;
+    private Integer subMenuOrder;
 
     @Builder.Default
     private List<String> privilegeCodes = new ArrayList<>();

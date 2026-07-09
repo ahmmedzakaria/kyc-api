@@ -24,6 +24,8 @@ public class SubMenuDto {
     private String featureCode;
     private String featureName;
     private boolean active;
+    private Integer menuOrder;
+    private Integer subMenuOrder;
     private Long createdBy;
     private Long updatedBy;
 
@@ -42,6 +44,8 @@ public class SubMenuDto {
                 .featureCode(subMenu.getFeatureCode())
                 .featureName(subMenu.getFeatureName())
                 .active(subMenu.isActive())
+                .menuOrder(subMenu.getMenuOrder())
+                .subMenuOrder(subMenu.getSubMenuOrder())
                 .createdBy(subMenu.getCreatedBy())
                 .updatedBy(subMenu.getUpdatedBy())
                 .build();
