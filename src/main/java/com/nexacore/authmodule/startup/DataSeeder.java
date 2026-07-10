@@ -130,12 +130,8 @@ public class DataSeeder {
         AuthUser user = new AuthUser();
         user.setUsername(username);
         user.setPersonId(person.getId());
-        user.setEmail(email);
-        user.setMobileNumber(mobile);
         user.setPassword(passwordEncoder.encode(password));
         user.setRoles(new HashSet<>(List.of(roles)));
-        user.setEmailVerified(true);
-        user.setMobileVerified(true);
         user.setEnabled(true);
 
         userRepository.save(user);

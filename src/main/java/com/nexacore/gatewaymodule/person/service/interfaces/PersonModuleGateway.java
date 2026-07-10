@@ -20,6 +20,12 @@ public interface PersonModuleGateway extends ModuleGateway {
                                          String firstName,
                                          String lastName);
 
+    PersonSummaryDto promotePersonToUser(Long personId,
+                                         String username,
+                                         String email,
+                                         String firstName,
+                                         String lastName);
+
     boolean existsById(Long personId);
 
     boolean existsByUsername(String username);

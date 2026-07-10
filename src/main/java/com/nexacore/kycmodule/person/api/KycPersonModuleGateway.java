@@ -59,9 +59,42 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
                                                 String lastName) {
         Optional<KycPerson> existingPerson = findExistingPerson(username, email, mobileNumber);
         KycPerson person = existingPerson.orElseGet(KycPerson::new);
+        applyUserFields(person, username, email, mobileNumber, firstName, lastName);
+        return toSummary(personRepository.save(person));
+    }
 
+    @Override
+    @Transactional(transactionManager = "kycTransactionManager")
+    public PersonSummaryDto promotePersonToUser(Long personId,
+                                                String username,
+                                                String email,
+                                                String firstName,
+                                                String lastName) {
+        KycPerson person = personRepository.findById(personId)
+                .orElseThrow(() -> new IllegalArgumentException("Person not found: " + personId));
+        applyUserFields(person, username, email, null, firstName, lastName);
+        return toSummary(personRepository.save(person));
+    }
+
+    private void applyUserFields(KycPerson person,
+                                 String username,
+                                 String email,
+                                 String mobileNumber,
+                                 String firstName,
+                                 String lastName) {
+        if (!StringUtils.hasText(username)) {
+            throw new IllegalArgumentException("Username is required when promoting a person to user");
+        }
+        String normalizedUsername = username.trim();
+        personRepository.findByUsername(normalizedUsername)
+                .filter(existing -> person.getId() == null || !existing.getId().equals(person.getId()))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("Username is already assigned: " + normalizedUsername);
+                });
         if (!StringUtils.hasText(person.getUsername())) {
-            person.setUsername(username.trim());
+            person.setUsername(normalizedUsername);
+        } else if (!person.getUsername().equalsIgnoreCase(normalizedUsername)) {
+            throw new IllegalArgumentException("Person is already linked to username: " + person.getUsername());
         }
         if (!StringUtils.hasText(person.getEmail()) && StringUtils.hasText(email)) {
             person.setEmail(email.trim());
@@ -81,8 +114,7 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
         if (person.getMobileVerified() == null) {
             person.setMobileVerified(false);
         }
-
-        return toSummary(personRepository.save(person));
+        person.setUser(true);
     }
 
     @Override
@@ -127,6 +159,7 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
                 .nationalId(person.getNationalId())
                 .emailVerified(person.getEmailVerified())
                 .mobileVerified(person.getMobileVerified())
+                .user(person.getUser())
                 .build();
     }
 }

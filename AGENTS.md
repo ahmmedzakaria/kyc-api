@@ -38,8 +38,10 @@ This guide applies to the NexaCore backend Maven project under `backend/`.
 - Every `AuthUser` is a `KycPerson`.
 - Not every `KycPerson` is an `AuthUser`.
 - A `KycPerson` can later become an `AuthUser` after approval/business verification.
-- Keep person identity/profile fields such as first name and last name in `kyc_db.kyc_person`.
-- Do not duplicate person profile fields in `auth_db.auth_users`; store only the application-level reference `auth_users.person_id`.
+- Keep person identity/contact/profile fields such as first name, last name, email, email verification, mobile number, and mobile verification in `kyc_db.kyc_person`.
+- Do not duplicate person contact/profile fields in `auth_db.auth_users`; store only account data plus the application-level reference `auth_users.person_id`.
+- Use `kyc_person.is_user` to indicate that a person has an active application user account.
+- Username assignment and uniqueness for user accounts is owned by the auth flow; ordinary non-user persons should not receive generated usernames from KYC person creation.
 - Because `auth_db` and `kyc_db` are separate databases, treat `auth_users.person_id -> kyc_person.id` as an application-level reference, not a physical cross-database foreign key.
 
 ## Database Rules

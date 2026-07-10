@@ -22,6 +22,7 @@ public class PersonDto {
     private String photoUrl;
     private Boolean emailVerified;
     private Boolean mobileVerified;
+    private Boolean user;
 
     private String fatherName;
     private String fatherMobileNumber;

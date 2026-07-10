@@ -19,7 +19,7 @@ public class KycPerson {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(unique = true, length = 100)
     private String username;
 
     @Column(name = "mobile_number", nullable = false, unique = true, length = 20)
@@ -38,6 +38,9 @@ public class KycPerson {
 
     private Boolean emailVerified = false;
     private Boolean mobileVerified = false;
+
+    @Column(name = "is_user", nullable = false)
+    private Boolean user = false;
 
     @OneToMany(mappedBy = "person", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<KycPersonDocument> documents = new ArrayList<>();

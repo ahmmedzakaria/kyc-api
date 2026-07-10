@@ -36,6 +36,147 @@ The KYC module should support these business capabilities:
 - Publish person registration events for audit/logging.
 - Expose a module gateway so Auth can resolve and promote a person without depending on KYC repositories directly.
 
+## KYC Application Roadmap
+
+### Phase 1 - Requirement Analysis
+
+Business goal: build a reusable KYC platform that provides:
+
+- Customer onboarding
+- Identity verification
+- Document management
+- Workflow approval
+- Audit trail
+- Risk scoring
+- API integration
+- Multi-tenant support
+- Reporting
+
+Phase 1 deliverables:
+
+- Define KYC customer/person lifecycle states.
+- Define required onboarding data by person/customer type.
+- Define document requirements and document validation rules.
+- Define identity verification providers and manual verification fallback.
+- Define approval workflow roles, states, transitions, and SLAs.
+- Define audit events and retention expectations.
+- Define risk scoring inputs, scoring bands, and review rules.
+- Define internal and external API integration contracts.
+- Define tenant, business, branch, and user scoping rules.
+- Define operational, compliance, and management reports.
+
+### Phase 2 - Domain Model And Schema
+
+Build the normalized KYC domain model around these aggregates:
+
+- Person profile
+- Onboarding application
+- Verification case
+- Document set
+- Approval workflow
+- Risk assessment
+- Integration request
+- Audit event
+- Tenant/business context
+- Report projection
+
+Expected schema additions should use `kyc_` table prefixes and include audit columns.
+
+### Phase 3 - Core Onboarding
+
+Implement person/customer onboarding:
+
+- Draft onboarding application.
+- Submit onboarding application.
+- Validate required profile/contact fields.
+- Validate required documents.
+- Track onboarding source such as web, branch, API, or back-office.
+- Support resubmission after send-back.
+- Prevent duplicate active onboarding applications for the same person/business context.
+
+### Phase 4 - Verification And Document Management
+
+Implement identity and document verification:
+
+- Manual identity verification.
+- Optional provider-based identity verification.
+- Document upload, replacement, review, rejection, and approval.
+- Document expiry tracking.
+- Profile photo handling.
+- Sensitive document access control.
+
+### Phase 5 - Workflow Approval
+
+Implement approval workflow:
+
+- Maker/checker review.
+- Configurable workflow states.
+- Assign, approve, reject, send back, cancel.
+- Role/privilege-gated transitions.
+- Workflow comments and reason codes.
+- SLA and overdue tracking.
+
+### Phase 6 - Risk Scoring
+
+Implement KYC risk scoring:
+
+- Rule-based scoring for first phase.
+- Risk factors such as country/location, document type, verification result, occupation/business category, age, match results, and manual flags.
+- Risk bands such as `LOW`, `MEDIUM`, `HIGH`, and `BLOCKED`.
+- Auto-review or enhanced due diligence triggers.
+- Re-score when important profile or document data changes.
+
+### Phase 7 - API Integration
+
+Expose reusable KYC APIs:
+
+- Onboarding API
+- Person API
+- Document API
+- Verification API
+- Workflow API
+- Risk API
+- Status callback/webhook API
+
+Integration requirements:
+
+- Avoid logging raw PII or full document payloads.
+- Use API access control from the system/client-access module.
+- Use idempotency keys for external onboarding submissions.
+- Store integration audit without sensitive request/response bodies.
+
+### Phase 8 - Multi-Tenant Support
+
+Add tenant/business scoping:
+
+- Business id
+- Branch id
+- Optional tenant id if introduced separately
+- Created-by and updated-by actor metadata
+- Data filtering by authenticated user scope
+
+Rules:
+
+- A user should only access KYC records allowed by their business/branch scope.
+- Global admin access must be explicit.
+- Reports and exports must apply the same scope rules as APIs.
+
+### Phase 9 - Reporting And Operations
+
+Build reporting projections for:
+
+- Onboarding volume
+- Pending approvals
+- Approved/rejected applications
+- Verification success/failure
+- Document expiry
+- Risk distribution
+- SLA breaches
+- Branch/business performance
+- User/operator productivity
+
+Reports should use explicit DTOs and avoid exposing unnecessary PII.
+
 ## Ownership Boundary
 
 KYC owns:
@@ -91,6 +232,47 @@ Rules:
 - `is_user` defaults to `false`.
 - When Auth promotes a person to user, KYC sets `is_user = true` and stores the assigned username.
 
+### Planned Tables
+
+The following tables are planned for the reusable KYC platform. All tables must include:
+
+```text
+created_by
+updated_by
+created_at
+updated_at
+```
+
+Recommended planned tables:
+
+```text
+kyc_onboarding_application
+kyc_onboarding_status_history
+kyc_verification_case
+kyc_verification_result
+kyc_document_requirement
+kyc_document_review
+kyc_workflow_instance
+kyc_workflow_task
+kyc_workflow_comment
+kyc_risk_assessment
+kyc_risk_factor
+kyc_integration_request
+kyc_integration_audit
+kyc_audit_event
+kyc_report_snapshot
+```
+
+Ownership notes:
+
+- `kyc_onboarding_application` owns onboarding lifecycle state.
+- `kyc_verification_case` owns identity verification state.
+- `kyc_document_review` owns document review decisions.
+- `kyc_workflow_*` owns approval workflow state and comments.
+- `kyc_risk_*` owns risk score and risk factor details.
+- `kyc_integration_*` owns external API integration tracking.
+- `kyc_audit_event` owns KYC business audit history.
+
 ### `kyc_person_details`
 
 Stores secondary person details:
@@ -136,6 +318,47 @@ com.nexacore.kycmodule
     ├── kyc
     └── privilege
 ```
+
+Planned package shape:
+
+```text
+kycmodule
+├── config
+├── person
+├── onboarding
+│   ├── controller
+│   ├── dto
+│   ├── entity
+│   ├── repository
+│   └── service
+├── verification
+│   ├── provider
+│   └── service
+├── document
+│   └── service
+├── workflow
+│   └── service
+├── risk
+│   └── service
+├── integration
+│   └── service
+├── audit
+│   └── service
+└── reporting
+    └── service
+```
+
+Dependency direction:
+
+```text
+KYC business service -> shared technical service interface -> provider interface -> provider implementation
+```
+
+Examples:
+
+- Verification providers belong behind provider interfaces.
+- File storage stays in `servicesmodule.fileservice`.
+- External API calls should be abstracted and audited.
 
 Important classes:
 
@@ -233,6 +456,10 @@ Recommended validation:
 - `mobile_number` must be unique.
 - `username` must be unique when present.
 - `username` should only be set by Auth/user promotion flow.
+- Onboarding submission must validate required profile fields.
+- Onboarding submission must validate required documents for the requested KYC type.
+- Workflow transitions must validate current state, role, and branch/business scope.
+- Risk scoring must be repeatable and auditable.
 
 ## Security Rules
 
@@ -240,6 +467,9 @@ Recommended validation:
 - Do not return unnecessary PII in broad search responses.
 - Apply authorization checks to person create/update/delete/read operations.
 - Keep KYC document access protected.
+- Do not log full PII payloads, raw document content, or sensitive verification provider responses.
+- Apply business and branch filters to KYC searches, approvals, reports, and exports.
+- Keep all approval decisions auditable with actor, timestamp, previous state, new state, and reason/comment.
 
 ## Integration With Keycloak
 
@@ -258,5 +488,12 @@ KYC remains the source of truth for profile/contact data even when Keycloak show
 - Add tests proving ordinary person creation does not generate username.
 - Add tests proving promotion sets `is_user = true`.
 - Add tests proving username conflict is rejected during promotion.
+- Define onboarding application DTOs, entities, repositories, and services.
+- Define workflow state enum and transition rules.
+- Define risk score DTOs, entities, rules, and tests.
+- Define document requirement and review model.
+- Define KYC integration audit model.
+- Define business/branch scoping model for KYC queries.
+- Define reporting DTOs and projections.
 - Add API/business flow for person-to-user approval if not already present.
 - Add audit logging for person promotion to user.

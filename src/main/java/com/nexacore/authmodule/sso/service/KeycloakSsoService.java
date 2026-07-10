@@ -20,6 +20,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -69,10 +70,6 @@ public class KeycloakSsoService {
             existingUser = userRepository.findByExternalProviderAndExternalSubject(PROVIDER, profile.subject());
         }
 
-        if (existingUser.isEmpty() && StringUtils.hasText(profile.email())) {
-            existingUser = userRepository.findByEmail(profile.email());
-        }
-
         if (existingUser.isEmpty() && StringUtils.hasText(profile.username())) {
             existingUser = userRepository.findByUsername(profile.username());
         }
@@ -85,12 +82,21 @@ public class KeycloakSsoService {
         if (personId == null) {
             throw new JwtException("SSO_PERSON_NOT_MAPPED");
         }
+        if (existingUser.isEmpty()) {
+            existingUser = userRepository.findByPersonId(personId);
+        }
 
         AuthUser user = existingUser.orElseGet(AuthUser::new);
+        String username = resolveUniqueUsername(profile.username(), personId);
+        PersonSummaryDto person = personModuleGateway.promotePersonToUser(
+                personId,
+                username,
+                profile.email(),
+                profile.firstName(),
+                profile.lastName()
+        );
         user.setPersonId(personId);
-        user.setUsername(profile.username());
-        user.setEmail(profile.email());
-        user.setEmailVerified(profile.emailVerified());
+        user.setUsername(person.getUsername());
         user.setExternalProvider(PROVIDER);
         user.setExternalSubject(profile.subject());
         user.setEnabled(true);
@@ -107,6 +113,31 @@ public class KeycloakSsoService {
         }
 
         return userRepository.save(user);
+    }
+
+    private String resolveUniqueUsername(String requestedUsername, Long personId) {
+        String baseUsername = normalizeUsername(requestedUsername);
+        String candidate = baseUsername;
+        int suffix = 1;
+
+        while (true) {
+            Optional<AuthUser> existing = userRepository.findByUsername(candidate);
+            Optional<PersonSummaryDto> existingPerson = personModuleGateway.findSummaryByUsername(candidate);
+            boolean authUsernameAvailable = existing.isEmpty() || Objects.equals(existing.get().getPersonId(), personId);
+            boolean personUsernameAvailable = existingPerson.isEmpty() || Objects.equals(existingPerson.get().getId(), personId);
+            if (authUsernameAvailable && personUsernameAvailable) {
+                return candidate;
+            }
+            candidate = baseUsername + suffix++;
+        }
+    }
+
+    private String normalizeUsername(String username) {
+        String normalized = username == null ? "" : username.trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9._-]+", "_")
+                .replaceAll("^[_\\.\\-]+|[_\\.\\-]+$", "");
+        return StringUtils.hasText(normalized) ? normalized : "user";
     }
 
     private Long resolvePersonId(SsoUserProfileDto profile) {

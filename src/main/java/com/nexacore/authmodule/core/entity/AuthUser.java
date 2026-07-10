@@ -24,7 +24,7 @@ public class AuthUser extends ActionInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
+    @Column(unique = true)
     private String username;
 
     @Column(name = "person_id", unique = true)
@@ -45,18 +45,6 @@ public class AuthUser extends ActionInfo {
 
     @Column(nullable = false)
     private boolean enabled;
-
-    @Column
-    private String email;
-
-    @Column
-    private boolean emailVerified;
-
-    @Column
-    private String mobileNumber;
-
-    @Column
-    private boolean mobileVerified;
 
     @Column
     private String externalProvider;

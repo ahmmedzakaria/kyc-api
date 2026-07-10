@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -251,40 +250,13 @@ public class PersonService {
     }
 
     private KycPerson mapPerson(PersonDto dto, KycPerson person) {
+        String authUsername = person.getUsername();
+        Boolean isUser = person.getUser();
         mapper.map(dto, person);
         person.setBloodGrop(dto.getBloodGroup());
-        person.setUsername(generateUniqueUsername(dto.getFirstName(), dto.getLastName(), person.getId()));
+        person.setUsername(authUsername);
+        person.setUser(isUser == null ? false : isUser);
         return person;
-    }
-
-    private String generateUniqueUsername(String firstName, String lastName, Long currentPersonId) {
-        String baseUsername = ((safeName(firstName) + "." + safeName(lastName)).replaceAll("^\\.+|\\.+$", ""))
-                .replaceAll("\\.+", ".");
-        if (baseUsername.isBlank()) {
-            baseUsername = "user";
-        }
-
-        String candidate = baseUsername;
-        int suffix = 1;
-        while (usernameExists(candidate, currentPersonId)) {
-            candidate = baseUsername + suffix++;
-        }
-        return candidate;
-    }
-
-    private boolean usernameExists(String username, Long currentPersonId) {
-        return currentPersonId == null
-                ? personRepository.existsByUsername(username)
-                : personRepository.existsByUsernameAndIdNot(username, currentPersonId);
-    }
-
-    private String safeName(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.trim()
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", ".");
     }
 
     private void savePersonDetails(KycPerson person, PersonDto dto) {

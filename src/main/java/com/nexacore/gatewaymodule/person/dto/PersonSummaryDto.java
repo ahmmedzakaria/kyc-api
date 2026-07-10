@@ -23,4 +23,5 @@ public class PersonSummaryDto {
     private String nationalId;
     private Boolean emailVerified;
     private Boolean mobileVerified;
+    private Boolean user;
 }
