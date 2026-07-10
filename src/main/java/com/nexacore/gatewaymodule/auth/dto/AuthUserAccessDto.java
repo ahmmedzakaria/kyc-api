@@ -7,6 +7,7 @@ import java.util.Set;
 @Builder
 public record AuthUserAccessDto(
         Long userId,
+        Long personId,
         Set<Long> roleIds,
         boolean admin
 ) {

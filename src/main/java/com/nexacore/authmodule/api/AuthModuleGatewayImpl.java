@@ -29,6 +29,7 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
 
         return AuthUserAccessDto.builder()
                 .userId(user.getId())
+                .personId(user.getPersonId())
                 .roleIds(user.getRoles().stream()
                         .map(AuthRole::getId)
                         .collect(Collectors.toSet()))

@@ -14,6 +14,12 @@ public interface PersonModuleGateway extends ModuleGateway {
 
     Optional<PersonSummaryDto> findSummaryByMobileNumber(String mobileNumber);
 
+    PersonSummaryDto ensurePersonForUser(String username,
+                                         String email,
+                                         String mobileNumber,
+                                         String firstName,
+                                         String lastName);
+
     boolean existsById(Long personId);
 
     boolean existsByUsername(String username);

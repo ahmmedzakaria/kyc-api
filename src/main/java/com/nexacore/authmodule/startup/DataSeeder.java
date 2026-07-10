@@ -6,6 +6,8 @@ import com.nexacore.authmodule.core.entity.AuthRole;
 import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
+import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
+import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
 import com.nexacore.systemmodule.clientaccess.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.clientaccess.dto.ClientApplicationRequestDto;
 import com.nexacore.systemmodule.clientaccess.dto.ClientPermissionAssignmentRequestDto;
@@ -40,6 +42,7 @@ public class DataSeeder {
                                    UserRepository userRepository,
                                    SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
+                                   PersonModuleGateway personModuleGateway,
                                    ClientApplicationService clientApplicationService,
                                    ClientPermissionService clientPermissionService,
                                    ClientApiRegistryService clientApiRegistryService,
@@ -79,20 +82,20 @@ public class DataSeeder {
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.SEARCH)
             ));
 
-            seedDefaultUser(userRepository, passwordEncoder,
-                    "admin", "123", "admin@example.com", "01700000000", adminRole);
+            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+                    "admin", "123", "admin@example.com", "01700000000", "Admin", "User", adminRole);
 
-            seedDefaultUser(userRepository, passwordEncoder,
-                    "kyc_operator", "123", "operator@example.com", "01700000001", kycOperatorRole);
+            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+                    "kyc_operator", "123", "operator@example.com", "01700000001", "Kyc", "Operator", kycOperatorRole);
 
-            seedDefaultUser(userRepository, passwordEncoder,
-                    "kyc_approver", "123", "approver@example.com", "01700000002", kycApproverRole);
+            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+                    "kyc_approver", "123", "approver@example.com", "01700000002", "Kyc", "Approver", kycApproverRole);
 
-            seedDefaultUser(userRepository, passwordEncoder,
-                    "report_user", "123", "report@example.com", "01700000003", reportViewerRole);
+            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+                    "report_user", "123", "report@example.com", "01700000003", "Report", "User", reportViewerRole);
 
-            seedDefaultUser(userRepository, passwordEncoder,
-                    "kyc_manager", "123", "manager@example.com", "01700000004",
+            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+                    "kyc_manager", "123", "manager@example.com", "01700000004", "Kyc", "Manager",
                     kycOperatorRole, kycApproverRole, reportViewerRole);
 
             seedDefaultWebClient(
@@ -106,14 +109,19 @@ public class DataSeeder {
 
     private void seedDefaultUser(UserRepository userRepository,
                                  PasswordEncoder passwordEncoder,
+                                 PersonModuleGateway personModuleGateway,
                                  String username,
                                  String password,
                                  String email,
                                  String mobile,
+                                 String firstName,
+                                 String lastName,
                                  AuthRole... roles) {
+        PersonSummaryDto person = personModuleGateway.ensurePersonForUser(username, email, mobile, firstName, lastName);
 
         AuthUser existingUser = userRepository.findByUsername(username).orElse(null);
         if (existingUser != null) {
+            existingUser.setPersonId(person.getId());
             existingUser.getRoles().addAll(List.of(roles));
             userRepository.save(existingUser);
             return;
@@ -121,6 +129,7 @@ public class DataSeeder {
 
         AuthUser user = new AuthUser();
         user.setUsername(username);
+        user.setPersonId(person.getId());
         user.setEmail(email);
         user.setMobileNumber(mobile);
         user.setPassword(passwordEncoder.encode(password));

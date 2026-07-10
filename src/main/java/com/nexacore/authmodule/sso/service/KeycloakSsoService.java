@@ -6,6 +6,8 @@ import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.authmodule.sso.dto.SsoUserProfileDto;
+import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
+import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -30,6 +32,7 @@ public class KeycloakSsoService {
     private final KeycloakProperties keycloakProperties;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final PersonModuleGateway personModuleGateway;
 
     public SsoUserProfileDto verifyToken(String accessToken) {
         JwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(keycloakProperties.getJwkSetUri()).build();
@@ -47,6 +50,7 @@ public class KeycloakSsoService {
 
         return new SsoUserProfileDto(
                 subject,
+                claimAsLong(jwt, "nexacore_person_id"),
                 username,
                 jwt.getClaimAsString("email"),
                 jwt.getClaimAsString("given_name"),
@@ -57,8 +61,13 @@ public class KeycloakSsoService {
 
     @Transactional
     public AuthUser syncUser(SsoUserProfileDto profile) {
-        Optional<AuthUser> existingUser = userRepository
-                .findByExternalProviderAndExternalSubject(PROVIDER, profile.subject());
+        Optional<AuthUser> existingUser = profile.personId() == null
+                ? Optional.empty()
+                : userRepository.findByPersonId(profile.personId());
+
+        if (existingUser.isEmpty()) {
+            existingUser = userRepository.findByExternalProviderAndExternalSubject(PROVIDER, profile.subject());
+        }
 
         if (existingUser.isEmpty() && StringUtils.hasText(profile.email())) {
             existingUser = userRepository.findByEmail(profile.email());
@@ -72,7 +81,13 @@ public class KeycloakSsoService {
             throw new JwtException("SSO_USER_NOT_MAPPED");
         }
 
+        Long personId = resolvePersonId(profile);
+        if (personId == null) {
+            throw new JwtException("SSO_PERSON_NOT_MAPPED");
+        }
+
         AuthUser user = existingUser.orElseGet(AuthUser::new);
+        user.setPersonId(personId);
         user.setUsername(profile.username());
         user.setEmail(profile.email());
         user.setEmailVerified(profile.emailVerified());
@@ -92,6 +107,24 @@ public class KeycloakSsoService {
         }
 
         return userRepository.save(user);
+    }
+
+    private Long resolvePersonId(SsoUserProfileDto profile) {
+        if (profile.personId() != null && personModuleGateway.existsById(profile.personId())) {
+            return profile.personId();
+        }
+        if (StringUtils.hasText(profile.username())) {
+            Optional<PersonSummaryDto> person = personModuleGateway.findSummaryByUsername(profile.username());
+            if (person.isPresent()) {
+                return person.get().getId();
+            }
+        }
+        if (StringUtils.hasText(profile.email())) {
+            return personModuleGateway.findSummaryByEmail(profile.email())
+                    .map(PersonSummaryDto::getId)
+                    .orElse(null);
+        }
+        return null;
     }
 
     private void validateIssuer(Jwt jwt) {
@@ -126,6 +159,21 @@ public class KeycloakSsoService {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
                 return value;
+            }
+        }
+        return null;
+    }
+
+    private Long claimAsLong(Jwt jwt, String claimName) {
+        Object value = jwt.getClaims().get(claimName);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text && StringUtils.hasText(text)) {
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                return null;
             }
         }
         return null;

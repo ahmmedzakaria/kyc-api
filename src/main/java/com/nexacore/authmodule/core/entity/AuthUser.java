@@ -27,6 +27,9 @@ public class AuthUser extends ActionInfo {
     @Column
     private String username;
 
+    @Column(name = "person_id", unique = true)
+    private Long personId;
+
     @JsonIgnore
     @Column(nullable = true)
     private String password;

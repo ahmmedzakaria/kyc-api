@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional(transactionManager = "kycTransactionManager", readOnly = true)
 public class KycPersonModuleGateway implements PersonModuleGateway {
 
     private final PersonRepository personRepository;
@@ -51,6 +51,41 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
     }
 
     @Override
+    @Transactional(transactionManager = "kycTransactionManager")
+    public PersonSummaryDto ensurePersonForUser(String username,
+                                                String email,
+                                                String mobileNumber,
+                                                String firstName,
+                                                String lastName) {
+        Optional<KycPerson> existingPerson = findExistingPerson(username, email, mobileNumber);
+        KycPerson person = existingPerson.orElseGet(KycPerson::new);
+
+        if (!StringUtils.hasText(person.getUsername())) {
+            person.setUsername(username.trim());
+        }
+        if (!StringUtils.hasText(person.getEmail()) && StringUtils.hasText(email)) {
+            person.setEmail(email.trim());
+        }
+        if (!StringUtils.hasText(person.getMobileNumber()) && StringUtils.hasText(mobileNumber)) {
+            person.setMobileNumber(mobileNumber.trim());
+        }
+        if (!StringUtils.hasText(person.getFirstName()) && StringUtils.hasText(firstName)) {
+            person.setFirstName(firstName.trim());
+        }
+        if (!StringUtils.hasText(person.getLastName()) && StringUtils.hasText(lastName)) {
+            person.setLastName(lastName.trim());
+        }
+        if (person.getEmailVerified() == null) {
+            person.setEmailVerified(false);
+        }
+        if (person.getMobileVerified() == null) {
+            person.setMobileVerified(false);
+        }
+
+        return toSummary(personRepository.save(person));
+    }
+
+    @Override
     public boolean existsById(Long personId) {
         return personId != null && personRepository.existsById(personId);
     }
@@ -58,6 +93,25 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
     @Override
     public boolean existsByUsername(String username) {
         return StringUtils.hasText(username) && personRepository.existsByUsername(username.trim());
+    }
+
+    private Optional<KycPerson> findExistingPerson(String username, String email, String mobileNumber) {
+        if (StringUtils.hasText(username)) {
+            Optional<KycPerson> person = personRepository.findByUsername(username.trim());
+            if (person.isPresent()) {
+                return person;
+            }
+        }
+        if (StringUtils.hasText(email)) {
+            Optional<KycPerson> person = personRepository.findByEmail(email.trim());
+            if (person.isPresent()) {
+                return person;
+            }
+        }
+        if (StringUtils.hasText(mobileNumber)) {
+            return personRepository.findByMobileNumber(mobileNumber.trim());
+        }
+        return Optional.empty();
     }
 
     private PersonSummaryDto toSummary(KycPerson person) {
