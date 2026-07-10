@@ -88,18 +88,6 @@ public enum RegistrationMode {
 }
 ```
 
-Recommended authentication modes:
-
-```java
-public enum AuthenticationMode {
-    LOCAL,
-    SSO,
-    HYBRID
-}
-```
-
-`HYBRID` means the application can expose more than one configured login method, for example local login for back-office admins and SSO for normal users. If this is not needed in the first release, keep only `LOCAL` and `SSO` but design DTOs to support multiple methods.
-
 Recommended login identifier types:
 
 ```java
@@ -108,17 +96,6 @@ public enum LoginIdentifierType {
     EMAIL,
     MOBILE,
     PERSON_ID
-}
-```
-
-Recommended credential types:
-
-```java
-public enum CredentialType {
-    PASSWORD,
-    OTP,
-    SSO_TOKEN,
-    MAGIC_LINK
 }
 ```
 
@@ -228,7 +205,69 @@ Frontend behavior:
 
 ### Supported Authentication Models
 
-#### `LOCAL`
+### Registration And Login Model Matrix
+
+The platform should support these configurable model pairs. A deployment or client application can enable one or more models through application context.
+
+| Model | Registration | Login |
+| --- | --- | --- |
+| Email + Password | Email and password | Password |
+| Mobile + Password | Mobile number and password | Password |
+| Email Verification | Email confirmation | Password |
+| Mobile OTP | Phone number | OTP |
+| Magic Link | Email | Link |
+| Social Login | OAuth provider | OAuth |
+| SSO | Enterprise identity | SSO |
+| MFA | Standard registration | Multiple factors |
+| Biometrics | Device enrollment | Fingerprint or face |
+| Passkeys | Device enrollment | Cryptographic challenge |
+
+Implementation notes:
+
+- `Email + Password` should create credentials only after the linked `KycPerson` is valid for the configured registration mode.
+- `Mobile + Password` should create credentials only after the linked `KycPerson` is valid for the configured registration mode and has a verified or allowed `mobile_number`.
+- `Email Verification` uses `kyc_person.email` and `kyc_person.email_verified`; Auth must not duplicate those fields.
+- `Mobile OTP` uses `kyc_person.mobile_number` and `kyc_person.mobile_verified`; OTP delivery belongs behind reusable messaging service abstractions.
+- `Magic Link` should issue short-lived, single-use login links and avoid logging full tokens.
+- `Social Login` should map OAuth provider identity to an existing or newly approved `KycPerson` before creating `AuthUser`.
+- `SSO` should prefer `nexacore_person_id` for mapping and use Keycloak/enterprise identity as the identity provider.
+- `MFA` is an authentication policy layered on top of a primary login model.
+- `Biometrics` should be treated as device-bound authentication, not as raw biometric storage in the backend.
+- `Passkeys` should use a standards-based WebAuthn/FIDO2 implementation rather than custom cryptography.
+
+Recommended additional enums:
+
+```java
+public enum RegistrationCredentialModel {
+    EMAIL_PASSWORD,
+    MOBILE_PASSWORD,
+    EMAIL_VERIFICATION,
+    MOBILE_OTP,
+    MAGIC_LINK,
+    SOCIAL_OAUTH,
+    ENTERPRISE_SSO,
+    MFA_ENROLLMENT,
+    BIOMETRIC_ENROLLMENT,
+    PASSKEY_ENROLLMENT
+}
+```
+
+```java
+public enum LoginMethod {
+    PASSWORD,
+    OTP,
+    MAGIC_LINK,
+    OAUTH,
+    SSO,
+    MFA,
+    BIOMETRIC,
+    PASSKEY
+}
+```
+
+`ApplicationContextDto` should expose enabled registration credential models and enabled login methods so frontend can render only the configured flows.
+
+#### Password Login
 
 Backend validates username/password and issues backend JWT.
 
@@ -240,9 +279,9 @@ Frontend behavior:
 Backend behavior:
 
 - Enable `/auth/authenticate`.
-- Reject SSO-only login requirements.
+- Reject password login when `LoginMethod.PASSWORD` is not enabled.
 
-#### `SSO`
+#### SSO Login
 
 Keycloak handles identity authentication. Backend validates Keycloak token and issues backend JWT.
 
@@ -254,11 +293,11 @@ Frontend behavior:
 
 Backend behavior:
 
-- Disable local login unless explicitly configured otherwise.
+- Enable SSO login only when `LoginMethod.SSO` is enabled.
 - Validate Keycloak issuer, audience/client, expiry, and signature.
 - Map user by `nexacore_person_id`, username, or another configured identifier.
 
-#### `HYBRID`
+#### Multiple Login Methods
 
 Multiple authentication methods are enabled.
 
@@ -292,10 +331,9 @@ Recommended additions:
 
 ```text
 registrationMode
-authenticationMode
-enabledAuthenticationMethods
+enabledRegistrationCredentialModels
+enabledLoginMethods
 loginIdentifierTypes
-credentialTypes
 userActivationMode
 sso
 registration
@@ -309,10 +347,9 @@ public class ApplicationContextDto {
     private String clientCode;
     private String clientType;
     private RegistrationMode registrationMode;
-    private AuthenticationMode authenticationMode;
-    private Set<AuthenticationMode> enabledAuthenticationMethods;
+    private Set<RegistrationCredentialModel> enabledRegistrationCredentialModels;
+    private Set<LoginMethod> enabledLoginMethods;
     private Set<LoginIdentifierType> loginIdentifierTypes;
-    private Set<CredentialType> credentialTypes;
     private UserActivationMode userActivationMode;
     private SsoContextDto sso;
     private RegistrationContextDto registration;
@@ -369,10 +406,10 @@ passwordPolicyCode
 First implementation can use properties:
 
 ```properties
-app.auth.mode=SSO
 app.registration.mode=APPROVAL_REQUIRED
+app.registration.credential-models=EMAIL_PASSWORD,MOBILE_PASSWORD,ENTERPRISE_SSO
+app.auth.login-methods=PASSWORD,SSO
 app.auth.login-identifiers=USERNAME
-app.auth.credentials=PASSWORD,SSO_TOKEN
 app.auth.activation-mode=APPROVAL_REQUIRED
 ```
 
@@ -392,8 +429,8 @@ These tables belong to Auth because they control account creation and login beha
 - Backend must enforce the configured registration and authentication model.
 - Registration APIs must reject disabled or unavailable modes.
 - Login APIs must reject unavailable authentication methods.
-- SSO token bridge must reject SSO when SSO is not enabled for the current client/application.
-- Local login must reject when local login is disabled for the current context.
+- SSO token bridge must reject SSO when `LoginMethod.SSO` is not enabled for the current client/application.
+- Local password login must reject when `LoginMethod.PASSWORD` is not enabled for the current context.
 - Person-to-user promotion must require a valid `KycPerson`.
 - `AuthUser` creation must set `person_id`.
 
@@ -410,13 +447,13 @@ registrationMode=DISABLED
 registrationMode=PERSON_REQUEST
 -> show request-access flow
 
-authenticationMode=LOCAL
+enabledLoginMethods=PASSWORD
 -> show username/password login
 
-authenticationMode=SSO
+enabledLoginMethods=SSO
 -> show SSO login only
 
-authenticationMode=HYBRID
+enabledLoginMethods=PASSWORD,SSO
 -> show configured login choices
 ```
 
