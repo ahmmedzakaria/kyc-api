@@ -1,6 +1,9 @@
 # Frontend Layout Upgrade Plan
 
 ## Purpose
+Implementation on going on Git Branch: 
+frontend-lib: front-end-libs-sso-layout-update
+kyc-frontend: kyc-frontend-3.0.2-sso-layout-update
 
 Upgrade the frontend shell so NexaCore can support large KYC, Auth, reporting, workflow, administration, and future business modules without relying on a long expanding sidebar.
 
