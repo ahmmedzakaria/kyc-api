@@ -9,6 +9,7 @@ import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
+import com.nexacore.authmodule.core.service.implementations.AuthApplicationContextService;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.clientaccess.dto.ClientApplicationContextDto;
@@ -58,6 +59,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final SubMenuRepository subMenuRepository;
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
     private final ClientApplicationContextService clientApplicationContextService;
+    private final AuthApplicationContextService authApplicationContextService;
 
     @Override
     public String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode) {
@@ -169,7 +171,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public ApplicationContextDto getApplicationContext(String username) {
         Set<String> privilegeCodes = getUserPrivilegeCodes(username);
         ClientApplicationContextDto clientContext = clientApplicationContextService.getCurrentClientContext().orElse(null);
-        return ApplicationContextDto.builder()
+        ApplicationContextDto context = ApplicationContextDto.builder()
                 .clientCode(clientContext == null ? null : clientContext.getClientCode())
                 .clientType(clientContext == null ? null : clientContext.getClientType().name())
                 .menus(getUserSidebarMenu(username))
@@ -178,6 +180,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .enabledSubmodules(resolveEnabledSubmodules(privilegeCodes))
                 .enabledFeatures(resolveEnabledFeatures(privilegeCodes))
                 .build();
+        return authApplicationContextService.applyAuthPolicy(context, null);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.nexacore.authmodule.core.controller;
 
 
+import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.dto.AuthRequest;
 import com.nexacore.authmodule.core.dto.AuthResponse;
 import com.nexacore.authmodule.core.dto.AuthConfigResponse;
@@ -33,14 +34,30 @@ public class AuthController {
 
     @Operation(summary = "Login user by OTP", security = {}) // security = {} make disables JWT for this method (for using swagger UI)
     @PostMapping("/authenticate")
-    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid AuthRequest requestDto) {
-        return authService.authenticate(requestDto);
+    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid AuthRequest requestDto,
+                                                                  @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
+        return authService.authenticate(requestDto, clientCode);
     }
 
     @Operation(summary = "Get authentication mode and SSO client config", security = {})
     @PostMapping("/config")
-    public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(@RequestHeader(value = "Origin", required = false) String origin) {
-        return authService.getAuthConfig(origin);
+    public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(@RequestHeader(value = "Origin", required = false) String origin,
+                                                                         @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
+        return authService.getAuthConfig(origin, clientCode);
+    }
+
+    @Operation(summary = "Get public application context for login and registration", security = {})
+    @PostMapping("/application-context/public")
+    public ResponseEntity<ApiResponse<ApplicationContextDto>> getPublicApplicationContext(@RequestHeader(value = "Origin", required = false) String origin,
+                                                                                         @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
+        return authService.getPublicApplicationContext(origin, clientCode);
+    }
+
+    @Operation(summary = "Get authenticated application context")
+    @PostMapping("/application-context")
+    public ResponseEntity<ApiResponse<ApplicationContextDto>> getApplicationContext(@RequestHeader(value = "Origin", required = false) String origin,
+                                                                                   @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
+        return authService.getApplicationContext(origin, clientCode);
     }
 
     @Operation(summary = "Logout user from shared application session")

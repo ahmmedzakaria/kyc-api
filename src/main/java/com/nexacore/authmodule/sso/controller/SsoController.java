@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,7 +25,8 @@ public class SsoController {
 
     @Operation(summary = "Authenticate user by Keycloak access token", security = {})
     @PostMapping("/authenticate")
-    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid SsoAuthenticateRequest requestDto) {
-        return ssoAuthService.authenticate(requestDto);
+    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid SsoAuthenticateRequest requestDto,
+                                                                  @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
+        return ssoAuthService.authenticate(requestDto, clientCode);
     }
 }

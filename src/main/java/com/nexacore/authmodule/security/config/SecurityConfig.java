@@ -38,6 +38,7 @@ public class SecurityConfig {
             "/auth/login",
             "/auth/authenticate",
             "/auth/config",
+            "/auth/application-context/public",
             "/auth/sso/authenticate",
             "/auth/login-status",
             "/oauth2/**",

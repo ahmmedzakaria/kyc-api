@@ -1,5 +1,7 @@
 package com.nexacore.authmodule.sso.service;
 
+import com.nexacore.authmodule.core.enums.LoginMethod;
+import com.nexacore.authmodule.core.service.implementations.AuthClientPolicyService;
 import com.nexacore.authmodule.security.jwt.JwtUtil;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import com.nexacore.authmodule.core.dto.AuthResponse;
@@ -26,9 +28,10 @@ public class SsoAuthService {
     private final UserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
     private final LogoutSessionService logoutSessionService;
+    private final AuthClientPolicyService authClientPolicyService;
 
-    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(SsoAuthenticateRequest request) {
-        if (!authenticationProperties.isSsoMode()) {
+    public ResponseEntity<ApiResponse<AuthResponse>> authenticate(SsoAuthenticateRequest request, String clientCode) {
+        if (!authClientPolicyService.isLoginMethodEnabled(LoginMethod.SSO, clientCode)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SSO_LOGIN_DISABLED"));
         }

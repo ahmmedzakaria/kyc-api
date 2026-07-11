@@ -1,5 +1,6 @@
 package com.nexacore.systemmodule.privilege.service.implementations;
 
+import com.nexacore.authmodule.core.service.implementations.AuthApplicationContextService;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
@@ -28,6 +29,7 @@ class PrivilegeServiceImplTest {
     private final AuthModuleGateway authModuleGateway = mock(AuthModuleGateway.class);
     private final SubMenuRepository subMenuRepository = mock(SubMenuRepository.class);
     private final ClientApplicationContextService clientApplicationContextService = mock(ClientApplicationContextService.class);
+    private final AuthApplicationContextService authApplicationContextService = mock(AuthApplicationContextService.class);
     private final PrivilegeServiceImpl service = new PrivilegeServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
@@ -35,7 +37,8 @@ class PrivilegeServiceImplTest {
             authModuleGateway,
             subMenuRepository,
             List.of(),
-            clientApplicationContextService
+            clientApplicationContextService,
+            authApplicationContextService
     );
 
     @Test

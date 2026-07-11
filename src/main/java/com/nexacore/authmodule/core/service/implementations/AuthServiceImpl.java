@@ -1,6 +1,8 @@
 package com.nexacore.authmodule.core.service.implementations;
 
 
+import com.nexacore.authmodule.core.dto.ApplicationContextDto;
+import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import com.nexacore.authmodule.security.config.KeycloakProperties;
 import com.nexacore.authmodule.core.dto.AuthConfigResponse;
@@ -37,10 +39,12 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationProperties authenticationProperties;
 	private final KeycloakProperties keycloakProperties;
 	private final LogoutSessionService logoutSessionService;
+	private final AuthApplicationContextService authApplicationContextService;
+	private final AuthClientPolicyService authClientPolicyService;
 
 	@Override
-	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request) {
-		if (authenticationProperties.isSsoMode()) {
+	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request, String clientCode) {
+		if (!authClientPolicyService.isLoginMethodEnabled(LoginMethod.PASSWORD, clientCode)) {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN)
 					.body(ApiResponse.error(HttpStatus.FORBIDDEN.value(), "LOCAL_LOGIN_DISABLED"));
 		}
@@ -74,16 +78,41 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
-	public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(String origin) {
-		String redirectUri = buildRedirectUri(origin);
+	public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(String origin, String clientCode) {
+		String redirectUri = authApplicationContextService.buildRedirectUri(origin);
+		ApplicationContextDto applicationContext = authApplicationContextService.buildPublicContext(origin, clientCode);
 		AuthConfigResponse response = AuthConfigResponse.builder()
-				.authMode(authenticationProperties.getMode())
+				.registrationMode(applicationContext.getRegistrationMode())
+				.enabledRegistrationCredentialModels(applicationContext.getEnabledRegistrationCredentialModels())
+				.enabledLoginMethods(applicationContext.getEnabledLoginMethods())
+				.loginIdentifierTypes(applicationContext.getLoginIdentifierTypes())
+				.userActivationMode(applicationContext.getUserActivationMode())
 				.issuerUri(keycloakProperties.getIssuerUri())
-				.clientId(resolveClientId(origin))
+				.clientId(authApplicationContextService.resolveClientId(origin))
 				.redirectUri(redirectUri)
+				.sso(applicationContext.getSso())
+				.registration(applicationContext.getRegistration())
+				.securityPolicy(applicationContext.getSecurityPolicy())
+				.applicationContext(applicationContext)
 				.build();
 
 		return ResponseEntity.ok(ApiResponse.success(response, "Authentication config loaded"));
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<ApplicationContextDto>> getPublicApplicationContext(String origin, String clientCode) {
+		return ResponseEntity.ok(ApiResponse.success(
+				authApplicationContextService.buildPublicContext(origin, clientCode),
+				"Public application context loaded"
+		));
+	}
+
+	@Override
+	public ResponseEntity<ApiResponse<ApplicationContextDto>> getApplicationContext(String origin, String clientCode) {
+		return ResponseEntity.ok(ApiResponse.success(
+				authApplicationContextService.buildPublicContext(origin, clientCode),
+				"Application context loaded"
+		));
 	}
 
 	@Override
@@ -138,18 +167,6 @@ public class AuthServiceImpl implements AuthService {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurs: " + e.getLocalizedMessage())));
 		}
-	}
-
-	private String buildRedirectUri(String origin) {
-		String baseOrigin = StringUtils.hasText(origin) ? origin : "http://localhost:4200";
-		return baseOrigin + "/sso/callback";
-	}
-
-	private String resolveClientId(String origin) {
-		if (StringUtils.hasText(origin) && origin.contains(":4300")) {
-			return "privilege-frontend";
-		}
-		return keycloakProperties.getClientId();
 	}
 
 }

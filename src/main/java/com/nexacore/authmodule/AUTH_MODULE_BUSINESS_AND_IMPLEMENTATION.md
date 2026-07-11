@@ -403,25 +403,51 @@ passwordPolicyCode
 
 ### Configuration Source
 
-First implementation can use properties:
+Client-wise DB policy is the source of truth for enabled login methods and registration credential models.
+
+Primary policy tables:
+
+```text
+auth_client_auth_policy
+auth_client_registration_policy
+```
+
+Fallback properties are used only when no enabled DB policy rows exist for a client:
 
 ```properties
 app.registration.mode=APPROVAL_REQUIRED
 app.registration.credential-models=EMAIL_PASSWORD,MOBILE_PASSWORD,ENTERPRISE_SSO
-app.auth.login-methods=PASSWORD,SSO
+app.auth.login-methods=SSO
 app.auth.login-identifiers=USERNAME
-app.auth.activation-mode=APPROVAL_REQUIRED
+app.registration.activation-mode=APPROVAL_REQUIRED
 ```
 
-Later implementation should move to database-backed client/application policies:
+Do not use `app.auth.mode`. The old `LOCAL`/`SSO` mode is redundant because behavior is derived from `LoginMethod`:
 
 ```text
-auth_registration_policy
-auth_authentication_policy
-auth_client_auth_policy
+PASSWORD      -> local password login enabled
+SSO           -> SSO login enabled
+PASSWORD,SSO  -> both login methods enabled
 ```
 
-These tables belong to Auth because they control account creation and login behavior. They may reference client applications from the system/client-access module by stable client code.
+`/auth/config` and `/auth/application-context/public` must not return legacy `authMode`. Frontend clients must read `enabledLoginMethods` instead:
+
+```text
+PASSWORD only      -> render local username/password login
+SSO only           -> auto redirect guarded pages to SSO unless auto-SSO is temporarily suppressed
+PASSWORD and SSO   -> route unauthenticated users to /login and render both choices
+```
+
+Resolution order:
+
+```text
+1. enabled rows in auth_client_auth_policy / auth_client_registration_policy for client_code
+2. client-specific property override
+3. global property fallback
+4. safe system default from code
+```
+
+These policy tables belong to Auth because they control account creation and login behavior. They reference client applications by stable `client_code`; no cross-database foreign key is required.
 
 ### Backend Enforcement Rules
 
