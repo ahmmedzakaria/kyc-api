@@ -15,7 +15,7 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "app.auth")
 public class AuthenticationProperties {
 
-    private Set<LoginMethod> loginMethods = new LinkedHashSet<>(List.of(LoginMethod.SSO));
+    private Set<LoginMethod> loginMethods = new LinkedHashSet<>(List.of(LoginMethod.PASSWORD));
     private Set<LoginIdentifierType> loginIdentifiers = new LinkedHashSet<>(List.of(LoginIdentifierType.USERNAME));
     private Map<String, ClientAuthenticationPolicy> clients = new LinkedHashMap<>();
     private long sessionTimeoutSeconds = 3600;

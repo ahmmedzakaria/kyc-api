@@ -405,21 +405,20 @@ passwordPolicyCode
 
 Client-wise DB policy is the source of truth for enabled login methods and registration credential models.
 
-Primary policy tables:
+Primary policy table:
 
 ```text
 auth_client_auth_policy
-auth_client_registration_policy
 ```
 
 Fallback properties are used only when no enabled DB policy rows exist for a client:
 
 ```properties
 app.registration.mode=APPROVAL_REQUIRED
-app.registration.credential-models=EMAIL_PASSWORD,MOBILE_PASSWORD,ENTERPRISE_SSO
-app.auth.login-methods=SSO
+app.auth.login-methods=PASSWORD
 app.auth.login-identifiers=USERNAME
 app.registration.activation-mode=APPROVAL_REQUIRED
+app.registration.requires-existing-person=true
 ```
 
 Do not use `app.auth.mode`. The old `LOCAL`/`SSO` mode is redundant because behavior is derived from `LoginMethod`:
@@ -427,27 +426,77 @@ Do not use `app.auth.mode`. The old `LOCAL`/`SSO` mode is redundant because beha
 ```text
 PASSWORD      -> local password login enabled
 SSO           -> SSO login enabled
-PASSWORD,SSO  -> both login methods enabled
 ```
+
+The backend resolves and returns one login method for a client. If multiple rows or property values are accidentally enabled, the first resolved method is used and should be corrected in configuration.
 
 `/auth/config` and `/auth/application-context/public` must not return legacy `authMode`. Frontend clients must read `enabledLoginMethods` instead:
 
 ```text
 PASSWORD only      -> render local username/password login
 SSO only           -> auto redirect guarded pages to SSO unless auto-SSO is temporarily suppressed
-PASSWORD and SSO   -> route unauthenticated users to /login and render both choices
 ```
 
 Resolution order:
 
 ```text
-1. enabled rows in auth_client_auth_policy / auth_client_registration_policy for client_code
+1. enabled rows in auth_client_auth_policy for client_code
 2. client-specific property override
 3. global property fallback
 4. safe system default from code
 ```
 
-These policy tables belong to Auth because they control account creation and login behavior. They reference client applications by stable `client_code`; no cross-database foreign key is required.
+This policy table belongs to Auth because it controls account creation and login behavior. It references client applications by stable `client_code`; no cross-database foreign key is required.
+Registration credential models are derived from the same auth policy, so `auth_client_registration_policy` is not used. This keeps login and registration capability configuration in one place:
+
+```text
+PASSWORD + EMAIL/USERNAME -> EMAIL_PASSWORD
+PASSWORD + MOBILE         -> MOBILE_PASSWORD
+OTP                       -> MOBILE_OTP
+MAGIC_LINK                -> MAGIC_LINK
+OAUTH                     -> SOCIAL_OAUTH
+SSO                       -> ENTERPRISE_SSO
+MFA                       -> MFA_ENROLLMENT
+BIOMETRIC                 -> BIOMETRIC_ENROLLMENT
+PASSKEY                   -> PASSKEY_ENROLLMENT
+```
+
+### Registration Flow Properties
+
+These properties control the registration business flow. They do not decide the login method; login method is resolved from `auth_client_auth_policy` first and `app.auth.login-methods` only as fallback.
+
+```properties
+app.registration.mode=APPROVAL_REQUIRED
+app.registration.activation-mode=APPROVAL_REQUIRED
+app.registration.requires-existing-person=true
+```
+
+`app.registration.mode` defines whether registration is available and what kind of registration flow is allowed:
+
+```text
+DISABLED          -> registration is not available
+APPROVAL_REQUIRED -> registration/request access is allowed but needs approval
+INVITE_ONLY       -> registration requires invitation
+```
+
+`app.registration.activation-mode` defines how a requested user account becomes active:
+
+```text
+APPROVAL_REQUIRED           -> user activation needs business/admin approval
+INVITE_ACCEPTANCE_REQUIRED  -> user activation needs invite acceptance
+EMAIL_VERIFICATION_REQUIRED -> activation requires email verification
+MOBILE_VERIFICATION_REQUIRED -> activation requires mobile verification
+```
+
+`app.registration.requires-existing-person` defines whether registration must be linked to an existing `KycPerson`. For the current domain model this should normally stay `true`:
+
+```text
+Every User is a Person.
+Not every Person is a User.
+A Person can later become a User after approval/business verification.
+```
+
+When this flag is `true`, registration/user creation must not create an `AuthUser` without a valid existing `KycPerson` reference.
 
 ### Backend Enforcement Rules
 
@@ -478,9 +527,6 @@ enabledLoginMethods=PASSWORD
 
 enabledLoginMethods=SSO
 -> show SSO login only
-
-enabledLoginMethods=PASSWORD,SSO
--> show configured login choices
 ```
 
 The frontend must not infer capabilities from routes alone. It should render based on `ApplicationContextDto` and handle backend rejection gracefully.

@@ -3,14 +3,11 @@ package com.nexacore.authmodule.startup;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
 import com.nexacore.authmodule.core.entity.AuthClientAuthPolicy;
-import com.nexacore.authmodule.core.entity.AuthClientRegistrationPolicy;
 import com.nexacore.authmodule.core.entity.AuthRole;
 import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.enums.LoginIdentifierType;
 import com.nexacore.authmodule.core.enums.LoginMethod;
-import com.nexacore.authmodule.core.enums.RegistrationCredentialModel;
 import com.nexacore.authmodule.core.repository.AuthClientAuthPolicyRepository;
-import com.nexacore.authmodule.core.repository.AuthClientRegistrationPolicyRepository;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
@@ -31,6 +28,7 @@ import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.enums.PrivilegeAction;
+import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,7 +52,7 @@ public class DataSeeder {
                                    ClientPermissionService clientPermissionService,
                                    ClientApiRegistryService clientApiRegistryService,
                                    AuthClientAuthPolicyRepository authPolicyRepository,
-                                   AuthClientRegistrationPolicyRepository registrationPolicyRepository,
+                                   AuthenticationProperties authenticationProperties,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
             AuthRole adminRole = roleRepository.findByName("ROLE_ADMIN")
@@ -114,7 +112,7 @@ public class DataSeeder {
                     adminPrivilegeCodes
             );
 
-            seedDefaultAuthPolicies(authPolicyRepository, registrationPolicyRepository);
+            seedDefaultAuthPolicies(authPolicyRepository, authenticationProperties);
         };
     }
 
@@ -186,15 +184,25 @@ public class DataSeeder {
     }
 
     private void seedDefaultAuthPolicies(AuthClientAuthPolicyRepository authPolicyRepository,
-                                         AuthClientRegistrationPolicyRepository registrationPolicyRepository) {
-        seedClientAuthPolicy(authPolicyRepository, "WEB", LoginMethod.SSO, LoginIdentifierType.USERNAME);
-        seedClientRegistrationPolicy(registrationPolicyRepository, "WEB", Set.of(RegistrationCredentialModel.ENTERPRISE_SSO));
+                                         AuthenticationProperties authenticationProperties) {
+        seedClientAuthPolicy(authPolicyRepository, "WEB", authenticationProperties);
 
-        seedClientAuthPolicy(authPolicyRepository, "nexacore-client", LoginMethod.SSO, LoginIdentifierType.USERNAME);
-        seedClientRegistrationPolicy(registrationPolicyRepository, "nexacore-client", Set.of(RegistrationCredentialModel.ENTERPRISE_SSO));
+        seedClientAuthPolicy(authPolicyRepository, "nexacore-client", authenticationProperties);
 
-        seedClientAuthPolicy(authPolicyRepository, "privilege-frontend", LoginMethod.SSO, LoginIdentifierType.USERNAME);
-        seedClientRegistrationPolicy(registrationPolicyRepository, "privilege-frontend", Set.of(RegistrationCredentialModel.ENTERPRISE_SSO));
+        seedClientAuthPolicy(authPolicyRepository, "privilege-frontend", authenticationProperties);
+    }
+
+    private void seedClientAuthPolicy(AuthClientAuthPolicyRepository authPolicyRepository,
+                                      String clientCode,
+                                      AuthenticationProperties authenticationProperties) {
+        LoginMethod enabledLoginMethod = authenticationProperties.getLoginMethods(clientCode).stream()
+                .findFirst()
+                .orElse(LoginMethod.PASSWORD);
+        LoginIdentifierType loginIdentifierType = authenticationProperties.getLoginIdentifiers(clientCode).stream()
+                .findFirst()
+                .orElse(LoginIdentifierType.USERNAME);
+
+        seedClientAuthPolicy(authPolicyRepository, clientCode, enabledLoginMethod, loginIdentifierType);
     }
 
     private void seedClientAuthPolicy(AuthClientAuthPolicyRepository authPolicyRepository,
@@ -227,33 +235,6 @@ public class DataSeeder {
         }
 
         authPolicyRepository.saveAll(policies);
-    }
-
-    private void seedClientRegistrationPolicy(AuthClientRegistrationPolicyRepository registrationPolicyRepository,
-                                              String clientCode,
-                                              Set<RegistrationCredentialModel> enabledCredentialModels) {
-        List<AuthClientRegistrationPolicy> policies = registrationPolicyRepository.findByClientCodeIgnoreCase(clientCode);
-        Set<RegistrationCredentialModel> existingModels = policies.stream()
-                .map(AuthClientRegistrationPolicy::getRegistrationCredentialModel)
-                .collect(Collectors.toSet());
-
-        for (AuthClientRegistrationPolicy policy : policies) {
-            policy.setEnabled(enabledCredentialModels.contains(policy.getRegistrationCredentialModel()));
-            policy.setUpdatedBy(0L);
-        }
-
-        enabledCredentialModels.stream()
-                .filter(model -> !existingModels.contains(model))
-                .map(model -> AuthClientRegistrationPolicy.builder()
-                        .clientCode(clientCode)
-                        .registrationCredentialModel(model)
-                        .enabled(true)
-                        .createdBy(0L)
-                        .updatedBy(0L)
-                        .build())
-                .forEach(policies::add);
-
-        registrationPolicyRepository.saveAll(policies);
     }
 
     private Set<String> seedModulePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService,

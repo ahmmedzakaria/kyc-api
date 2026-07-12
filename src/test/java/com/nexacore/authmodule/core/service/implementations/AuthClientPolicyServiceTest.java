@@ -1,14 +1,11 @@
 package com.nexacore.authmodule.core.service.implementations;
 
 import com.nexacore.authmodule.core.entity.AuthClientAuthPolicy;
-import com.nexacore.authmodule.core.entity.AuthClientRegistrationPolicy;
 import com.nexacore.authmodule.core.enums.LoginIdentifierType;
 import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.core.enums.RegistrationCredentialModel;
 import com.nexacore.authmodule.core.repository.AuthClientAuthPolicyRepository;
-import com.nexacore.authmodule.core.repository.AuthClientRegistrationPolicyRepository;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
-import com.nexacore.authmodule.security.config.RegistrationProperties;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -21,14 +18,10 @@ import static org.mockito.Mockito.when;
 class AuthClientPolicyServiceTest {
 
     private final AuthClientAuthPolicyRepository authPolicyRepository = mock(AuthClientAuthPolicyRepository.class);
-    private final AuthClientRegistrationPolicyRepository registrationPolicyRepository = mock(AuthClientRegistrationPolicyRepository.class);
     private final AuthenticationProperties authenticationProperties = new AuthenticationProperties();
-    private final RegistrationProperties registrationProperties = new RegistrationProperties();
     private final AuthClientPolicyService service = new AuthClientPolicyService(
             authPolicyRepository,
-            registrationPolicyRepository,
-            authenticationProperties,
-            registrationProperties
+            authenticationProperties
     );
 
     @Test
@@ -54,15 +47,39 @@ class AuthClientPolicyServiceTest {
 
         Set<LoginMethod> loginMethods = service.resolveLoginMethods("CLIENT-002");
 
-        assertThat(loginMethods).containsExactly(LoginMethod.SSO);
+        assertThat(loginMethods).containsExactly(LoginMethod.PASSWORD);
     }
 
     @Test
-    void resolvesRegistrationCredentialModelsFromDatabaseBeforeProperties() {
-        when(registrationPolicyRepository.findByClientCodeIgnoreCaseAndEnabledTrue("CLIENT-001"))
-                .thenReturn(List.of(AuthClientRegistrationPolicy.builder()
+    void resolvesOnlyFirstLoginMethodWhenDatabaseHasMultipleEnabledRows() {
+        when(authPolicyRepository.findByClientCodeIgnoreCaseAndEnabledTrue("CLIENT-004"))
+                .thenReturn(List.of(
+                        AuthClientAuthPolicy.builder()
+                                .clientCode("CLIENT-004")
+                                .loginMethod(LoginMethod.PASSWORD)
+                                .loginIdentifierType(LoginIdentifierType.USERNAME)
+                                .enabled(true)
+                                .build(),
+                        AuthClientAuthPolicy.builder()
+                                .clientCode("CLIENT-004")
+                                .loginMethod(LoginMethod.SSO)
+                                .loginIdentifierType(LoginIdentifierType.USERNAME)
+                                .enabled(true)
+                                .build()
+                ));
+
+        Set<LoginMethod> loginMethods = service.resolveLoginMethods("CLIENT-004");
+
+        assertThat(loginMethods).containsExactly(LoginMethod.PASSWORD);
+    }
+
+    @Test
+    void derivesRegistrationCredentialModelsFromDatabaseAuthPolicy() {
+        when(authPolicyRepository.findByClientCodeIgnoreCaseAndEnabledTrue("CLIENT-001"))
+                .thenReturn(List.of(AuthClientAuthPolicy.builder()
                         .clientCode("CLIENT-001")
-                        .registrationCredentialModel(RegistrationCredentialModel.ENTERPRISE_SSO)
+                        .loginMethod(LoginMethod.SSO)
+                        .loginIdentifierType(LoginIdentifierType.USERNAME)
                         .enabled(true)
                         .build()));
 
@@ -72,16 +89,35 @@ class AuthClientPolicyServiceTest {
     }
 
     @Test
-    void fallsBackToPropertyRegistrationCredentialModelsWhenDatabaseHasNoRows() {
-        when(registrationPolicyRepository.findByClientCodeIgnoreCaseAndEnabledTrue("CLIENT-002")).thenReturn(List.of());
+    void derivesRegistrationCredentialModelsFromPropertyAuthPolicyWhenDatabaseHasNoRows() {
+        when(authPolicyRepository.findByClientCodeIgnoreCaseAndEnabledTrue("CLIENT-002")).thenReturn(List.of());
 
         Set<RegistrationCredentialModel> credentialModels = service.resolveRegistrationCredentialModels("CLIENT-002");
 
+        assertThat(credentialModels).containsExactly(RegistrationCredentialModel.EMAIL_PASSWORD);
+    }
+
+    @Test
+    void derivesPasswordRegistrationCredentialModelsFromLoginIdentifiers() {
+        when(authPolicyRepository.findByClientCodeIgnoreCaseAndEnabledTrue("CLIENT-003"))
+                .thenReturn(List.of(
+                        AuthClientAuthPolicy.builder()
+                                .clientCode("CLIENT-003")
+                                .loginMethod(LoginMethod.PASSWORD)
+                                .loginIdentifierType(LoginIdentifierType.EMAIL)
+                                .enabled(true)
+                                .build(),
+                        AuthClientAuthPolicy.builder()
+                                .clientCode("CLIENT-003")
+                                .loginMethod(LoginMethod.PASSWORD)
+                                .loginIdentifierType(LoginIdentifierType.MOBILE)
+                                .enabled(true)
+                                .build()
+                ));
+
+        Set<RegistrationCredentialModel> credentialModels = service.resolveRegistrationCredentialModels("CLIENT-003");
+
         assertThat(credentialModels)
-                .containsExactly(
-                        RegistrationCredentialModel.EMAIL_PASSWORD,
-                        RegistrationCredentialModel.MOBILE_PASSWORD,
-                        RegistrationCredentialModel.ENTERPRISE_SSO
-                );
+                .containsExactly(RegistrationCredentialModel.MOBILE_PASSWORD, RegistrationCredentialModel.EMAIL_PASSWORD);
     }
 }
