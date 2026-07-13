@@ -163,7 +163,7 @@ public class DataSeeder {
         requestDto.setClientName("Default Web Application");
         requestDto.setClientType(ClientApplicationType.WEB);
         requestDto.setStatus(ClientApplicationStatus.ACTIVE);
-        requestDto.setAllowedOrigins("http://localhost:4200,http://localhost:4300");
+        requestDto.setAllowedOrigins("http://localhost:4200,http://localhost:4300,http://localhost:5300");
         requestDto.setDescription("Default first-party web frontend client.");
         clientApplicationService.save(requestDto, "admin");
 
