@@ -9,7 +9,7 @@ This plan is written for the current backend project structure:
 - Backend: Spring Boot 3.5, Java 21, Maven project under `backend/`
 - Package root: `com.nexacore`
 - Target module: `com.nexacore.systemmodule.license`
-- Existing client access package: `com.nexacore.systemmodule.clientaccess`
+- Existing client access package: `com.nexacore.systemmodule.privilege.accesscontrol`
 - Existing privilege package: `com.nexacore.systemmodule.privilege`
 - API response wrappers and common DTOs: `commonmodule`
 - API access/error/audit logging: `logmodule`
@@ -43,7 +43,7 @@ Business modules consume license decisions but do not own license rules.
 
 ```text
 business module -> LicenseModuleGateway -> systemmodule/license/api/SystemLicenseModuleGateway -> LicenseDecisionService -> license repository/domain
-clientaccess filter -> LicenseDecisionService -> license repository/domain
+accesscontrol filter -> LicenseDecisionService -> license repository/domain
 privilege context -> license entitlements -> visible modules/features
 ```
 
@@ -147,12 +147,12 @@ The same pattern applies to other business modules:
 
 ## Relationship With Client Access
 
-The existing `systemmodule.clientaccess` package controls whether a client application can call a backend API. The new license submodule should control whether the tenant, business, or client is commercially entitled to use that API or feature.
+The existing `systemmodule.privilege.accesscontrol` package controls whether a client application can call a backend API. The new license submodule should control whether the tenant, business, or client is commercially entitled to use that API or feature.
 
 Request enforcement should use this order:
 
 1. Validate public API status.
-2. Validate frontend or integration client identity through `clientaccess`.
+2. Validate frontend or integration client identity through `privilege.accesscontrol`.
 3. Resolve tenant and business context.
 4. Validate license status and effective dates.
 5. Validate licensed module, feature, API, and usage limits.
@@ -164,7 +164,7 @@ Client access and license access must stay separate:
 
 | Concern | Owner | Example |
 | --- | --- | --- |
-| Client identity | `systemmodule.clientaccess` | `WEB`, `POS`, `MOBILE`, partner API key |
+| Client identity | `systemmodule.privilege.accesscontrol` | `WEB`, `POS`, `MOBILE`, partner API key |
 | Commercial entitlement | `systemmodule.license` | tenant has POS Professional until 2027-01-31 |
 | User authorization | `systemmodule.privilege` and `authmodule` | cashier can create sale |
 

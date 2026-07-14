@@ -10,7 +10,7 @@ import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.commonmodule.dto.ApiResponse;
-import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

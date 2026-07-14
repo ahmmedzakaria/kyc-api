@@ -1,7 +1,7 @@
 package com.nexacore.authmodule.startup;
 
-import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
-import com.nexacore.systemmodule.privilege.dto.PrivilegeMenuItemDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeMenuItemDto;
 import com.nexacore.authmodule.core.entity.AuthClientAuthPolicy;
 import com.nexacore.authmodule.core.entity.AuthRole;
 import com.nexacore.authmodule.core.entity.AuthUser;
@@ -12,22 +12,22 @@ import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
 import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
-import com.nexacore.systemmodule.clientaccess.dto.ApiRegistryDto;
-import com.nexacore.systemmodule.clientaccess.dto.ClientApplicationRequestDto;
-import com.nexacore.systemmodule.clientaccess.dto.ClientPermissionAssignmentRequestDto;
-import com.nexacore.systemmodule.clientaccess.enums.ClientApplicationStatus;
-import com.nexacore.systemmodule.clientaccess.enums.ClientApplicationType;
-import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApiRegistryService;
-import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApplicationService;
-import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientPermissionService;
-import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
-import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
-import com.nexacore.systemmodule.privilege.service.interfaces.SystemPrivilegeRegistryService;
-import com.nexacore.systemmodule.privilege.enums.ApplicationModule;
-import com.nexacore.systemmodule.privilege.enums.ApplicationSubmodule;
-import com.nexacore.systemmodule.privilege.enums.FeatureType;
-import com.nexacore.systemmodule.privilege.enums.PrivilegeAction;
+import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryDto;
+import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientApplicationRequestDto;
+import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientPermissionAssignmentRequestDto;
+import com.nexacore.systemmodule.privilege.accesscontrol.enums.ClientApplicationStatus;
+import com.nexacore.systemmodule.privilege.accesscontrol.enums.ClientApplicationType;
+import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApiRegistryService;
+import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApplicationService;
+import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientPermissionService;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysSubMenu;
+import com.nexacore.systemmodule.privilege.catalog.service.interfaces.ModulePrivilegeProvider;
+import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
+import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
+import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
+import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
+import com.nexacore.systemmodule.privilege.catalog.enums.PrivilegeAction;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -64,6 +64,7 @@ public class DataSeeder {
             AuthRole reportViewerRole = roleRepository.findByName("ROLE_REPORT_VIEWER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_REPORT_VIEWER"));
 
+            systemPrivilegeRegistryService.syncApplicationCatalog();
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
             systemPrivilegeRegistryService.assignRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
             assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, kycOperatorRole, Set.of(

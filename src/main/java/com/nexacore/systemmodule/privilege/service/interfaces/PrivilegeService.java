@@ -9,7 +9,7 @@ import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
-import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 
 import java.util.List;
 import java.util.Set;
