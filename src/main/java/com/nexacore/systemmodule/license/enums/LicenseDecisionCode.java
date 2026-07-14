@@ -1,0 +1,14 @@
+package com.nexacore.systemmodule.license.enums;
+
+public enum LicenseDecisionCode {
+    ALLOWED,
+    MISSING_CONTEXT,
+    NO_ACTIVE_SUBSCRIPTION,
+    SUBSCRIPTION_NOT_EFFECTIVE,
+    LICENSE_EXPIRED,
+    LICENSE_SUSPENDED,
+    LICENSE_CANCELLED,
+    LICENSE_REVOKED,
+    ENTITLEMENT_DENIED,
+    LIMIT_EXCEEDED
+}

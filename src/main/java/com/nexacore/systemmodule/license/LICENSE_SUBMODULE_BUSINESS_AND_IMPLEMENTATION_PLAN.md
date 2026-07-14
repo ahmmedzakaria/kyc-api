@@ -633,6 +633,11 @@ Recommended features:
 
 Use existing actions such as Create, Update, Delete, View, Search, and Approve where appropriate. Add new actions only if the existing action catalog cannot express the workflow.
 
+## BPMN
+BPMN (Business Process Model and Notation) is an international standard (maintained by the Object Management Group (OMG)) for visually modeling business processes. It provides a common language that business analysts, developers, and stakeholders can all understand.
+
+Instead of writing workflow logic entirely in code, you draw a process diagram, and workflow engines like Camunda, Flowable, and Activiti can execute it.
+
 ## Enforcement Points
 
 ### Client API Filter
