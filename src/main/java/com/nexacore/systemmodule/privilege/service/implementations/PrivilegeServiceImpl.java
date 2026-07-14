@@ -15,16 +15,22 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.clientaccess.dto.ClientApplicationContextDto;
 import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.entity.SysFeature;
+import com.nexacore.systemmodule.privilege.entity.SysModule;
 import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import com.nexacore.systemmodule.privilege.entity.SysRolePrivilege;
 import com.nexacore.systemmodule.privilege.entity.RolePrivilegeId;
 import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
+import com.nexacore.systemmodule.privilege.entity.SysSubmodule;
 import com.nexacore.systemmodule.privilege.entity.SysUserPrivilege;
 import com.nexacore.systemmodule.privilege.entity.UserPrivilegeId;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
+import com.nexacore.systemmodule.privilege.repository.FeatureRepository;
+import com.nexacore.systemmodule.privilege.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.RolePrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.SubMenuRepository;
+import com.nexacore.systemmodule.privilege.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.repository.UserPrivilegeRepository;
 import com.nexacore.systemmodule.privilege.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
@@ -38,6 +44,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -55,6 +62,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final PrivilegeRepository privilegeRepository;
     private final RolePrivilegeRepository rolePrivilegeRepository;
     private final UserPrivilegeRepository userPrivilegeRepository;
+    private final ModuleRepository moduleRepository;
+    private final SubmoduleRepository submoduleRepository;
+    private final FeatureRepository featureRepository;
     private final AuthModuleGateway authModuleGateway;
     private final SubMenuRepository subMenuRepository;
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
@@ -87,14 +97,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .orElseGet(SysPrivilege::new);
 
         privilege.setPrivilegeCode(privilegeCode);
-        privilege.setModuleCode(requestDto.getModuleCode());
-        privilege.setModuleName(requestDto.getModuleName());
-        privilege.setSubmoduleCode(requestDto.getSubmoduleCode());
-        privilege.setSubmoduleName(requestDto.getSubmoduleName());
-        privilege.setFeatureTypeCode(requestDto.getFeatureTypeCode());
-        privilege.setFeatureTypeName(requestDto.getFeatureTypeName());
-        privilege.setFeatureCode(requestDto.getFeatureCode());
-        privilege.setFeatureName(requestDto.getFeatureName());
+        privilege.setFeature(resolveFeature(requestDto));
         privilege.setActionCode(requestDto.getActionCode());
         privilege.setActionName(requestDto.getActionName());
         privilege.setSubMenu(resolveSubMenu(requestDto.getSubMenuId()));
@@ -131,14 +134,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         subMenu.setName(requestDto.getName());
         subMenu.setUrl(requestDto.getUrl());
         subMenu.setIcon(requestDto.getIcon());
-        subMenu.setModuleCode(requestDto.getModuleCode());
-        subMenu.setModuleName(requestDto.getModuleName());
-        subMenu.setSubmoduleCode(requestDto.getSubmoduleCode());
-        subMenu.setSubmoduleName(requestDto.getSubmoduleName());
-        subMenu.setFeatureTypeCode(requestDto.getFeatureTypeCode());
-        subMenu.setFeatureTypeName(requestDto.getFeatureTypeName());
-        subMenu.setFeatureCode(requestDto.getFeatureCode());
-        subMenu.setFeatureName(requestDto.getFeatureName());
+        subMenu.setFeature(resolveFeature(requestDto));
         subMenu.setActive(requestDto.getActive() == null || requestDto.getActive());
         subMenu.setMenuOrder(defaultOrder(requestDto.getMenuOrder()));
         subMenu.setSubMenuOrder(defaultOrder(requestDto.getSubMenuOrder()));
@@ -399,6 +395,94 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
     private int defaultOrder(Integer order) {
         return order == null ? 0 : order;
+    }
+
+    private SysFeature resolveFeature(PrivilegeRequestDto requestDto) {
+        return resolveFeature(
+                requestDto.getModuleCode(),
+                requestDto.getModuleName(),
+                requestDto.getSubmoduleCode(),
+                requestDto.getSubmoduleName(),
+                requestDto.getFeatureTypeCode(),
+                requestDto.getFeatureTypeName(),
+                requestDto.getFeatureCode(),
+                requestDto.getFeatureName()
+        );
+    }
+
+    private SysFeature resolveFeature(SubMenuRequestDto requestDto) {
+        return resolveFeature(
+                requestDto.getModuleCode(),
+                requestDto.getModuleName(),
+                requestDto.getSubmoduleCode(),
+                requestDto.getSubmoduleName(),
+                requestDto.getFeatureTypeCode(),
+                requestDto.getFeatureTypeName(),
+                requestDto.getFeatureCode(),
+                requestDto.getFeatureName()
+        );
+    }
+
+    private SysFeature resolveFeature(String moduleCode,
+                                      String moduleName,
+                                      String submoduleCode,
+                                      String submoduleName,
+                                      String featureTypeCode,
+                                      String featureTypeName,
+                                      String featureCode,
+                                      String featureName) {
+        SysModule module = moduleRepository.findByCode(moduleCode)
+                .orElseGet(() -> moduleRepository.save(SysModule.builder()
+                        .code(moduleCode)
+                        .name(moduleName)
+                        .active(true)
+                        .build()));
+        if (!Objects.equals(moduleName, module.getName()) || !module.isActive()) {
+            module.setName(moduleName);
+            module.setActive(true);
+            module = moduleRepository.save(module);
+        }
+
+        SysModule resolvedModule = module;
+        SysSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(moduleCode, submoduleCode)
+                .orElseGet(() -> submoduleRepository.save(SysSubmodule.builder()
+                        .module(resolvedModule)
+                        .code(submoduleCode)
+                        .name(submoduleName)
+                        .active(true)
+                        .build()));
+        if (!Objects.equals(submoduleName, submodule.getName()) || !submodule.isActive()) {
+            submodule.setName(submoduleName);
+            submodule.setActive(true);
+            submodule = submoduleRepository.save(submodule);
+        }
+
+        SysSubmodule resolvedSubmodule = submodule;
+        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndCode(
+                        moduleCode,
+                        submoduleCode,
+                        featureTypeCode,
+                        featureCode
+                )
+                .map(feature -> {
+                    if (!Objects.equals(featureName, feature.getName())
+                            || !Objects.equals(featureTypeName, feature.getFeatureTypeName())
+                            || !feature.isActive()) {
+                        feature.setName(featureName);
+                        feature.setFeatureTypeName(featureTypeName);
+                        feature.setActive(true);
+                        return featureRepository.save(feature);
+                    }
+                    return feature;
+                })
+                .orElseGet(() -> featureRepository.save(SysFeature.builder()
+                        .submodule(resolvedSubmodule)
+                        .featureTypeCode(featureTypeCode)
+                        .featureTypeName(featureTypeName)
+                        .code(featureCode)
+                        .name(featureName)
+                        .active(true)
+                        .build()));
     }
 
     private void validateCodePart(String value, int expectedLength, String fieldName) {

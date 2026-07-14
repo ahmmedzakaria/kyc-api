@@ -335,252 +335,42 @@ sale_id
 
 If any table is renamed after data exists, add a migration script. `spring.jpa.hibernate.ddl-auto=update` may create new tables but will not move data from old table names.
 
-## Shared Business And Subscription Model
+## Shared Business Context And License Integration
 
-Business, branch, module enablement, feature enablement, and subscription state should be implemented under `commonmodule.business` because upcoming modules will also need the same business context.
+Business and branch are shared operational context and should not be duplicated inside POS tables. POS records should reference the shared business and branch identifiers.
 
-Suggested package:
+Commercial subscription, module enablement, feature entitlement, license status, and usage limits are owned by `systemmodule.license`, not by POS and not by `commonmodule.business`.
+
+POS should use this split:
+
+| Concern | Owner | POS responsibility |
+| --- | --- | --- |
+| Business identity | shared business context | Store `business_id` on POS records and validate ownership/context |
+| Branch identity | shared business context | Store `branch_id` on branch-scoped POS records and validate branch access |
+| License plan/subscription | `systemmodule.license` through `LicenseModuleGateway` | Ask `LicenseModuleGateway` before licensed actions |
+| Feature entitlement | `systemmodule.license` | Deny POS actions when the license decision denies the feature |
+| User privilege | `authmodule` and `systemmodule.privilege` | Require the correct POS privilege for the authenticated user |
+| POS domain rules | `posmodule` | Validate stock, shift, sale totals, returns, taxes, payments, receipts |
+
+Runtime access checks for POS should be:
 
 ```text
-backend/src/main/java/com/nexacore/commonmodule/business
-├── controller
-├── dto
-├── entity
-├── enums
-├── repository
-└── service
-    ├── interfaces
-    └── implementations
-```
-
-### Table: `common_business`
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_code` | `varchar(50)` | Unique external/business code |
-| `name` | `varchar(150)` | Business display name |
-| `legal_name` | `varchar(200)` | Optional legal name |
-| `business_type` | `varchar(50)` | Retail, pharmacy, restaurant, service, wholesale |
-| `email` | `varchar(150)` | Primary contact email |
-| `mobile_number` | `varchar(30)` | Primary contact mobile |
-| `tax_id` | `varchar(80)` | Optional BIN/VAT/TIN/trade identifier |
-| `status` | `varchar(30)` | `ACTIVE`, `SUSPENDED`, `CLOSED`, `TRIAL` |
-| `timezone` | `varchar(80)` | Example: `Asia/Dhaka` |
-| `default_currency` | `varchar(10)` | Example: `BDT` |
-| `created_at` | `timestamp` | Audit timestamp |
-| `created_by` | `bigint` | Auth user id |
-| `updated_at` | `timestamp` | Audit timestamp |
-| `updated_by` | `bigint` | Auth user id |
-
-### Table: `common_branch`
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_id` | `bigint` | FK to `common_business.id` |
-| `branch_code` | `varchar(50)` | Unique per business |
-| `name` | `varchar(150)` | Branch name |
-| `branch_type` | `varchar(50)` | Store, warehouse, restaurant, virtual |
-| `email` | `varchar(150)` | Branch contact email |
-| `mobile_number` | `varchar(30)` | Branch contact mobile |
-| `address` | `varchar(500)` | Branch address |
-| `location_id` | `uuid` | Optional GIS boundary reference |
-| `active` | `boolean` | Branch availability |
-| `created_at` | `timestamp` | Audit timestamp |
-| `created_by` | `bigint` | Auth user id |
-| `updated_at` | `timestamp` | Audit timestamp |
-| `updated_by` | `bigint` | Auth user id |
-
-### Table: `common_business_module`
-
-Tracks which high-level modules are enabled for a business.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_id` | `bigint` | FK to `common_business.id` |
-| `module_code` | `varchar(50)` | Example: `POS`, `KYC`, `CRM`, `ACCOUNTING` |
-| `module_name` | `varchar(150)` | Display name |
-| `enabled` | `boolean` | Business-level module enablement |
-| `enabled_from` | `timestamp` | Start time |
-| `enabled_until` | `timestamp` | Optional expiry |
-| `source` | `varchar(50)` | `SUBSCRIPTION`, `MANUAL`, `TRIAL` |
-| `created_at` | `timestamp` | Audit timestamp |
-| `updated_at` | `timestamp` | Audit timestamp |
-
-### Table: `common_business_sub_module`
-
-Tracks which submodules are enabled inside a module.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_module_id` | `bigint` | FK to `common_business_module.id` |
-| `sub_module_code` | `varchar(50)` | Example: `POS_SALES`, `POS_INVENTORY`, `POS_REPORTING` |
-| `sub_module_name` | `varchar(150)` | Display name |
-| `enabled` | `boolean` | Submodule enablement |
-| `enabled_from` | `timestamp` | Start time |
-| `enabled_until` | `timestamp` | Optional expiry |
-| `created_at` | `timestamp` | Audit timestamp |
-| `updated_at` | `timestamp` | Audit timestamp |
-
-### Table: `common_business_feature`
-
-Tracks feature-level enablement for a business. This is separate from user privileges.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_sub_module_id` | `bigint` | FK to `common_business_sub_module.id` |
-| `feature_code` | `varchar(80)` | Example: `POS_REFUND`, `POS_DISCOUNT`, `POS_REPORT_EXPORT` |
-| `feature_name` | `varchar(150)` | Display name |
-| `enabled` | `boolean` | Feature enablement |
-| `limit_key` | `varchar(80)` | Optional limit, e.g. `MAX_BRANCHES`, `MAX_PRODUCTS` |
-| `limit_value` | `numeric(19,4)` | Optional numeric entitlement |
-| `enabled_from` | `timestamp` | Start time |
-| `enabled_until` | `timestamp` | Optional expiry |
-| `created_at` | `timestamp` | Audit timestamp |
-| `updated_at` | `timestamp` | Audit timestamp |
-
-### Table: `common_subscription_plan`
-
-Plan catalog shared across businesses.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `plan_code` | `varchar(50)` | Unique code, e.g. `STARTER`, `PRO`, `ENTERPRISE` |
-| `name` | `varchar(150)` | Display name |
-| `billing_cycle` | `varchar(30)` | `MONTHLY`, `YEARLY`, `TRIAL` |
-| `price` | `numeric(19,4)` | Plan price |
-| `currency` | `varchar(10)` | Example: `BDT` |
-| `active` | `boolean` | Plan availability |
-| `created_at` | `timestamp` | Audit timestamp |
-| `updated_at` | `timestamp` | Audit timestamp |
-
-### Table: `common_subscription_plan_feature`
-
-Defines module, submodule, feature, and limits included in a plan.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `plan_id` | `bigint` | FK to `common_subscription_plan.id` |
-| `module_code` | `varchar(50)` | Example: `POS` |
-| `sub_module_code` | `varchar(50)` | Example: `POS_SALES` |
-| `feature_code` | `varchar(80)` | Example: `POS_REFUND` |
-| `enabled` | `boolean` | Included or not |
-| `limit_key` | `varchar(80)` | Optional limit name |
-| `limit_value` | `numeric(19,4)` | Optional limit value |
-| `created_at` | `timestamp` | Audit timestamp |
-| `updated_at` | `timestamp` | Audit timestamp |
-
-### Table: `common_business_subscription`
-
-Tracks the current and historical subscription state for a business.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_id` | `bigint` | FK to `common_business.id` |
-| `plan_id` | `bigint` | FK to `common_subscription_plan.id` |
-| `status` | `varchar(30)` | `TRIAL`, `ACTIVE`, `PAST_DUE`, `CANCELLED`, `EXPIRED` |
-| `started_at` | `timestamp` | Subscription start |
-| `current_period_start` | `timestamp` | Billing period start |
-| `current_period_end` | `timestamp` | Billing period end |
-| `trial_end_at` | `timestamp` | Optional trial expiry |
-| `cancelled_at` | `timestamp` | Optional cancellation time |
-| `auto_renew` | `boolean` | Renewal flag |
-| `payment_reference` | `varchar(150)` | Payment gateway/manual billing reference |
-| `created_at` | `timestamp` | Audit timestamp |
-| `updated_at` | `timestamp` | Audit timestamp |
-
-### Table: `common_business_subscription_event`
-
-Optional audit/event table for subscription lifecycle.
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key |
-| `business_subscription_id` | `bigint` | FK to `common_business_subscription.id` |
-| `event_type` | `varchar(50)` | `CREATED`, `RENEWED`, `UPGRADED`, `DOWNGRADED`, `CANCELLED`, `EXPIRED` |
-| `event_time` | `timestamp` | Event time |
-| `details` | `text` | JSON/text details |
-| `created_by` | `bigint` | Auth user id |
-
-## Subscription Maintenance Flow
-
-Subscription state should control business module, submodule, and feature availability.
-
-### Provisioning
-
-1. Create or update `common_business`.
-2. Create branch records in `common_branch`.
-3. Assign a plan in `common_business_subscription`.
-4. Read included modules/features from `common_subscription_plan_feature`.
-5. Create or update:
-   - `common_business_module`
-   - `common_business_sub_module`
-   - `common_business_feature`
-
-### Runtime Access Check
-
-Before executing POS actions, check three levels:
-
-```text
-1. Is the business subscription ACTIVE or TRIAL and not expired?
-2. Is the business module/submodule/feature enabled?
-3. Does the authenticated user have the required auth privilege?
+1. Is the request in the correct business and branch context?
+2. Does LicenseModuleGateway allow the module/feature/action/limit?
+3. Does the authenticated user have the required POS privilege?
+4. Do POS domain validations pass?
 ```
 
 Example for POS refund:
 
 ```text
-business subscription active
-  -> common_business_module: POS enabled
-  -> common_business_sub_module: POS_RETURN enabled
-  -> common_business_feature: POS_REFUND enabled
-  -> auth privilege: POS_RETURN_REFUND allowed
+POS validates sale, payment, return eligibility, and branch context
+  -> LicenseModuleGateway checks POS Return/Refund entitlement and license status
+  -> auth privilege checks POS refund action for the user
+  -> POS creates pos_return and pos_return_item only if all checks pass
 ```
 
-### Renewal
-
-On successful renewal:
-
-1. Extend `current_period_start` and `current_period_end`.
-2. Set status to `ACTIVE`.
-3. Re-apply plan features to module/submodule/feature tables.
-4. Write `common_business_subscription_event` with `RENEWED`.
-
-### Upgrade Or Downgrade
-
-On plan change:
-
-1. Update `common_business_subscription.plan_id`.
-2. Rebuild feature enablement from `common_subscription_plan_feature`.
-3. Preserve manual overrides only when explicitly allowed.
-4. Write `UPGRADED` or `DOWNGRADED` event.
-
-### Expiry Or Failed Payment
-
-When subscription expires or payment fails:
-
-1. Set status to `PAST_DUE` or `EXPIRED`.
-2. Disable non-grace-period features.
-3. Keep read-only access if business policy requires it.
-4. Block write operations such as sale creation, purchase creation, refund, and report export if the plan is expired.
-
-### Separation From Auth Privileges
-
-Subscription feature enablement is not the same as user permission.
-
-```text
-common_business_feature = what the business has paid for or enabled
-auth_privileges = what the current user is allowed to do
-```
-
-Both must pass before the action is allowed.
+Do not create POS-specific or common-module subscription tables such as `common_business_module`, `common_business_sub_module`, `common_business_feature`, `common_subscription_plan`, `common_subscription_plan_feature`, or `common_business_subscription`. Use the license submodule tables and services described in `systemmodule/license/LICENSE_SUBMODULE_BUSINESS_AND_IMPLEMENTATION_PLAN.md`.
 
 ## Core Domain Entities
 
@@ -590,12 +380,7 @@ Business and branch are shared concepts and should be owned by `commonmodule.bus
 
 - `Business`: tenant/business account, stored in `common_business`
 - `Branch`: physical or virtual outlet, stored in `common_branch`
-- `BusinessModule`: enabled modules per business, stored in `common_business_module`
-- `BusinessSubModule`: enabled submodules per business, stored in `common_business_sub_module`
-- `BusinessFeature`: enabled features per business, stored in `common_business_feature`
-- `BusinessSubscription`: current subscription state, stored in `common_business_subscription`
-- `SubscriptionPlan`: reusable plan catalog, stored in `common_subscription_plan`
-- `SubscriptionPlanFeature`: feature limits/entitlements per plan, stored in `common_subscription_plan_feature`
+- License plan, subscription, entitlement, and usage-limit records are owned by `systemmodule.license`
 
 POS should reference shared business tables:
 
@@ -1011,7 +796,7 @@ Privilege management for POS features should be visible through the existing `pr
 
 - Use existing JWT/SSO authentication.
 - Protect POS APIs with module privileges.
-- Check business subscription and feature entitlement before allowing POS actions.
+- Check `LicenseModuleGateway` before licensed POS actions, premium features, writes, exports, and limit-consuming operations.
 - Use audit logging for destructive or financial operations.
 - Never trust client-side totals. Recalculate totals on the backend.
 - Validate payment amount, discount amount, tax amount, and stock movement on the backend.
@@ -1086,7 +871,7 @@ pos_refund.approval_reference
 - Never expose JPA entities directly from POS APIs.
 - Use separate DTOs for masked and privileged responses.
 - Enforce authorization in the service layer as well as the controller.
-- Validate business ownership, branch access, subscription status, feature entitlement, and user privilege.
+- Validate business ownership, branch access, license decision, feature entitlement, and user privilege.
 - Mask sensitive response fields by default:
   - phone: `017******89`
   - email: `z***@mail.com`
@@ -1100,8 +885,7 @@ Recommended API decision flow:
 ```text
 JWT/SSO authenticated
   -> business ownership valid
-  -> subscription ACTIVE or TRIAL
-  -> module/submodule/feature enabled
+  -> LicenseModuleGateway allows module/feature/action/limit
   -> user privilege allowed
   -> sensitive data policy applied
   -> masked DTO returned
@@ -1123,7 +907,7 @@ JWT/SSO authenticated
 
 | Gap | Risk | Mitigation |
 | --- | --- | --- |
-| Only hiding buttons in Angular | User can call API directly | Enforce permission and subscription checks in backend service layer |
+| Only hiding buttons in Angular | User can call API directly | Enforce privilege and license checks in backend service layer |
 | Returning entities directly | Passwords, tokens, internal ids, or full PII may leak | Use explicit response DTOs |
 | Logging full request bodies | OTP, token, identity, or payment data may enter logs | Sanitize logs and block sensitive keys |
 | Storing raw OTP | OTP can be reused if DB leaks | Store OTP hash, expiry, and attempt count |

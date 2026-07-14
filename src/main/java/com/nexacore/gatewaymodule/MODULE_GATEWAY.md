@@ -46,6 +46,16 @@ business module
   -> privilege catalog and assignments
 ```
 
+License decisions should use `LicenseModuleGateway` instead of depending on
+license service internals:
+
+```text
+business module
+  -> LicenseModuleGateway
+  -> systemmodule/license/api/SystemLicenseModuleGateway
+  -> license decision service and sys_license_* tables
+```
+
 Auth user and role lookups should use `AuthModuleGateway` instead of depending on
 auth repositories or entities directly:
 

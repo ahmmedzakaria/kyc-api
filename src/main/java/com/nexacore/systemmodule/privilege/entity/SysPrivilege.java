@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(callSuper = false)
 public class SysPrivilege extends ActionInfo {
 
     @Id
@@ -31,28 +33,33 @@ public class SysPrivilege extends ActionInfo {
     @Column(nullable = false, unique = true, length = 11)
     private String privilegeCode;
 
-    @Column(nullable = false, length = 2)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "feature_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    private SysFeature feature;
+
+    @Transient
     private String moduleCode;
 
-    @Column(nullable = false)
+    @Transient
     private String moduleName;
 
-    @Column(nullable = false, length = 2)
+    @Transient
     private String submoduleCode;
 
-    @Column(nullable = false)
+    @Transient
     private String submoduleName;
 
-    @Column(nullable = false, length = 2)
+    @Transient
     private String featureTypeCode;
 
-    @Column(nullable = false)
+    @Transient
     private String featureTypeName;
 
-    @Column(nullable = false, length = 3)
+    @Transient
     private String featureCode;
 
-    @Column(nullable = false)
+    @Transient
     private String featureName;
 
     @Column(nullable = false, length = 2)
@@ -68,4 +75,44 @@ public class SysPrivilege extends ActionInfo {
 
     @Column(nullable = false)
     private boolean active;
+
+    public String getModuleCode() {
+        return feature != null && feature.getSubmodule() != null && feature.getSubmodule().getModule() != null
+                ? feature.getSubmodule().getModule().getCode()
+                : moduleCode;
+    }
+
+    public String getModuleName() {
+        return feature != null && feature.getSubmodule() != null && feature.getSubmodule().getModule() != null
+                ? feature.getSubmodule().getModule().getName()
+                : moduleName;
+    }
+
+    public String getSubmoduleCode() {
+        return feature != null && feature.getSubmodule() != null
+                ? feature.getSubmodule().getCode()
+                : submoduleCode;
+    }
+
+    public String getSubmoduleName() {
+        return feature != null && feature.getSubmodule() != null
+                ? feature.getSubmodule().getName()
+                : submoduleName;
+    }
+
+    public String getFeatureTypeCode() {
+        return feature != null ? feature.getFeatureTypeCode() : featureTypeCode;
+    }
+
+    public String getFeatureTypeName() {
+        return feature != null ? feature.getFeatureTypeName() : featureTypeName;
+    }
+
+    public String getFeatureCode() {
+        return feature != null ? feature.getCode() : featureCode;
+    }
+
+    public String getFeatureName() {
+        return feature != null ? feature.getName() : featureName;
+    }
 }

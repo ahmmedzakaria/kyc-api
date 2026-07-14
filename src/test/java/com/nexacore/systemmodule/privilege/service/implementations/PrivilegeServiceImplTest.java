@@ -5,12 +5,18 @@ import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.clientaccess.service.interfaces.ClientApplicationContextService;
+import com.nexacore.systemmodule.privilege.entity.SysFeature;
+import com.nexacore.systemmodule.privilege.entity.SysModule;
 import com.nexacore.systemmodule.privilege.entity.SysPrivilege;
 import com.nexacore.systemmodule.privilege.entity.SysSubMenu;
+import com.nexacore.systemmodule.privilege.entity.SysSubmodule;
 import com.nexacore.systemmodule.privilege.enums.FeatureType;
+import com.nexacore.systemmodule.privilege.repository.FeatureRepository;
+import com.nexacore.systemmodule.privilege.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.RolePrivilegeRepository;
 import com.nexacore.systemmodule.privilege.repository.SubMenuRepository;
+import com.nexacore.systemmodule.privilege.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.repository.UserPrivilegeRepository;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +32,9 @@ class PrivilegeServiceImplTest {
     private final PrivilegeRepository privilegeRepository = mock(PrivilegeRepository.class);
     private final RolePrivilegeRepository rolePrivilegeRepository = mock(RolePrivilegeRepository.class);
     private final UserPrivilegeRepository userPrivilegeRepository = mock(UserPrivilegeRepository.class);
+    private final ModuleRepository moduleRepository = mock(ModuleRepository.class);
+    private final SubmoduleRepository submoduleRepository = mock(SubmoduleRepository.class);
+    private final FeatureRepository featureRepository = mock(FeatureRepository.class);
     private final AuthModuleGateway authModuleGateway = mock(AuthModuleGateway.class);
     private final SubMenuRepository subMenuRepository = mock(SubMenuRepository.class);
     private final ClientApplicationContextService clientApplicationContextService = mock(ClientApplicationContextService.class);
@@ -34,6 +43,9 @@ class PrivilegeServiceImplTest {
             privilegeRepository,
             rolePrivilegeRepository,
             userPrivilegeRepository,
+            moduleRepository,
+            submoduleRepository,
+            featureRepository,
             authModuleGateway,
             subMenuRepository,
             List.of(),
@@ -76,22 +88,41 @@ class PrivilegeServiceImplTest {
     }
 
     private SysSubMenu subMenu(Long id, String name, Integer menuOrder, Integer subMenuOrder) {
+        SysFeature feature = feature(id, name);
         return SysSubMenu.builder()
                 .id(id)
                 .name(name)
                 .url("/" + name.toLowerCase())
                 .icon("fa fa-circle")
-                .moduleCode("01")
-                .moduleName("KYC")
-                .submoduleCode("01")
-                .submoduleName("Person")
-                .featureTypeCode(FeatureType.OPERATIONS.getCode())
-                .featureTypeName(FeatureType.OPERATIONS.getDisplayName())
-                .featureCode(String.format("%03d", id))
-                .featureName(name)
+                .feature(feature)
                 .active(true)
                 .menuOrder(menuOrder)
                 .subMenuOrder(subMenuOrder)
+                .build();
+    }
+
+    private SysFeature feature(Long id, String name) {
+        SysModule module = SysModule.builder()
+                .id(1L)
+                .code("01")
+                .name("KYC")
+                .active(true)
+                .build();
+        SysSubmodule submodule = SysSubmodule.builder()
+                .id(1L)
+                .module(module)
+                .code("01")
+                .name("Person")
+                .active(true)
+                .build();
+        return SysFeature.builder()
+                .id(id)
+                .submodule(submodule)
+                .featureTypeCode(FeatureType.OPERATIONS.getCode())
+                .featureTypeName(FeatureType.OPERATIONS.getDisplayName())
+                .code(String.format("%03d", id))
+                .name(name)
+                .active(true)
                 .build();
     }
 
