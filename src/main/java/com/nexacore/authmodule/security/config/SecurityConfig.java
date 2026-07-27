@@ -35,15 +35,15 @@ public class SecurityConfig {
     private final JwtAuthEntryPoint authenticationEntryPoint;
 
     private final String[] AUTH_WHITELIST = {
-            "/auth/login",
-            "/auth/authenticate",
-            "/auth/config",
-            "/auth/application-context/public",
-            "/auth/sso/authenticate",
-            "/auth/login-status",
+            "/api/v1/auth/login",
+            "/api/v1/auth/authenticate",
+            "/api/v1/auth/config",
+            "/api/v1/auth/application-context/public",
+            "/api/v1/auth/sso/authenticate",
+            "/api/v1/auth/login-status",
             "/oauth2/**",
             "/users/register",
-            "/auth/test",
+            "/api/v1/auth/test",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",

@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/system/client-app")
+@RequestMapping("/api/v1/system/client-app")
 public class ClientApplicationController {
 
     private final ClientApplicationService clientApplicationService;

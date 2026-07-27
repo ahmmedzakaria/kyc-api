@@ -24,12 +24,12 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     public static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     private static final String[] PUBLIC_PATHS = {
-            "/auth/login",
-            "/auth/authenticate",
-            "/auth/config",
-            "/auth/application-context/public",
-            "/auth/sso/authenticate",
-            "/auth/login-status",
+            "/api/v1/auth/login",
+            "/api/v1/auth/authenticate",
+            "/api/v1/auth/config",
+            "/api/v1/auth/application-context/public",
+            "/api/v1/auth/sso/authenticate",
+            "/api/v1/auth/login-status",
             "/oauth2/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",

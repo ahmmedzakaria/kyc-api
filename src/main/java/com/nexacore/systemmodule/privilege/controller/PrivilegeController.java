@@ -25,7 +25,7 @@ import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/system/privilege")
+@RequestMapping("/api/v1/system/privilege")
 public class PrivilegeController {
 
     private final PrivilegeService privilegeService;

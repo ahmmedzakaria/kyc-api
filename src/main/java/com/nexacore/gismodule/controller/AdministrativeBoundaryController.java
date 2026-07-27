@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/locations")
+@RequestMapping("/api/v1/locations")
 @RequiredArgsConstructor
 public class AdministrativeBoundaryController {
 

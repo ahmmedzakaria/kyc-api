@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 @RestController
-@RequestMapping("/api/kyc")
+@RequestMapping("/api/v1/kyc")
 @Tag(name = "KYC Module API", description = "Operations for managing KYC records")
 @RequiredArgsConstructor
 @Slf4j

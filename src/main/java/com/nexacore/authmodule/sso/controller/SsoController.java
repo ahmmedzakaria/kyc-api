@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "SSO Authentication", description = "Handles SSO authentication APIs")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/auth/sso")
+@RequestMapping("/api/v1/auth/sso")
 public class SsoController {
 
     private final SsoAuthService ssoAuthService;

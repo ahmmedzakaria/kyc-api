@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/system/api-registry")
+@RequestMapping("/api/v1/system/api-registry")
 public class ApiRegistryController {
 
     private final ClientApiRegistryService clientApiRegistryService;
