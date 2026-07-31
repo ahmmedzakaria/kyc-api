@@ -51,4 +51,6 @@ public class ApplicationContextDto {
 
     @Builder.Default
     private Set<String> enabledFeatures = new HashSet<>();
+
+    private Object layout;
 }

@@ -14,6 +14,7 @@ import com.nexacore.authmodule.core.dto.RefreshTokenRequest;
 import com.nexacore.authmodule.core.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.authmodule.security.jwt.JwtUtil;
+import com.nexacore.gatewaymodule.layout.service.interfaces.LayoutModuleGateway;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
 	private final LogoutSessionService logoutSessionService;
 	private final AuthApplicationContextService authApplicationContextService;
 	private final AuthClientPolicyService authClientPolicyService;
+	private final LayoutModuleGateway layoutModuleGateway;
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request, String clientCode) {
@@ -81,6 +83,7 @@ public class AuthServiceImpl implements AuthService {
 	public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(String origin, String clientCode) {
 		String redirectUri = authApplicationContextService.buildRedirectUri(origin);
 		ApplicationContextDto applicationContext = authApplicationContextService.buildPublicContext(origin, clientCode);
+		applicationContext.setLayout(layoutModuleGateway.getPublicLayout(applicationContext.getClientCode(), origin));
 		AuthConfigResponse response = AuthConfigResponse.builder()
 				.registrationMode(applicationContext.getRegistrationMode())
 				.enabledRegistrationCredentialModels(applicationContext.getEnabledRegistrationCredentialModels())
@@ -101,16 +104,20 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public ResponseEntity<ApiResponse<ApplicationContextDto>> getPublicApplicationContext(String origin, String clientCode) {
+		ApplicationContextDto context = authApplicationContextService.buildPublicContext(origin, clientCode);
+		context.setLayout(layoutModuleGateway.getPublicLayout(context.getClientCode(), origin));
 		return ResponseEntity.ok(ApiResponse.success(
-				authApplicationContextService.buildPublicContext(origin, clientCode),
+				context,
 				"Public application context loaded"
 		));
 	}
 
 	@Override
 	public ResponseEntity<ApiResponse<ApplicationContextDto>> getApplicationContext(String origin, String clientCode) {
+		ApplicationContextDto context = authApplicationContextService.buildPublicContext(origin, clientCode);
+		context.setLayout(layoutModuleGateway.getPublicLayout(context.getClientCode(), origin));
 		return ResponseEntity.ok(ApiResponse.success(
-				authApplicationContextService.buildPublicContext(origin, clientCode),
+				context,
 				"Application context loaded"
 		));
 	}

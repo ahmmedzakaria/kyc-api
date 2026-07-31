@@ -18,6 +18,7 @@ import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRe
 import com.nexacore.systemmodule.privilege.catalog.repository.SubMenuRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.UserPrivilegeRepository;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -39,6 +40,7 @@ class PrivilegeServiceImplTest {
     private final SubMenuRepository subMenuRepository = mock(SubMenuRepository.class);
     private final ClientApplicationContextService clientApplicationContextService = mock(ClientApplicationContextService.class);
     private final AuthApplicationContextService authApplicationContextService = mock(AuthApplicationContextService.class);
+    private final LayoutContextService layoutContextService = mock(LayoutContextService.class);
     private final PrivilegeServiceImpl service = new PrivilegeServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
@@ -50,7 +52,8 @@ class PrivilegeServiceImplTest {
             subMenuRepository,
             List.of(),
             clientApplicationContextService,
-            authApplicationContextService
+            authApplicationContextService,
+            layoutContextService
     );
 
     @Test

@@ -25,6 +25,7 @@ import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
 import com.nexacore.systemmodule.privilege.assignment.entity.SysUserPrivilege;
 import com.nexacore.systemmodule.privilege.assignment.entity.UserPrivilegeId;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
@@ -70,6 +71,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
     private final ClientApplicationContextService clientApplicationContextService;
     private final AuthApplicationContextService authApplicationContextService;
+    private final LayoutContextService layoutContextService;
 
     @Override
     public String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode) {
@@ -175,6 +177,11 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .enabledModules(resolveEnabledModules(privilegeCodes))
                 .enabledSubmodules(resolveEnabledSubmodules(privilegeCodes))
                 .enabledFeatures(resolveEnabledFeatures(privilegeCodes))
+                .layout(layoutContextService.getEffectiveLayout(
+                        clientContext == null ? null : clientContext.getClientCode(),
+                        username,
+                        privilegeCodes
+                ))
                 .build();
         return authApplicationContextService.applyAuthPolicy(context, null);
     }
