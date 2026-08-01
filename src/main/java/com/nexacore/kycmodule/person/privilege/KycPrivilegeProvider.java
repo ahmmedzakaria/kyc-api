@@ -16,16 +16,9 @@ import java.util.List;
 public class KycPrivilegeProvider implements ModulePrivilegeProvider {
 
     private static final String PERSON_FEATURE_CODE = "001";
-    private static final String KYC_RECORD_FEATURE_CODE = "002";
-    private static final String KYC_REPORT_FEATURE_CODE = "003";
-
     @Override
     public List<PrivilegeFeatureDefinitionDto> getPrivilegeFeatures() {
-        return List.of(
-                personFeature(),
-                kycRecordFeature(),
-                kycReportFeature()
-        );
+        return List.of(personFeature());
     }
 
     private PrivilegeFeatureDefinitionDto personFeature() {
@@ -51,52 +44,6 @@ public class KycPrivilegeProvider implements ModulePrivilegeProvider {
                         )),
                         menuItem("Add Person", "/person/create", "fa fa-user-plus", List.of(
                                 privilegeCode(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.CREATE)
-                        ))
-                )
-        );
-    }
-
-    private PrivilegeFeatureDefinitionDto kycRecordFeature() {
-        return feature(
-                FeatureType.OPERATIONS,
-                KYC_RECORD_FEATURE_CODE,
-                "KYC Record",
-                "KYC",
-                "fa fa-id-card",
-                List.of(
-                        action(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.CREATE),
-                        action(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.UPDATE),
-                        action(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.DELETE),
-                        action(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.VIEW),
-                        action(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.SEARCH)
-                ),
-                List.of(
-                        menuItem("All Records", "/kyc", "fa fa-list", List.of(
-                                privilegeCode(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.VIEW),
-                                privilegeCode(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.SEARCH)
-                        )),
-                        menuItem("Create Record", "/kyc/create", "fa fa-plus", List.of(
-                                privilegeCode(FeatureType.OPERATIONS, KYC_RECORD_FEATURE_CODE, PrivilegeAction.CREATE)
-                        ))
-                )
-        );
-    }
-
-    private PrivilegeFeatureDefinitionDto kycReportFeature() {
-        return feature(
-                FeatureType.REPORT,
-                KYC_REPORT_FEATURE_CODE,
-                "KYC Report",
-                "KYC Reports",
-                "fa fa-chart-line",
-                List.of(
-                        action(FeatureType.REPORT, KYC_REPORT_FEATURE_CODE, PrivilegeAction.VIEW),
-                        action(FeatureType.REPORT, KYC_REPORT_FEATURE_CODE, PrivilegeAction.SEARCH)
-                ),
-                List.of(
-                        menuItem("KYC Reports", "/kyc", "fa fa-chart-simple", List.of(
-                                privilegeCode(FeatureType.REPORT, KYC_REPORT_FEATURE_CODE, PrivilegeAction.VIEW),
-                                privilegeCode(FeatureType.REPORT, KYC_REPORT_FEATURE_CODE, PrivilegeAction.SEARCH)
                         ))
                 )
         );
