@@ -41,7 +41,7 @@ public class LayoutProfileServiceImpl implements LayoutProfileService {
         profile.setProfileName(required(request.getProfileName(), "profileName"));
         profile.setDescription(request.getDescription());
         profile.setLayoutType(defaultValue(request.getLayoutType(), LayoutType.RAIL));
-        profile.setNavigationMode(defaultValue(request.getNavigationMode(), NavigationMode.RAIL));
+        profile.setNavigationMode(defaultValue(request.getNavigationMode(), NavigationMode.MODULE_GROUP_MEGA_PANEL));
         profile.setThemeMode(defaultValue(request.getThemeMode(), ThemeMode.LIGHT));
         profile.setDensity(defaultValue(request.getDensity(), LayoutDensity.COMFORTABLE));
         profile.setTopbarEnabled(defaultBool(request.getTopbarEnabled(), true));

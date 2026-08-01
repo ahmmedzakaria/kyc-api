@@ -58,7 +58,6 @@ public class AuthApplicationContextService {
                 .sso(buildSsoContext(origin, redirectUri, policyClientCode))
                 .registration(buildRegistrationContext())
                 .securityPolicy(buildSecurityPolicyContext(policyClientCode))
-                .menus(context.getMenus())
                 .privilegeCodes(context.getPrivilegeCodes())
                 .enabledModules(context.getEnabledModules())
                 .enabledSubmodules(context.getEnabledSubmodules())

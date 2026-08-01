@@ -172,7 +172,6 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         ApplicationContextDto context = ApplicationContextDto.builder()
                 .clientCode(clientContext == null ? null : clientContext.getClientCode())
                 .clientType(clientContext == null ? null : clientContext.getClientType().name())
-                .menus(getUserSidebarMenu(username))
                 .privilegeCodes(privilegeCodes)
                 .enabledModules(resolveEnabledModules(privilegeCodes))
                 .enabledSubmodules(resolveEnabledSubmodules(privilegeCodes))

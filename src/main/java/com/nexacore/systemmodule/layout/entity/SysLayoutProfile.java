@@ -41,19 +41,19 @@ public class SysLayoutProfile extends LayoutAuditInfo {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "layout_type", nullable = false, length = 40)
+    @Column(name = "layout_type", nullable = false, length = 40, columnDefinition = "varchar(40)")
     private LayoutType layoutType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "navigation_mode", nullable = false, length = 40)
+    @Column(name = "navigation_mode", nullable = false, length = 40, columnDefinition = "varchar(40)")
     private NavigationMode navigationMode;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "theme_mode", nullable = false, length = 40)
+    @Column(name = "theme_mode", nullable = false, length = 40, columnDefinition = "varchar(40)")
     private ThemeMode themeMode;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 40)
+    @Column(nullable = false, length = 40, columnDefinition = "varchar(40)")
     private LayoutDensity density;
 
     @Column(name = "topbar_enabled", nullable = false)
@@ -84,7 +84,7 @@ public class SysLayoutProfile extends LayoutAuditInfo {
     void defaults() {
         super.prePersist();
         layoutType = layoutType == null ? LayoutType.RAIL : layoutType;
-        navigationMode = navigationMode == null ? NavigationMode.RAIL : navigationMode;
+        navigationMode = navigationMode == null ? NavigationMode.MODULE_GROUP_MEGA_PANEL : navigationMode;
         themeMode = themeMode == null ? ThemeMode.LIGHT : themeMode;
         density = density == null ? LayoutDensity.COMFORTABLE : density;
     }

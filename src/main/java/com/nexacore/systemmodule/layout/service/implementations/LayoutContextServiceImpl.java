@@ -245,7 +245,7 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .code(DEFAULT_PROFILE_CODE)
                 .name("Default")
                 .layoutType(LayoutType.RAIL)
-                .navigationMode(NavigationMode.RAIL)
+                .navigationMode(NavigationMode.MODULE_GROUP_MEGA_PANEL)
                 .themeMode(ThemeMode.LIGHT)
                 .density(LayoutDensity.COMFORTABLE)
                 .topbarEnabled(true)
