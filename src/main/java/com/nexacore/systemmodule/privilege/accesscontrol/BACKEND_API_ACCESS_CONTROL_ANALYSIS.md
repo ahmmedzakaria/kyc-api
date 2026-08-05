@@ -40,7 +40,7 @@ AND user JWT valid
 AND user owns required privilege
 ```
 
-This model is appropriate, but it activates only when the request resolves to an active `SysApiRegistry` entry.
+This model is appropriate, but it activates only when the request resolves to an active `SysPrivApiRegistry` entry.
 
 ## Critical Findings
 
@@ -151,7 +151,7 @@ Menu filtering alone is not an authorization boundary.
 
 ### Configured client restrictions are unused
 
-`SysClientApplication` stores:
+`SysPrivClientApplication` stores:
 
 - `allowedOrigins`
 - `allowedIps`
@@ -274,6 +274,488 @@ Database-driven authorization should not be the only protection for platform-adm
 10. Implement configured origin, IP, and rate-limit policies.
 11. Centralize public-route and CORS configuration.
 12. Add full filter-chain integration tests covering authentication and authorization decisions.
+
+## Step-by-Step Implementation Plan
+
+The implementation must be delivered in dependency order. Do not switch the runtime directly from the current fail-open behavior to enforcement until API metadata, client grants, user privileges, and coverage tests are in place.
+
+### Phase 0: Establish the security baseline
+
+#### Step 0.1: Capture the current API inventory
+
+Use Spring's `RequestMappingHandlerMapping` to enumerate every application-owned controller mapping and record:
+
+- HTTP method.
+- Path pattern.
+- Controller and method.
+- Whether authentication is required.
+- Intended module, submodule, feature, and action.
+- Whether the API is genuinely public.
+- Intended browser, mobile, service, or partner clients.
+- Required tenant/business/branch scope.
+
+Exclude framework endpoints such as error handling and actuator internals unless they are intentionally exposed.
+
+Deliverable: a reviewed API inventory with an owner and access decision for every mapping.
+
+#### Step 0.2: Define response semantics
+
+Adopt one consistent decision contract:
+
+| Condition | Status | Code |
+| --- | --- | --- |
+| Missing/invalid user token | `401` | `AUTHENTICATION_REQUIRED` |
+| Wrong token type | `401` | `INVALID_TOKEN_TYPE` |
+| Missing/invalid confidential-client credential | `401` | `INVALID_CLIENT_CREDENTIALS` |
+| Client lacks API permission | `403` | `CLIENT_API_NOT_ALLOWED` |
+| Client lacks feature permission | `403` | `CLIENT_FEATURE_NOT_ALLOWED` |
+| User lacks privilege | `403` | `USER_PRIVILEGE_NOT_ALLOWED` |
+| Tenant/business/branch outside scope | `403` | `DATA_SCOPE_NOT_ALLOWED` |
+| Protected API missing registry metadata | `403` | `API_NOT_REGISTERED` |
+
+Return the standard `ApiResponse` JSON shape instead of servlet-container HTML from `sendError`.
+
+#### Step 0.3: Add configuration switches
+
+Create typed access-control properties under the privilege access-control package:
+
+```properties
+access-control.enabled=true
+access-control.enforcement-mode=REPORT
+access-control.require-client-for-browser=false
+access-control.require-client-for-confidential=true
+access-control.registry-coverage-enabled=true
+```
+
+Supported enforcement modes:
+
+- `DISABLED`: authentication only; intended only for emergency local diagnosis.
+- `REPORT`: calculate and log decisions but do not deny unresolved registry mappings.
+- `ENFORCE`: deny every unauthorized or unresolved protected API.
+
+Production acceptance criterion: `DISABLED` is rejected or prominently warned against in production profiles.
+
+### Phase 1: Protect security administration immediately
+
+This phase must land before registry-driven enforcement because these APIs can change the authorization system itself.
+
+#### Step 1.1: Define bootstrap administration privileges
+
+Extend the system privilege catalog with explicit actions for:
+
+- Client application view/manage.
+- Client credential rotate.
+- Client API permission assign.
+- Client feature permission assign.
+- Client tenant assignment.
+- API registry view/manage/synchronize.
+- Privilege catalog view/synchronize/assign.
+- Layout administration.
+- Workflow administration.
+- License administration.
+
+Use existing module/submodule/feature/action code composition. Do not introduce ad hoc role-name checks as the long-term authorization model.
+
+#### Step 1.2: Seed bootstrap privileges safely
+
+Add the next system Flyway migration after `V13__prefix_privilege_owned_tables.sql` to:
+
+- Insert the administration catalog records into `sys_priv_modules`, `sys_priv_submodules`, `sys_priv_features`, and `sys_priv_privileges`.
+- Assign them to the designated bootstrap administrator role.
+- Preserve existing assignments with idempotent inserts or conflict handling.
+- Set `created_by` and `updated_by` to the documented system actor for seed data.
+
+Never assign these privileges to the default user role.
+
+#### Step 1.3: Apply method-level checks
+
+Add `@PreAuthorize` to administrative controllers, starting with:
+
+- `ClientApplicationController`.
+- `ApiRegistryController`.
+- `PrivilegeController` mutation operations.
+- `LayoutController` mutation operations.
+- `WorkflowDefinitionController` mutation/publish/retire operations.
+- License plan, subscription, entitlement, and key-management operations.
+
+Use a privilege-aware authorization bean, for example:
+
+```java
+@PreAuthorize("@privilegeAuthorizer.has(authentication, 'requiredPrivilegeCode')")
+```
+
+Acceptance criteria:
+
+- An ordinary authenticated user receives `403` for every security-administration mutation.
+- The bootstrap administrator can perform the operation.
+- Tests verify both cases independently of API-registry state.
+
+### Phase 2: Separate access and refresh tokens
+
+#### Step 2.1: Define token types
+
+Introduce a token-type enum such as:
+
+```text
+ACCESS
+REFRESH
+```
+
+Update `JwtUtil` so generated tokens contain:
+
+- `token_type`.
+- `iss`.
+- `aud`.
+- `jti`.
+- Subject.
+- Issued-at and expiration.
+- Roles only where needed.
+
+Keep secrets and issuer/audience values environment-driven.
+
+#### Step 2.2: Enforce token purpose
+
+Update `JwtAuthenticationFilter` to:
+
+- Accept only `ACCESS` tokens.
+- Treat missing/malformed roles as authentication failure rather than a server error.
+- Validate issuer and audience.
+- Convert parsing and claim-shape errors to a consistent `401` response.
+- Avoid logging raw tokens or claims containing sensitive data.
+
+Update refresh processing to:
+
+- Accept only `REFRESH` tokens.
+- Reject access tokens at the refresh endpoint.
+- Verify session/revocation state.
+- Rotate the refresh token when configured.
+
+#### Step 2.3: Correct refresh routing
+
+Add `/api/v1/auth/refresh-token` to the authoritative public authentication paths. It is public only in the sense that it does not require an access token; it still requires a valid refresh token and applicable client/origin controls.
+
+Acceptance criteria:
+
+- Access token used for refresh: `401`.
+- Refresh token used as bearer on a protected API: `401`.
+- Expired access token plus valid refresh token: refresh succeeds.
+- Revoked/expired refresh token: `401`.
+
+### Phase 3: Centralize public-route and client classification
+
+#### Step 3.1: Create one public-route source
+
+Remove duplicated arrays from the security filters. Define one shared public-route policy used by:
+
+- `SecurityConfig`.
+- `ClientApplicationAuthenticationFilter`.
+- `ClientApiAccessFilter`.
+- `UserPrivilegeApiAccessFilter`.
+
+Remove origin URLs such as `http://localhost:4200` from request matchers. Origins belong in CORS policy.
+
+#### Step 3.2: Distinguish public and confidential clients
+
+Define client authentication behavior by `ClientApplicationType`:
+
+- Browser SPA/public client: client code is context, not a secret credential.
+- Mobile/public client: use an appropriate public-client flow and attestation where required.
+- Internal service/partner/confidential client: require API key, client secret, mTLS, or client-credential token.
+
+Do not ship a confidential API key inside Angular bundles.
+
+#### Step 3.3: Externalize CORS
+
+Move allowed origins, methods, and headers to typed configuration. Validate requested origin against deployment policy and, where applicable, the resolved client application's allowed origins.
+
+Acceptance criteria: all filters agree on public paths and browser origins are changed without recompiling the backend.
+
+### Phase 4: Annotate and register every API
+
+#### Step 4.1: Improve `@ClientSecuredApi`
+
+Keep the existing annotation as the source for registry metadata. Where useful, add:
+
+- A required privilege-code override for exceptional mappings.
+- A client-authentication requirement.
+- A data-scope requirement.
+- Clear method-overrides-type semantics.
+
+Avoid making `publicApi=true` the default.
+
+#### Step 4.2: Annotate controllers in risk order
+
+Annotate controller methods in this order:
+
+1. Client application and API registry.
+2. Privilege, layout, workflow, and license administration.
+3. Person and document APIs.
+4. GIS APIs.
+5. Authentication context APIs.
+6. Remaining controllers.
+
+Use action-specific privilege codes. For example, person search and document download should not share create/update permissions.
+
+#### Step 4.3: Make synchronization deterministic
+
+Update `ClientApiRegistryServiceImpl#syncFromAnnotations` to:
+
+- Normalize paths and HTTP methods.
+- Reject mappings without an explicit HTTP method.
+- Detect duplicate API codes and overlapping patterns.
+- Update existing annotated entries deterministically.
+- Mark removed annotation-managed entries inactive rather than deleting audit history.
+- Distinguish annotation-managed records from manually managed records.
+- Produce a synchronization report with added, changed, unchanged, deactivated, and conflicted counts.
+
+If required, add registry fields such as `source`, `priority`, and `last_synchronized_at` through a Flyway migration.
+
+#### Step 4.4: Add registry coverage tests
+
+Create an integration test using `RequestMappingHandlerMapping` that fails when:
+
+- An application-owned `/api/**` mapping lacks `@ClientSecuredApi`.
+- A mapping is accidentally declared public without appearing in the approved public-route set.
+- Two protected mappings generate the same API code.
+- Required privilege composition is invalid.
+
+Acceptance criterion: 100% of application-owned API mappings have reviewed metadata.
+
+### Phase 5: Seed client permissions before enforcement
+
+#### Step 5.1: Synchronize API registry in a controlled environment
+
+Run annotation synchronization using an authorized system actor. Review the generated registry before enabling enforcement.
+
+#### Step 5.2: Assign client API permissions
+
+For each registered client:
+
+- Grant only the APIs it calls.
+- Grant only the matching feature privileges.
+- Assign allowed tenants/businesses where applicable.
+- Generate confidential credentials only for clients capable of protecting them.
+
+Do not interpret an empty permission set as unrestricted access.
+
+#### Step 5.3: Validate frontend traffic in report mode
+
+Run normal Angular workflows with `enforcement-mode=REPORT`. Record would-deny decisions by:
+
+- API code.
+- Client code.
+- Username or safe user identifier.
+- Required privilege code.
+- Denial reason.
+- Trace ID.
+
+Never log API keys, bearer tokens, raw PII, or request bodies.
+
+Acceptance criterion: normal approved workflows produce no unexplained would-deny events.
+
+### Phase 6: Change unresolved APIs to fail closed
+
+#### Step 6.1: Resolve once per request
+
+Avoid resolving the API registry independently in multiple filters. Introduce a single resolver filter or request-scoped decision context containing:
+
+- Resolved API registry record.
+- Client application.
+- Client decision.
+- User decision.
+- Required privilege.
+- Trace ID.
+
+This prevents inconsistent database reads and matching results.
+
+#### Step 6.2: Enforce unresolved-route denial
+
+In `ENFORCE` mode:
+
+```text
+protected /api/** + no active registry match -> deny API_NOT_REGISTERED
+```
+
+Public routes must be explicitly approved. Do not infer public access merely because an endpoint is absent from the registry.
+
+#### Step 6.3: Roll out progressively
+
+Recommended rollout:
+
+1. Local/test: `ENFORCE` immediately after coverage tests pass.
+2. Staging: `REPORT`, then `ENFORCE` after traffic validation.
+3. Production: canary instance or limited client cohort, then full `ENFORCE`.
+
+Rollback changes only the enforcement mode. Do not delete registry or permission data during rollback.
+
+### Phase 7: Enforce tenant, business, and branch scope
+
+#### Step 7.1: Define authenticated request context
+
+Create an immutable request context containing:
+
+- User ID and username.
+- Client application ID/code.
+- Tenant ID.
+- Business ID.
+- Branch ID.
+- Trace ID.
+- Effective privilege codes.
+
+Values must come from validated token/client state and server-side assignments, not blindly from caller headers.
+
+#### Step 7.2: Validate client scope
+
+Use `sys_priv_client_application_tenants` to verify that the resolved client can access the requested tenant/business context.
+
+#### Step 7.3: Apply data scope in services and repositories
+
+Update sensitive queries so scope is part of the database predicate. Start with:
+
+- Person search and detail.
+- Photos and documents.
+- Workflow tasks and history.
+- Client, privilege, layout, and license configuration.
+
+Do not fetch cross-tenant data and filter it in memory.
+
+#### Step 7.4: Test object-level authorization
+
+Add tests proving that a user/client authorized for tenant A cannot read, update, delete, or download tenant B records, including direct-ID requests.
+
+### Phase 8: Enforce client operational policy
+
+#### Step 8.1: Allowed origins
+
+Parse and normalize configured origins. Reject mismatched origins for browser traffic where origin validation applies. Treat absent `Origin` correctly for server-to-server calls.
+
+#### Step 8.2: Allowed IP addresses
+
+Support explicit IP/CIDR rules. Trust forwarded headers only when the application is behind a configured trusted proxy; otherwise use the remote address.
+
+#### Step 8.3: Rate limiting
+
+Implement per-client and, where needed, per-route limits using Redis or the gateway layer. Return `429` with a stable error code and safe retry metadata.
+
+Do not rely on an in-memory counter in a multi-instance deployment.
+
+### Phase 9: Improve registry matching and performance
+
+#### Step 9.1: Make route precedence explicit
+
+Add deterministic matching rules:
+
+1. Exact method and exact path.
+2. Most specific path template.
+3. Explicit registry priority.
+4. Reject unresolved ties.
+
+Add a unique constraint where possible and synchronization-time overlap validation.
+
+#### Step 9.2: Cache safe authorization data
+
+Cache:
+
+- Active API registry mappings.
+- Client API/feature grants.
+- User effective privilege codes.
+
+Invalidate caches after registry sync, permission assignment, user/role privilege changes, client status changes, or credential rotation. Keep TTLs short enough to bound stale authorization.
+
+#### Step 9.3: Avoid writes on every API-key request
+
+`lastUsedAt` updates currently write during credential validation. Throttle or asynchronously aggregate these updates to avoid turning every authenticated request into a database write.
+
+### Phase 10: Audit and observability
+
+#### Step 10.1: Emit structured authorization events
+
+Record safe fields:
+
+- Trace ID.
+- API code and path template.
+- Client code.
+- Safe user identifier.
+- Decision and denial code.
+- Required privilege code.
+- Tenant/business/branch identifiers where non-sensitive.
+- Duration.
+
+#### Step 10.2: Add metrics
+
+Track at minimum:
+
+- Allowed and denied request counts.
+- Denials by reason.
+- Unregistered API attempts.
+- Invalid client credential attempts.
+- Invalid token-type attempts.
+- Registry-resolution latency.
+- Authorization cache hit rate.
+
+Alert on spikes in administrative denials, invalid credentials, and unregistered API access.
+
+### Phase 11: Complete automated verification
+
+#### Step 11.1: Unit tests
+
+Cover token type, route matching, client decisions, user privilege decisions, tenant scope, origin/IP parsing, and cache invalidation.
+
+#### Step 11.2: Filter-chain integration tests
+
+Use MockMvc or Spring Boot integration tests to verify the complete filter order and response contract for every row in the required test matrix below.
+
+#### Step 11.3: Database migration tests
+
+Run Flyway against:
+
+- An empty system database.
+- A snapshot using pre-`sys_priv_` table names.
+- A current database at migration `V13`.
+
+Verify data, foreign keys, indexes, and audit records after migration.
+
+#### Step 11.4: Security regression tests
+
+Add explicit regressions for:
+
+- Refresh token used as access token.
+- Missing registry record.
+- Ordinary user rotating a client key.
+- Direct-ID cross-tenant document access.
+- Disabled client with otherwise valid credentials.
+- Removed privilege while a session is active.
+
+### Phase 12: Production readiness and operating procedure
+
+Before production enforcement, confirm:
+
+- API registry coverage is 100%.
+- Public endpoints have security-owner approval.
+- Every production client has reviewed API and feature grants.
+- Browser clients do not contain confidential keys.
+- Bootstrap administrator privileges are limited and audited.
+- Token issuer/audience/type validation is enabled.
+- Tenant/business/branch isolation tests pass.
+- CORS origins are environment-specific.
+- Rate limits use shared infrastructure.
+- Dashboards and alerts are active.
+- Rollback to `REPORT` mode is documented and tested.
+
+## Implementation Work Packages
+
+| Work package | Primary code area | Depends on | Completion gate |
+| --- | --- | --- | --- |
+| WP-1 Admin protection | Controllers, privilege authorizer, privilege catalog | Phase 0 | Ordinary user denied admin mutations |
+| WP-2 Token hardening | `JwtUtil`, JWT filter, auth service | Phase 0 | Access/refresh misuse tests pass |
+| WP-3 Public/client policy | Security config and filters | WP-2 | One authoritative public-path policy |
+| WP-4 API metadata | Controllers, annotation, registry sync | WP-1 | Registry coverage reaches 100% |
+| WP-5 Client grants | Access-control services and migrations | WP-4 | Approved workflows clean in report mode |
+| WP-6 Fail-closed enforcement | Resolver/decision filters | WP-4, WP-5 | Unregistered protected APIs denied |
+| WP-7 Data scope | Context, services, repositories | WP-6 | Cross-tenant tests pass |
+| WP-8 Client operations | Origin, IP, rate-limit policy | WP-3, WP-6 | Policy integration tests pass |
+| WP-9 Performance/audit | Cache, logs, metrics | WP-6 | Load and observability gates pass |
+| WP-10 Production rollout | Configuration and operations | All | Production readiness checklist approved |
 
 ## Required Test Matrix
 
