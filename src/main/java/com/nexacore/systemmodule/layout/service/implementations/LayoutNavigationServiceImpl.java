@@ -48,13 +48,13 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     public List<NavNodeDto> getNavigationTree(String clientCode, String username, Set<String> privilegeCodes) {
         List<NavNodeDto> groups = new ArrayList<>();
         for (SysLayoutModuleGroup group : moduleGroupRepository.findByActiveTrueOrderByDisplayOrderAscGroupNameAsc()) {
-            NavNodeDto groupNode = node(group.getGroupCode(), null, group.getGroupName(), "group", group.getIcon(), null);
+            NavNodeDto groupNode = node(group.getGroupCode(), null, group.getGroupName(), "group", group.getIcon(), null, null);
             for (SysLayoutNavigationModule module : navigationModuleRepository.findByModuleGroupIdAndActiveTrueOrderByDisplayOrderAscNavigationModuleNameAsc(group.getId())) {
-                NavNodeDto moduleNode = node(module.getNavigationModuleCode(), null, module.getNavigationModuleName(), "module", module.getIcon(), null);
+                NavNodeDto moduleNode = node(module.getNavigationModuleCode(), null, module.getNavigationModuleName(), "module", module.getIcon(), module.getDescription(), null);
                 for (SysLayoutNavigationCategory category : categoryRepository.findByNavigationModuleIdAndActiveTrueOrderByDisplayOrderAscCategoryNameAsc(module.getId())) {
-                    NavNodeDto categoryNode = node(category.getCategoryCode(), null, category.getCategoryName(), "category", category.getIcon(), null);
+                    NavNodeDto categoryNode = node(category.getCategoryCode(), null, category.getCategoryName(), "category", category.getIcon(), null, null);
                     for (SysLayoutFeatureGroup featureGroup : featureGroupRepository.findByNavigationCategoryIdAndActiveTrueOrderByDisplayOrderAscFeatureGroupNameAsc(category.getId())) {
-                        NavNodeDto featureGroupNode = node(featureGroup.getFeatureGroupCode(), null, featureGroup.getFeatureGroupName(), "featureGroup", null, null);
+                        NavNodeDto featureGroupNode = node(featureGroup.getFeatureGroupCode(), null, featureGroup.getFeatureGroupName(), "featureGroup", null, null, null);
                         for (SysLayoutFeature feature : featureRepository.findByFeatureGroupIdAndActiveTrueOrderByDisplayOrderAscFeatureNameAsc(featureGroup.getId())) {
                             NavNodeDto featureNode = featureNode(feature, privilegeCodes);
                             if (featureNode != null) {
@@ -95,7 +95,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         group.setActive(defaultActive(request.getActive()));
         audit(group, userId);
         SysLayoutModuleGroup saved = moduleGroupRepository.save(group);
-        return node(saved.getGroupCode(), null, saved.getGroupName(), "group", saved.getIcon(), null);
+        return node(saved.getGroupCode(), null, saved.getGroupName(), "group", saved.getIcon(), null, null);
     }
 
     @Override
@@ -113,11 +113,12 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         module.setNavigationModuleName(required(request.getName(), "name"));
         module.setPhysicalModuleCode(request.getPhysicalModuleCode());
         module.setIcon(request.getIcon());
+        module.setDescription(request.getDescription());
         module.setDisplayOrder(defaultOrder(request.getDisplayOrder()));
         module.setActive(defaultActive(request.getActive()));
         audit(module, userId);
         SysLayoutNavigationModule saved = navigationModuleRepository.save(module);
-        return node(saved.getNavigationModuleCode(), null, saved.getNavigationModuleName(), "module", saved.getIcon(), null);
+        return node(saved.getNavigationModuleCode(), null, saved.getNavigationModuleName(), "module", saved.getIcon(), saved.getDescription(), null);
     }
 
     @Override
@@ -139,14 +140,14 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         category.setActive(defaultActive(request.getActive()));
         audit(category, userId);
         SysLayoutNavigationCategory saved = categoryRepository.save(category);
-        return node(saved.getCategoryCode(), null, saved.getCategoryName(), "category", saved.getIcon(), null);
+        return node(saved.getCategoryCode(), null, saved.getCategoryName(), "category", saved.getIcon(), null, null);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<NavNodeDto> listCategories() {
         return categoryRepository.findAll().stream()
-                .map(category -> node(category.getCategoryCode(), null, category.getCategoryName(), "category", category.getIcon(), null))
+                .map(category -> node(category.getCategoryCode(), null, category.getCategoryName(), "category", category.getIcon(), null, null))
                 .toList();
     }
 
@@ -180,7 +181,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         featureGroup.setActive(defaultActive(request.getActive()));
         audit(featureGroup, userId);
         SysLayoutFeatureGroup saved = featureGroupRepository.save(featureGroup);
-        return node(saved.getFeatureGroupCode(), null, saved.getFeatureGroupName(), "featureGroup", null, null);
+        return node(saved.getFeatureGroupCode(), null, saved.getFeatureGroupName(), "featureGroup", null, null, null);
     }
 
     @Override
@@ -246,13 +247,16 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         return requiredCodes.stream().anyMatch(userPrivilegeCodes::contains);
     }
 
-    private NavNodeDto node(String code, String tCode, String label, String type, String icon, String route) {
+    private NavNodeDto node(String code, String tCode, String label, String type, String icon, String description, String route) {
         return NavNodeDto.builder()
                 .code(code)
                 .tCode(tCode)
                 .label(label)
                 .type(type)
                 .icon(icon)
+                .moduleGroupIconName("group".equals(type) ? icon : null)
+                .moduleIconName("module".equals(type) ? icon : null)
+                .description(description)
                 .route(route)
                 .children(new ArrayList<>())
                 .privilegeCodes(new ArrayList<>())

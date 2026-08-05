@@ -15,6 +15,7 @@ public class LayoutNavigationNodeRequestDto {
     private String categoryKind;
     private String route;
     private String icon;
+    private String description;
     private String physicalModuleCode;
     private String physicalSubmoduleCode;
     private String physicalFeatureTypeCode;

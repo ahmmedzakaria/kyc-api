@@ -18,6 +18,9 @@ public class NavNodeDto {
     private String label;
     private String type;
     private String icon;
+    private String moduleGroupIconName;
+    private String moduleIconName;
+    private String description;
     private String route;
 
     @Builder.Default
