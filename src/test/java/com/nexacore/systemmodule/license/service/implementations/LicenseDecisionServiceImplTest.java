@@ -13,7 +13,7 @@ import com.nexacore.systemmodule.license.repository.LicenseEntitlementOverrideRe
 import com.nexacore.systemmodule.license.repository.LicensePlanEntitlementRepository;
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
 import com.nexacore.systemmodule.license.repository.LicenseUsageSnapshotRepository;
-import com.nexacore.systemmodule.privilege.accesscontrol.repository.ApiRegistryRepository;
+import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;

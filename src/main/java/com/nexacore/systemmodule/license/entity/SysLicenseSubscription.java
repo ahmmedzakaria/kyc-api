@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.license.entity;
 
 import com.nexacore.systemmodule.license.enums.LicenseStatus;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

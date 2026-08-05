@@ -4,7 +4,7 @@ import com.nexacore.authmodule.core.service.implementations.AuthApplicationConte
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
-import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApplicationContextService;
+import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;

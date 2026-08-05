@@ -12,8 +12,8 @@ import com.nexacore.systemmodule.license.repository.LicenseEntitlementOverrideRe
 import com.nexacore.systemmodule.license.repository.LicensePlanRepository;
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
 import com.nexacore.systemmodule.license.service.interfaces.LicenseSubscriptionService;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;

@@ -1,4 +1,4 @@
-package com.nexacore.systemmodule.privilege.controller;
+package com.nexacore.systemmodule.accesscontrol.controller;
 
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.dto.PrivilegeAssignmentRequestDto;

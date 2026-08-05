@@ -9,7 +9,7 @@ This plan is written for the current project structure:
 - Backend: Spring Boot 3.5, Java 21, Maven project under `backend/`
 - Package root: `com.nexacore`
 - Target module: `com.nexacore.systemmodule.layout`
-- Existing client access package: `com.nexacore.systemmodule.privilege.accesscontrol`
+- Existing client access package: `com.nexacore.systemmodule.accesscontrol`
 - Existing privilege/application context package: `com.nexacore.systemmodule.privilege`
 - Frontend companion plan: `LAYOUT_FRONTEND_CHANGE_PLAN.md`
 - API response wrappers and common DTOs: `commonmodule`

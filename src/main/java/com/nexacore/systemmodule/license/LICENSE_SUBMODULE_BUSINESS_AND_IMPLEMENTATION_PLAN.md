@@ -9,7 +9,7 @@ This plan is written for the current backend project structure:
 - Backend: Spring Boot 3.5, Java 21, Maven project under `backend/`
 - Package root: `com.nexacore`
 - Target module: `com.nexacore.systemmodule.license`
-- Existing client access package: `com.nexacore.systemmodule.privilege.accesscontrol`
+- Existing client access package: `com.nexacore.systemmodule.accesscontrol`
 - Existing privilege package: `com.nexacore.systemmodule.privilege`
 - API response wrappers and common DTOs: `commonmodule`
 - API access/error/audit logging: `logmodule`
@@ -147,7 +147,7 @@ The same pattern applies to other business modules:
 
 ## Relationship With Client Access
 
-The existing `systemmodule.privilege.accesscontrol` package controls whether a client application can call a backend API. The new license submodule should control whether the tenant, business, or client is commercially entitled to use that API or feature.
+The existing `systemmodule.accesscontrol` package controls whether a client application can call a backend API. The new license submodule should control whether the tenant, business, or client is commercially entitled to use that API or feature.
 
 Request enforcement should use this order:
 
@@ -164,7 +164,7 @@ Client access and license access must stay separate:
 
 | Concern | Owner | Example |
 | --- | --- | --- |
-| Client identity | `systemmodule.privilege.accesscontrol` | `WEB`, `POS`, `MOBILE`, partner API key |
+| Client identity | `systemmodule.accesscontrol` | `WEB`, `POS`, `MOBILE`, partner API key |
 | Commercial entitlement | `systemmodule.license` | tenant has POS Professional until 2027-01-31 |
 | User authorization | `systemmodule.privilege` and `authmodule` | cashier can create sale |
 

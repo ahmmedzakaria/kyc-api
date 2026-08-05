@@ -1,0 +1,69 @@
+package com.nexacore.systemmodule.accesscontrol.service.implementations;
+
+import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
+import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.repository.ClientApiPermissionRepository;
+import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissionRepository;
+import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ClientAccessDecisionServiceImpl implements ClientAccessDecisionService {
+
+    private final ClientApiPermissionRepository clientApiPermissionRepository;
+    private final ClientFeaturePermissionRepository clientFeaturePermissionRepository;
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public ClientAccessDecisionDto decide(SysPrivClientApplication clientApplication, SysPrivApiRegistry apiRegistry) {
+        if (apiRegistry == null || apiRegistry.isPublicApi()) {
+            return ClientAccessDecisionDto.allowed(clientApplication, apiRegistry);
+        }
+        if (clientApplication == null) {
+            return ClientAccessDecisionDto.denied("CLIENT_REQUIRED", null, apiRegistry);
+        }
+        boolean apiAllowed = clientApiPermissionRepository.existsByClientApplicationIdAndApiRegistryIdAndActiveTrue(
+                clientApplication.getId(),
+                apiRegistry.getId()
+        );
+        if (!apiAllowed) {
+            return ClientAccessDecisionDto.denied("CLIENT_API_NOT_ALLOWED", clientApplication, apiRegistry);
+        }
+        if (apiRegistry.getRequiredPrivilegeCode() == null || apiRegistry.getRequiredPrivilegeCode().isBlank()) {
+            return ClientAccessDecisionDto.allowed(clientApplication, apiRegistry);
+        }
+        boolean featureAllowed = clientFeaturePermissionRepository.existsByClientApplicationIdAndPrivilegePrivilegeCodeAndActiveTrue(
+                clientApplication.getId(),
+                apiRegistry.getRequiredPrivilegeCode()
+        );
+        return featureAllowed
+                ? ClientAccessDecisionDto.allowed(clientApplication, apiRegistry)
+                : ClientAccessDecisionDto.denied("CLIENT_FEATURE_NOT_ALLOWED", clientApplication, apiRegistry);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public Set<String> filterPrivilegeCodesForClient(SysPrivClientApplication clientApplication, Set<String> userPrivilegeCodes) {
+        if (clientApplication == null || userPrivilegeCodes == null || userPrivilegeCodes.isEmpty()) {
+            return userPrivilegeCodes == null ? Set.of() : userPrivilegeCodes;
+        }
+
+        Set<String> clientPrivilegeCodes = clientFeaturePermissionRepository
+                .findActivePrivilegeCodesByClientApplicationId(clientApplication.getId());
+        if (clientPrivilegeCodes.isEmpty()) {
+            return Set.of();
+        }
+
+        return userPrivilegeCodes.stream()
+                .filter(new HashSet<>(clientPrivilegeCodes)::contains)
+                .collect(Collectors.toSet());
+    }
+}
