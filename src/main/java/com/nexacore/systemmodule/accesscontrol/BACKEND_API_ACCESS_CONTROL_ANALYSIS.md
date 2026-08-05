@@ -302,6 +302,8 @@ Deliverable: a reviewed API inventory with an owner and access decision for ever
 
 #### Step 0.2: Define response semantics
 
+Implementation status: **implemented**. Security filters and the JWT authentication entry point now return the standard `ApiResponse` JSON shape through `ApiResponseJsonWriter`. `AccessControlError` is the canonical access-control status/code/message catalog; client-required decisions are normalized to `401 INVALID_CLIENT_CREDENTIALS`. The `INVALID_TOKEN_TYPE`, `DATA_SCOPE_NOT_ALLOWED`, and `API_NOT_REGISTERED` codes are defined now and are used when their enforcement phases are activated.
+
 Adopt one consistent decision contract:
 
 | Condition | Status | Code |

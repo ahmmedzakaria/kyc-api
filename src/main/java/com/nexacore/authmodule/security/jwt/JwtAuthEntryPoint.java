@@ -1,7 +1,9 @@
 package com.nexacore.authmodule.security.jwt;
 
+import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -9,20 +11,24 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
+
+	private static final String AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED";
+	private static final String INVALID_TOKEN_TYPE = "INVALID_TOKEN_TYPE";
+
+	private final ApiResponseJsonWriter responseWriter;
 
 	@Override
 	public void commence(HttpServletRequest request,
 						 HttpServletResponse response,
 						 AuthenticationException authException) throws IOException {
-		String jwtError = (String) request.getAttribute("jwt_exception");
-		response.setContentType("application/json");
-		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		if (jwtError == null || jwtError.isBlank()) {
-			response.getWriter().write("{\"error\": \"Unauthorized - Invalid or missing token\"}");
-			return;
-		}
-		response.getWriter().write("{\"error\": \"" + jwtError.replace("\"", "\\\"") + "\"}");
+		String errorCode = (String) request.getAttribute("jwt_error_code");
+		String code = INVALID_TOKEN_TYPE.equals(errorCode) ? INVALID_TOKEN_TYPE : AUTHENTICATION_REQUIRED;
+		String message = INVALID_TOKEN_TYPE.equals(code)
+				? "The supplied token type cannot access this resource"
+				: "A valid user access token is required";
+		responseWriter.writeError(response, HttpServletResponse.SC_UNAUTHORIZED, code, message);
 	}
 
 

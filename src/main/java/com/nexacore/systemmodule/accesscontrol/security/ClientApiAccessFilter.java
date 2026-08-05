@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
+import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +37,7 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
 
     private final ClientApiRegistryService clientApiRegistryService;
     private final ClientAccessDecisionService clientAccessDecisionService;
+    private final ApiResponseJsonWriter responseWriter;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
@@ -62,7 +64,8 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
         updateContext(decision);
 
         if (!decision.allowed()) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, decision.denyReason());
+            AccessControlError error = AccessControlError.fromClientDecision(decision.denyReason());
+            responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
             return;
         }
 

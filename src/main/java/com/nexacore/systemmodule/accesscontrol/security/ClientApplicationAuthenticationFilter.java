@@ -2,6 +2,7 @@ package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredentialService;
+import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,6 +38,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     };
 
     private final ClientCredentialService clientCredentialService;
+    private final ApiResponseJsonWriter responseWriter;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
@@ -61,7 +63,8 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                 Optional<SysPrivClientApplication> resolvedClient = clientCredentialService.validateApiKey(clientCode, apiKey);
                 if (resolvedClient.isEmpty()) {
                     setContext(traceId, null, "DENIED", "INVALID_CLIENT_CREDENTIALS");
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid client credentials");
+                    AccessControlError error = AccessControlError.INVALID_CLIENT_CREDENTIALS;
+                    responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
                     return;
                 }
                 application = resolvedClient.get();
