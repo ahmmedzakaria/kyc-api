@@ -14,7 +14,7 @@ import com.nexacore.systemmodule.license.repository.LicensePlanEntitlementReposi
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
 import com.nexacore.systemmodule.license.repository.LicenseUsageSnapshotRepository;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ApiRegistryRepository;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
@@ -60,7 +60,7 @@ class LicenseDecisionServiceImplTest {
         when(overrideRepository.findByLicenseSubscriptionIdAndActiveTrue(20L)).thenReturn(List.of());
         when(entitlementRepository.findByLicensePlanIdAndEntitlementTypeAndActiveTrue(10L, LicenseEntitlementType.MODULE))
                 .thenReturn(List.of(SysLicensePlanEntitlement.builder()
-                        .module(SysModule.builder().id(30L).build())
+                        .module(SysPrivModule.builder().id(30L).build())
                         .active(true)
                         .build()));
 

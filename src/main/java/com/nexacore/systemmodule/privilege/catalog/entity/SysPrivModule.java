@@ -14,13 +14,13 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "sys_modules")
+@Table(name = "sys_priv_modules")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class SysModule extends ActionInfo {
+public class SysPrivModule extends ActionInfo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

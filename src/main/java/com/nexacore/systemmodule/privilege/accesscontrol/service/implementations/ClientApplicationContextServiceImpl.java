@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.service.implementations;
 
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientApplicationContextDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.security.ClientApplicationContextHolder;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApplicationContextService;
@@ -26,7 +26,7 @@ public class ClientApplicationContextServiceImpl implements ClientApplicationCon
 
     @Override
     public Set<String> getCurrentClientPrivilegeCodes(Set<String> userPrivilegeCodes) {
-        SysClientApplication application = ClientApplicationContextHolder.get()
+        SysPrivClientApplication application = ClientApplicationContextHolder.get()
                 .map(context -> context.clientApplication())
                 .orElse(null);
         return clientAccessDecisionService.filterPrivilegeCodesForClient(application, userPrivilegeCodes);
@@ -39,7 +39,7 @@ public class ClientApplicationContextServiceImpl implements ClientApplicationCon
                 .orElse(false);
     }
 
-    private ClientApplicationContextDto toDto(SysClientApplication application) {
+    private ClientApplicationContextDto toDto(SysPrivClientApplication application) {
         return ClientApplicationContextDto.builder()
                 .clientApplicationId(application.getId())
                 .clientCode(application.getClientCode())

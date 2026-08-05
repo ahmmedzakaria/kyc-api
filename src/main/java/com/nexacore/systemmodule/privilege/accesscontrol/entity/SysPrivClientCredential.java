@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.entity;
 
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -20,12 +20,13 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sys_client_feature_permissions")
+@Table(name = "sys_priv_client_credentials")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysClientFeaturePermission {
+public class SysPrivClientCredential {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -33,13 +34,15 @@ public class SysClientFeaturePermission {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_application_id", nullable = false)
     @EqualsAndHashCode.Exclude
-    private SysClientApplication clientApplication;
+    private SysPrivClientApplication clientApplication;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "privilege_id", nullable = false)
-    @EqualsAndHashCode.Exclude
-    private SysPrivilege privilege;
+    @Column(unique = true, length = 100)
+    private String clientId;
 
+    private String apiKeyHash;
+    private String clientSecretHash;
+    private LocalDateTime expiresAt;
+    private LocalDateTime lastUsedAt;
     private boolean active;
     private Long createdBy;
     private Long updatedBy;

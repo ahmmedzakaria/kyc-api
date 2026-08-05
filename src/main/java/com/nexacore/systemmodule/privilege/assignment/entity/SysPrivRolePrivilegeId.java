@@ -12,7 +12,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RolePrivilegeId implements Serializable {
+public class SysPrivRolePrivilegeId implements Serializable {
 
     @Column(name = "role_id", nullable = false)
     private Long roleId;

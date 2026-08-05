@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.security;
 
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientCredentialService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -52,13 +52,13 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                                     FilterChain filterChain) throws ServletException, IOException {
         String traceId = resolveTraceId(request);
         response.setHeader(TRACE_ID_HEADER, traceId);
-        SysClientApplication application = null;
+        SysPrivClientApplication application = null;
 
         try {
             String clientCode = request.getHeader(CLIENT_CODE_HEADER);
             String apiKey = request.getHeader(API_KEY_HEADER);
             if (hasText(clientCode) || hasText(apiKey)) {
-                Optional<SysClientApplication> resolvedClient = clientCredentialService.validateApiKey(clientCode, apiKey);
+                Optional<SysPrivClientApplication> resolvedClient = clientCredentialService.validateApiKey(clientCode, apiKey);
                 if (resolvedClient.isEmpty()) {
                     setContext(traceId, null, "DENIED", "INVALID_CLIENT_CREDENTIALS");
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid client credentials");
@@ -74,7 +74,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         }
     }
 
-    private void setContext(String traceId, SysClientApplication application, String decision, String denyReason) {
+    private void setContext(String traceId, SysPrivClientApplication application, String decision, String denyReason) {
         ClientApplicationContextHolder.set(ClientApplicationContext.builder()
                 .traceId(traceId)
                 .clientApplication(application)

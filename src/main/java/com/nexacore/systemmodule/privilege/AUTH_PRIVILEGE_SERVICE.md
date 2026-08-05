@@ -123,20 +123,20 @@ The privilege system uses these core tables:
 
 | Table | Purpose |
 | --- | --- |
-| `system_db.sys_modules` | Module catalog with module `id`, `code`, and `name` |
-| `system_db.sys_submodules` | Submodule catalog linked to `sys_modules` |
-| `system_db.sys_features` | Feature catalog linked to `sys_submodules`; owns feature type and feature `code`/`name` |
-| `system_db.sys_privileges` | Action-level privilege catalog linked to `sys_features` by `feature_id` |
-| `system_db.sys_sub_menus` | Menu entries exposed by privilege providers, linked to `sys_features` by `feature_id` |
-| `system_db.sys_role_privileges` | Privileges assigned to auth role IDs |
-| `system_db.sys_user_privileges` | Direct privileges assigned to auth user IDs |
+| `system_db.sys_priv_modules` | Module catalog with module `id`, `code`, and `name` |
+| `system_db.sys_priv_submodules` | Submodule catalog linked to `sys_priv_modules` |
+| `system_db.sys_priv_features` | Feature catalog linked to `sys_priv_submodules`; owns feature type and feature `code`/`name` |
+| `system_db.sys_priv_privileges` | Action-level privilege catalog linked to `sys_priv_features` by `feature_id` |
+| `system_db.sys_priv_sub_menus` | Menu entries exposed by privilege providers, linked to `sys_priv_features` by `feature_id` |
+| `system_db.sys_priv_role_privileges` | Privileges assigned to auth role IDs |
+| `system_db.sys_priv_user_privileges` | Direct privileges assigned to auth user IDs |
 | `auth_roles` | Existing role table |
 | `auth_users` | Existing user table |
 
-Module, submodule, and feature code/name values should not be duplicated in `sys_privileges`. The privilege code remains stable, but the descriptive catalog is normalized:
+Module, submodule, and feature code/name values should not be duplicated in `sys_priv_privileges`. The privilege code remains stable, but the descriptive catalog is normalized:
 
 ```text
-sys_modules -> sys_submodules -> sys_features -> sys_privileges
+sys_priv_modules -> sys_priv_submodules -> sys_priv_features -> sys_priv_privileges
 ```
 
 Effective user access is calculated as:

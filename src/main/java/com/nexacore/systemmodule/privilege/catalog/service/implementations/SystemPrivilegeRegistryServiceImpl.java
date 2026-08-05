@@ -1,12 +1,12 @@
 package com.nexacore.systemmodule.privilege.catalog.service.implementations;
 
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.assignment.entity.SysRolePrivilege;
-import com.nexacore.systemmodule.privilege.assignment.entity.RolePrivilegeId;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubMenu;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilege;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilegeId;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
@@ -43,7 +43,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
             resolveModule(applicationModule.getCode(), applicationModule.getDisplayName());
         }
         for (ApplicationSubmodule applicationSubmodule : ApplicationSubmodule.values()) {
-            SysModule module = resolveModule(
+            SysPrivModule module = resolveModule(
                     applicationSubmodule.getModule().getCode(),
                     applicationSubmodule.getModule().getDisplayName()
             );
@@ -59,25 +59,25 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysPrivilege> findPrivilegeByCode(String privilegeCode) {
+    public Optional<SysPrivPrivilege> findPrivilegeByCode(String privilegeCode) {
         return privilegeRepository.findByPrivilegeCode(privilegeCode);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public List<SysPrivilege> findPrivilegesByCodes(Collection<String> privilegeCodes) {
+    public List<SysPrivPrivilege> findPrivilegesByCodes(Collection<String> privilegeCodes) {
         return privilegeRepository.findByPrivilegeCodeIn(privilegeCodes);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public List<SysPrivilege> getAllPrivileges() {
+    public List<SysPrivPrivilege> getAllPrivileges() {
         return privilegeRepository.findAll();
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
-    public SysPrivilege savePrivilege(SysPrivilege privilege) {
+    public SysPrivPrivilege savePrivilege(SysPrivPrivilege privilege) {
         if (privilege.getFeature() == null) {
             privilege.setFeature(resolveFeature(
                     privilege.getModuleCode(),
@@ -95,7 +95,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysSubMenu> findSubMenu(String moduleCode,
+    public Optional<SysPrivSubMenu> findSubMenu(String moduleCode,
                                          String submoduleCode,
                                          String featureTypeCode,
                                          String featureCode,
@@ -111,7 +111,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
-    public SysSubMenu saveSubMenu(SysSubMenu subMenu) {
+    public SysPrivSubMenu saveSubMenu(SysPrivSubMenu subMenu) {
         if (subMenu.getFeature() == null) {
             subMenu.setFeature(resolveFeature(
                     subMenu.getModuleCode(),
@@ -132,8 +132,8 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     public void assignRolePrivileges(Long roleId, Collection<String> privilegeCodes) {
         rolePrivilegeRepository.deleteByIdRoleId(roleId);
         rolePrivilegeRepository.saveAll(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
-                .map(privilege -> SysRolePrivilege.builder()
-                        .id(new RolePrivilegeId(roleId, privilege.getId()))
+                .map(privilege -> SysPrivRolePrivilege.builder()
+                        .id(new SysPrivRolePrivilegeId(roleId, privilege.getId()))
                         .build())
                 .toList());
     }
@@ -150,7 +150,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
         return subMenuRepository.count();
     }
 
-    private SysFeature resolveFeature(String moduleCode,
+    private SysPrivFeature resolveFeature(String moduleCode,
                                       String moduleName,
                                       String submoduleCode,
                                       String submoduleName,
@@ -158,10 +158,10 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                                       String featureTypeName,
                                       String featureCode,
                                       String featureName) {
-        SysModule module = resolveModule(moduleCode, moduleName);
-        SysSubmodule submodule = resolveSubmodule(module, submoduleCode, submoduleName);
+        SysPrivModule module = resolveModule(moduleCode, moduleName);
+        SysPrivSubmodule submodule = resolveSubmodule(module, submoduleCode, submoduleName);
 
-        SysSubmodule resolvedSubmodule = submodule;
+        SysPrivSubmodule resolvedSubmodule = submodule;
         return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndCode(
                         moduleCode,
                         submoduleCode,
@@ -179,7 +179,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                     }
                     return feature;
                 })
-                .orElseGet(() -> featureRepository.save(SysFeature.builder()
+                .orElseGet(() -> featureRepository.save(SysPrivFeature.builder()
                         .submodule(resolvedSubmodule)
                         .featureTypeCode(featureTypeCode)
                         .featureTypeName(featureTypeName)
@@ -189,9 +189,9 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                         .build()));
     }
 
-    private SysModule resolveModule(String moduleCode, String moduleName) {
-        SysModule module = moduleRepository.findByCode(moduleCode)
-                .orElseGet(() -> moduleRepository.save(SysModule.builder()
+    private SysPrivModule resolveModule(String moduleCode, String moduleName) {
+        SysPrivModule module = moduleRepository.findByCode(moduleCode)
+                .orElseGet(() -> moduleRepository.save(SysPrivModule.builder()
                         .code(moduleCode)
                         .name(moduleName)
                         .active(true)
@@ -204,9 +204,9 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
         return module;
     }
 
-    private SysSubmodule resolveSubmodule(SysModule module, String submoduleCode, String submoduleName) {
-        SysSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(module.getCode(), submoduleCode)
-                .orElseGet(() -> submoduleRepository.save(SysSubmodule.builder()
+    private SysPrivSubmodule resolveSubmodule(SysPrivModule module, String submoduleCode, String submoduleName) {
+        SysPrivSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(module.getCode(), submoduleCode)
+                .orElseGet(() -> submoduleRepository.save(SysPrivSubmodule.builder()
                         .module(module)
                         .code(submoduleCode)
                         .name(submoduleName)

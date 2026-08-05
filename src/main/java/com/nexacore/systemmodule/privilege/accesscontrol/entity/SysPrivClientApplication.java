@@ -1,7 +1,11 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.entity;
 
+import com.nexacore.systemmodule.privilege.accesscontrol.enums.ClientApplicationStatus;
+import com.nexacore.systemmodule.privilege.accesscontrol.enums.ClientApplicationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,51 +20,42 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sys_api_registry")
+@Table(name = "sys_priv_client_applications")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysApiRegistry {
+public class SysPrivClientApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String apiCode;
-
-    @Column(nullable = false, length = 20)
-    private String httpMethod;
+    @Column(nullable = false, unique = true, length = 50)
+    private String clientCode;
 
     @Column(nullable = false)
-    private String pathPattern;
+    private String clientName;
 
-    @Column(length = 2)
-    private String moduleCode;
-    private String moduleName;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private ClientApplicationType clientType;
 
-    @Column(length = 2)
-    private String submoduleCode;
-    private String submoduleName;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private ClientApplicationStatus status;
 
-    @Column(length = 2)
-    private String featureTypeCode;
-    private String featureTypeName;
+    @Column(columnDefinition = "TEXT")
+    private String allowedOrigins;
 
-    @Column(length = 3)
-    private String featureCode;
-    private String featureName;
+    @Column(columnDefinition = "TEXT")
+    private String allowedIps;
 
-    @Column(length = 2)
-    private String actionCode;
-    private String actionName;
+    private Integer rateLimitPerMinute;
 
-    @Column(length = 11)
-    private String requiredPrivilegeCode;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
-    private boolean publicApi;
-    private boolean active;
     private Long createdBy;
     private Long updatedBy;
     private LocalDateTime createdAt;
@@ -71,12 +66,11 @@ public class SysApiRegistry {
         LocalDateTime now = LocalDateTime.now();
         createdAt = createdAt == null ? now : createdAt;
         updatedAt = updatedAt == null ? now : updatedAt;
-        httpMethod = httpMethod == null ? null : httpMethod.toUpperCase();
+        status = status == null ? ClientApplicationStatus.ACTIVE : status;
     }
 
     @PreUpdate
     void preUpdate() {
         updatedAt = LocalDateTime.now();
-        httpMethod = httpMethod == null ? null : httpMethod.toUpperCase();
     }
 }

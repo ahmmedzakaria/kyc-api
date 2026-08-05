@@ -3,7 +3,7 @@ package com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientApplicationDto;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientApplicationRequestDto;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.GeneratedClientCredentialDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ public interface ClientApplicationService {
 
     List<ClientApplicationDto> list();
 
-    SysClientApplication requireClientApplication(Long clientApplicationId, String clientCode);
+    SysPrivClientApplication requireClientApplication(Long clientApplicationId, String clientCode);
 
     GeneratedClientCredentialDto rotateApiKey(Long clientApplicationId, String clientCode, String username);
 }

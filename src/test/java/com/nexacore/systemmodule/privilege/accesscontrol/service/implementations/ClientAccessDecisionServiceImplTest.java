@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.service.implementations;
 
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientApiPermissionRepository;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientFeaturePermissionRepository;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void allowsPublicApiWithoutClient() {
-        SysApiRegistry api = SysApiRegistry.builder()
+        SysPrivApiRegistry api = SysPrivApiRegistry.builder()
                 .id(1L)
                 .publicApi(true)
                 .active(true)
@@ -37,7 +37,7 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void deniesRegisteredPrivateApiWithoutClient() {
-        SysApiRegistry api = SysApiRegistry.builder()
+        SysPrivApiRegistry api = SysPrivApiRegistry.builder()
                 .id(1L)
                 .publicApi(false)
                 .active(true)
@@ -51,8 +51,8 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void deniesWhenClientHasApiButMissingFeaturePermission() {
-        SysClientApplication client = SysClientApplication.builder().id(10L).clientCode("WEB").build();
-        SysApiRegistry api = SysApiRegistry.builder()
+        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysPrivApiRegistry api = SysPrivApiRegistry.builder()
                 .id(20L)
                 .requiredPrivilegeCode("01010200101")
                 .publicApi(false)
@@ -71,7 +71,7 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void filtersUserPrivilegeCodesByClientFeaturePermissions() {
-        SysClientApplication client = SysClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
         Set<String> userPrivilegeCodes = Set.of("01010200101", "01010200201");
 
         when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L))

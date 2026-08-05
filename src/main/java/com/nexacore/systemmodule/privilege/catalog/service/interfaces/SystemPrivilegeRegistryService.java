@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.privilege.catalog.service.interfaces;
 
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubMenu;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,21 +12,21 @@ public interface SystemPrivilegeRegistryService {
 
     long countPrivileges();
 
-    Optional<SysPrivilege> findPrivilegeByCode(String privilegeCode);
+    Optional<SysPrivPrivilege> findPrivilegeByCode(String privilegeCode);
 
-    List<SysPrivilege> findPrivilegesByCodes(Collection<String> privilegeCodes);
+    List<SysPrivPrivilege> findPrivilegesByCodes(Collection<String> privilegeCodes);
 
-    List<SysPrivilege> getAllPrivileges();
+    List<SysPrivPrivilege> getAllPrivileges();
 
-    SysPrivilege savePrivilege(SysPrivilege privilege);
+    SysPrivPrivilege savePrivilege(SysPrivPrivilege privilege);
 
-    Optional<SysSubMenu> findSubMenu(String moduleCode,
+    Optional<SysPrivSubMenu> findSubMenu(String moduleCode,
                                   String submoduleCode,
                                   String featureTypeCode,
                                   String featureCode,
                                   String url);
 
-    SysSubMenu saveSubMenu(SysSubMenu subMenu);
+    SysPrivSubMenu saveSubMenu(SysPrivSubMenu subMenu);
 
     void assignRolePrivileges(Long roleId, Collection<String> privilegeCodes);
 

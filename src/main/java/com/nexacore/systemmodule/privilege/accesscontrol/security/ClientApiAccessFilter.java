@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.security;
 
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApiRegistryService;
 import jakarta.servlet.FilterChain;
@@ -49,13 +49,13 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        Optional<SysApiRegistry> api = clientApiRegistryService.resolve(request);
+        Optional<SysPrivApiRegistry> api = clientApiRegistryService.resolve(request);
         if (api.isEmpty()) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        SysClientApplication application = ClientApplicationContextHolder.get()
+        SysPrivClientApplication application = ClientApplicationContextHolder.get()
                 .map(ClientApplicationContext::clientApplication)
                 .orElse(null);
         ClientAccessDecisionDto decision = clientAccessDecisionService.decide(application, api.get());

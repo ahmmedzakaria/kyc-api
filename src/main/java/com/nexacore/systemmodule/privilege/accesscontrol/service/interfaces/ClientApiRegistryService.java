@@ -2,7 +2,7 @@ package com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces;
 
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryRequestDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -15,5 +15,5 @@ public interface ClientApiRegistryService {
 
     List<ApiRegistryDto> syncFromAnnotations(String username);
 
-    Optional<SysApiRegistry> resolve(HttpServletRequest request);
+    Optional<SysPrivApiRegistry> resolve(HttpServletRequest request);
 }

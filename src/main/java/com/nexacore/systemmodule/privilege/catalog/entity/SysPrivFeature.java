@@ -19,26 +19,35 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
-        name = "sys_submodules",
-        uniqueConstraints = @UniqueConstraint(name = "uk_sys_submodules_module_code", columnNames = {"module_id", "code"})
+        name = "sys_priv_features",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_sys_features_submodule_type_code",
+                columnNames = {"submodule_id", "feature_type_code", "code"}
+        )
 )
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class SysSubmodule extends ActionInfo {
+public class SysPrivFeature extends ActionInfo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "module_id", nullable = false)
+    @JoinColumn(name = "submodule_id", nullable = false)
     @EqualsAndHashCode.Exclude
-    private SysModule module;
+    private SysPrivSubmodule submodule;
 
     @Column(nullable = false, length = 2)
+    private String featureTypeCode;
+
+    @Column(nullable = false)
+    private String featureTypeName;
+
+    @Column(nullable = false, length = 3)
     private String code;
 
     @Column(nullable = false)

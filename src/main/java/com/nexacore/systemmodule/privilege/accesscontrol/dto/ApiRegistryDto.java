@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.dto;
 
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
 import lombok.Builder;
 import lombok.Data;
 
@@ -25,7 +25,7 @@ public class ApiRegistryDto {
     private boolean publicApi;
     private boolean active;
 
-    public static ApiRegistryDto fromEntity(SysApiRegistry api) {
+    public static ApiRegistryDto fromEntity(SysPrivApiRegistry api) {
         return ApiRegistryDto.builder()
                 .id(api.getId())
                 .apiCode(api.getApiCode())

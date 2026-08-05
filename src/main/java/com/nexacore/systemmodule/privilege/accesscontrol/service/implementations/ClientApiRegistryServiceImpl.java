@@ -3,7 +3,7 @@ package com.nexacore.systemmodule.privilege.accesscontrol.service.implementation
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryRequestDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.privilege.accesscontrol.security.ClientSecuredApi;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApiRegistryService;
@@ -35,9 +35,9 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     @Transactional(transactionManager = "systemTransactionManager")
     public ApiRegistryDto save(ApiRegistryRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
-        SysApiRegistry api = requestDto.getId() == null
+        SysPrivApiRegistry api = requestDto.getId() == null
                 ? apiRegistryRepository.findByApiCode(requireText(requestDto.getApiCode(), "apiCode"))
-                .orElseGet(SysApiRegistry::new)
+                .orElseGet(SysPrivApiRegistry::new)
                 : apiRegistryRepository.findById(requestDto.getId())
                 .orElseThrow(() -> new IllegalArgumentException("API registry not found: " + requestDto.getId()));
 
@@ -94,7 +94,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysApiRegistry> resolve(HttpServletRequest request) {
+    public Optional<SysPrivApiRegistry> resolve(HttpServletRequest request) {
         String method = request.getMethod().toUpperCase();
         String path = request.getRequestURI();
         return apiRegistryRepository.findByHttpMethodAndActiveTrue(method).stream()
@@ -120,7 +120,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
                 + annotation.featureCode()
                 + annotation.actionCode();
         String apiCode = method + ":" + path;
-        SysApiRegistry api = apiRegistryRepository.findByApiCode(apiCode).orElseGet(SysApiRegistry::new);
+        SysPrivApiRegistry api = apiRegistryRepository.findByApiCode(apiCode).orElseGet(SysPrivApiRegistry::new);
         api.setApiCode(apiCode);
         api.setHttpMethod(method);
         api.setPathPattern(path);

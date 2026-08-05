@@ -20,7 +20,7 @@ import com.nexacore.systemmodule.layout.repository.LayoutNavigationCategoryRepos
 import com.nexacore.systemmodule.layout.repository.LayoutNavigationModuleRepository;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutCodeGenerationService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -268,7 +268,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
             return;
         }
         for (String privilegeCode : privilegeCodes) {
-            SysPrivilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
+            SysPrivPrivilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
                     .orElseThrow(() -> new IllegalArgumentException("Privilege not found: " + privilegeCode));
             SysLayoutFeaturePrivilege link = SysLayoutFeaturePrivilege.builder()
                     .layoutFeature(feature)

@@ -211,7 +211,7 @@ The frontend should render the logical `layout.navTree` returned by backend. It 
 
 ## Proposed Logical Navigation Tables
 
-Add logical navigation tables under `system_db`. These tables are separate from `sys_modules`, `sys_submodules`, `sys_features`, and `sys_privileges`.
+Add logical navigation tables under `system_db`. These tables are separate from `sys_priv_modules`, `sys_priv_submodules`, `sys_priv_features`, and `sys_priv_privileges`.
 
 ### `sys_layout_module_groups`
 
@@ -232,7 +232,7 @@ Add logical navigation tables under `system_db`. These tables are separate from 
 | `module_group_id` | FK to `sys_layout_module_groups` |
 | `navigation_module_code` | Stable logical code, for example `KYC` |
 | `navigation_module_name` | Display label |
-| `physical_module_code` | Optional reference to `sys_modules.code` |
+| `physical_module_code` | Optional reference to `sys_priv_modules.code` |
 | `icon` | Safe icon key |
 | `display_order` | Sort order |
 | `active` | Boolean |
@@ -293,7 +293,7 @@ Category rules:
 | --- | --- |
 | `id` | Primary key |
 | `layout_feature_id` | FK to `sys_layout_features` |
-| `privilege_id` | FK to `sys_privileges` |
+| `privilege_id` | FK to `sys_priv_privileges` |
 | `match_mode` | `ANY` or `ALL`; default `ANY` |
 | `active` | Boolean |
 
@@ -356,7 +356,7 @@ RPT101
 
 ## Relationship With Client Applications
 
-Layout configuration is assigned to `sys_client_applications`.
+Layout configuration is assigned to `sys_priv_client_applications`.
 
 ```text
 WEB -> default authenticated sidebar layout
@@ -718,7 +718,7 @@ Assigns layout profiles to client applications.
 | Column | Notes |
 | --- | --- |
 | `id` | Primary key |
-| `client_application_id` | FK to `sys_client_applications` |
+| `client_application_id` | FK to `sys_priv_client_applications` |
 | `layout_profile_id` | FK to `sys_layout_profiles` |
 | `default_profile` | Boolean |
 | `selectable` | Boolean |
@@ -927,7 +927,7 @@ Use system actor values such as `system` or `migration` for seed data `created_b
   - display order
 - Update `SystemPrivilegeRegistryServiceImpl` or a new `LayoutNavigationSyncService` to sync provider metadata into logical navigation tables.
 - Make `FeatureType` a privilege/catalog classification only. It may map to a seeded logical category by default, but the mapping must be overridable in DB.
-- Keep existing `sys_sub_menus` for backward compatibility until Angular 21 consumes `layout.navTree`.
+- Keep existing `sys_priv_sub_menus` for backward compatibility until Angular 21 consumes `layout.navTree`.
 - Mark `PrivilegeServiceImpl#getUserSidebarMenu` as transitional once `LayoutNavigationService` is active.
 
 ### Phase 2: Backend Contract Stabilization

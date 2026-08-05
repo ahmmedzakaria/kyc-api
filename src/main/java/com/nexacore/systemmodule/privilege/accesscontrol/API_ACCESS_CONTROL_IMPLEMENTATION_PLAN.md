@@ -80,7 +80,7 @@ All persistent tables must include:
 - `created_at`
 - `updated_at`
 
-### `sys_client_applications`
+### `sys_priv_client_applications`
 
 Stores each registered frontend or integration application.
 
@@ -120,7 +120,7 @@ SUSPENDED
 EXPIRED
 ```
 
-### `sys_client_credentials`
+### `sys_priv_client_credentials`
 
 Stores hashed API keys or client secrets.
 
@@ -143,7 +143,7 @@ updated_at
 
 Never store raw API keys, raw client secrets, or generated credentials in logs.
 
-### `sys_api_registry`
+### `sys_priv_api_registry`
 
 Stores backend APIs that can be protected and licensed.
 
@@ -179,7 +179,7 @@ POST /kyc/person/list -> KYC / Person / Operations / Person / View
 POST /system/privilege/context -> System / Privilege / Setup / Context / View
 ```
 
-### `sys_client_api_permissions`
+### `sys_priv_client_api_permissions`
 
 Maps client applications to APIs.
 
@@ -194,7 +194,7 @@ created_at
 updated_at
 ```
 
-### `sys_client_feature_permissions`
+### `sys_priv_client_feature_permissions`
 
 Maps client applications to existing system privileges.
 
@@ -211,9 +211,9 @@ updated_at
 
 This reuses existing privilege codes instead of duplicating feature definitions.
 
-### Existing `sys_sub_menus` Ordering Update
+### Existing `sys_priv_sub_menus` Ordering Update
 
-Extend the existing `sys_sub_menus` table with ordering fields:
+Extend the existing `sys_priv_sub_menus` table with ordering fields:
 
 ```text
 menu_order
@@ -257,7 +257,7 @@ sys_client_menu_order
 - updated_at
 ```
 
-### `sys_client_application_tenants`
+### `sys_priv_client_application_tenants`
 
 Maps client applications to SaaS tenants, businesses, or organizations.
 
@@ -424,7 +424,7 @@ public ResponseEntity<ApiResponse<PersonDto>> savePerson(@RequestBody PersonDto 
 
 Use this annotation on controller methods to describe the API-to-feature mapping.
 
-This annotation can later be used by an API registry sync service to populate or update `sys_api_registry`.
+This annotation can later be used by an API registry sync service to populate or update `sys_priv_api_registry`.
 
 ## Admin APIs
 
@@ -708,7 +708,7 @@ Resolve these values on the backend. Do not trust frontend-provided values for c
 
 - Resolved client application context.
 - Authenticated user context.
-- `sys_api_registry`.
+- `sys_priv_api_registry`.
 - `@ClientSecuredApi` metadata.
 - Existing `SysPrivilege` metadata.
 - Tenant, business, and branch context.
@@ -737,13 +737,13 @@ src/main/resources/db/migration/system
 
 Suggested migration order:
 
-1. Create `sys_client_applications`.
-2. Create `sys_client_credentials`.
-3. Create `sys_api_registry`.
-4. Create `sys_client_api_permissions`.
-5. Create `sys_client_feature_permissions`.
-6. Create `sys_client_application_tenants`.
-7. Add `menu_order` and `sub_menu_order` to `sys_sub_menus`.
+1. Create `sys_priv_client_applications`.
+2. Create `sys_priv_client_credentials`.
+3. Create `sys_priv_api_registry`.
+4. Create `sys_priv_client_api_permissions`.
+5. Create `sys_priv_client_feature_permissions`.
+6. Create `sys_priv_client_application_tenants`.
+7. Add `menu_order` and `sub_menu_order` to `sys_priv_sub_menus`.
 8. Seed default menu and submenu order values for existing menus.
 9. Seed initial Web client application.
 10. Seed required public/system APIs.
@@ -792,7 +792,7 @@ mvn test
 ### Phase 1: Data Model and Admin Configuration
 
 - Add Flyway migration scripts.
-- Add menu and submenu ordering columns to `sys_sub_menus`.
+- Add menu and submenu ordering columns to `sys_priv_sub_menus`.
 - Add entities, repositories, DTOs, and service interfaces.
 - Add basic admin APIs for client applications.
 - Add API key generation and rotation.
@@ -806,7 +806,7 @@ mvn test
 
 ### Phase 3: API Registry and Enforcement
 
-- Add `sys_api_registry`.
+- Add `sys_priv_api_registry`.
 - Add `@ClientSecuredApi`.
 - Add manual API registry management.
 - Add `ClientApiAccessFilter`.

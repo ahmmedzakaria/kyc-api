@@ -20,8 +20,8 @@ import com.nexacore.systemmodule.privilege.accesscontrol.enums.ClientApplication
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApiRegistryService;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientPermissionService;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubMenu;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
@@ -244,8 +244,8 @@ public class DataSeeder {
         modulePrivilegeProviders.stream()
                 .flatMap(provider -> provider.getPrivilegeFeatures().stream())
                 .forEach(feature -> feature.getActions().forEach(action -> {
-                    SysSubMenu subMenu = seedSubMenuIfMissing(systemPrivilegeRegistryService, feature);
-                    SysPrivilege privilege = savePrivilegeIfMissing(
+                    SysPrivSubMenu subMenu = seedSubMenuIfMissing(systemPrivilegeRegistryService, feature);
+                    SysPrivPrivilege privilege = savePrivilegeIfMissing(
                             systemPrivilegeRegistryService,
                             feature,
                             action.getActionCode(),
@@ -257,7 +257,7 @@ public class DataSeeder {
         return privilegeCodes;
     }
 
-    private SysSubMenu seedSubMenuIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
+    private SysPrivSubMenu seedSubMenuIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                          PrivilegeFeatureDefinitionDto feature) {
         PrivilegeMenuItemDto menuItem = feature.getMenuItems().stream()
                 .findFirst()
@@ -267,14 +267,14 @@ public class DataSeeder {
         String url = menuItem == null ? "/" + feature.getFeatureName().toLowerCase().replace(" ", "-") : menuItem.getPath();
         String icon = menuItem == null ? feature.getIcon() : menuItem.getIcon();
 
-        SysSubMenu subMenu = systemPrivilegeRegistryService.findSubMenu(
+        SysPrivSubMenu subMenu = systemPrivilegeRegistryService.findSubMenu(
                         feature.getModuleCode(),
                         feature.getSubmoduleCode(),
                         feature.getFeatureTypeCode(),
                         feature.getFeatureCode(),
                         url
                 )
-                .orElseGet(SysSubMenu::new);
+                .orElseGet(SysPrivSubMenu::new);
 
         subMenu.setName(name == null ? feature.getFeatureName() : name);
         subMenu.setUrl(url);
@@ -296,15 +296,15 @@ public class DataSeeder {
         return systemPrivilegeRegistryService.saveSubMenu(subMenu);
     }
 
-    private SysPrivilege savePrivilegeIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
+    private SysPrivPrivilege savePrivilegeIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                              PrivilegeFeatureDefinitionDto feature,
                                              String actionCode,
                                              String actionName,
-                                             SysSubMenu subMenu) {
+                                             SysPrivSubMenu subMenu) {
         String privilegeCode = feature.getModuleCode() + feature.getSubmoduleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
 
-        SysPrivilege privilege = systemPrivilegeRegistryService.findPrivilegeByCode(privilegeCode)
-                .orElseGet(() -> SysPrivilege.builder()
+        SysPrivPrivilege privilege = systemPrivilegeRegistryService.findPrivilegeByCode(privilegeCode)
+                .orElseGet(() -> SysPrivPrivilege.builder()
                         .privilegeCode(privilegeCode)
                         .moduleCode(feature.getModuleCode())
                         .moduleName(feature.getModuleName())

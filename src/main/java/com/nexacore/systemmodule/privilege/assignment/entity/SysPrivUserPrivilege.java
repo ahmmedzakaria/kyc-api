@@ -9,13 +9,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "sys_role_privileges")
+@Table(name = "sys_priv_user_privileges")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysRolePrivilege {
+public class SysPrivUserPrivilege {
 
     @EmbeddedId
-    private RolePrivilegeId id;
+    private SysPrivUserPrivilegeId id;
 }

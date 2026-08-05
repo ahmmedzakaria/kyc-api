@@ -1,6 +1,6 @@
 package com.nexacore.authmodule.core.dto;
 
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,7 +28,7 @@ public class PrivilegeDto {
     private String subMenuUrl;
     private boolean active;
 
-    public static PrivilegeDto fromEntity(SysPrivilege privilege) {
+    public static PrivilegeDto fromEntity(SysPrivPrivilege privilege) {
         return PrivilegeDto.builder()
                 .id(privilege.getId())
                 .privilegeCode(privilege.getPrivilegeCode())

@@ -1,11 +1,11 @@
 package com.nexacore.systemmodule.license.entity;
 
 import com.nexacore.systemmodule.license.enums.LicenseEntitlementType;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -51,27 +51,27 @@ public class SysLicensePlanEntitlement {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "module_id")
     @EqualsAndHashCode.Exclude
-    private SysModule module;
+    private SysPrivModule module;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "submodule_id")
     @EqualsAndHashCode.Exclude
-    private SysSubmodule submodule;
+    private SysPrivSubmodule submodule;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "feature_id")
     @EqualsAndHashCode.Exclude
-    private SysFeature feature;
+    private SysPrivFeature feature;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "privilege_id")
     @EqualsAndHashCode.Exclude
-    private SysPrivilege privilege;
+    private SysPrivPrivilege privilege;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "api_registry_id")
     @EqualsAndHashCode.Exclude
-    private SysApiRegistry apiRegistry;
+    private SysPrivApiRegistry apiRegistry;
 
     @Column(length = 80)
     private String limitCode;

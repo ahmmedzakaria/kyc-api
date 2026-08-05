@@ -5,11 +5,11 @@ import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApplicationContextService;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubMenu;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
@@ -58,11 +58,11 @@ class PrivilegeServiceImplTest {
 
     @Test
     void sortsSidebarChildrenByConfiguredSubMenuOrder() {
-        SysSubMenu laterMenu = subMenu(1L, "Later", 20, 30);
-        SysSubMenu earlierMenu = subMenu(2L, "Earlier", 20, 10);
+        SysPrivSubMenu laterMenu = subMenu(1L, "Later", 20, 30);
+        SysPrivSubMenu earlierMenu = subMenu(2L, "Earlier", 20, 10);
 
-        SysPrivilege laterPrivilege = privilege("01010200101", laterMenu);
-        SysPrivilege earlierPrivilege = privilege("01010200201", earlierMenu);
+        SysPrivPrivilege laterPrivilege = privilege("01010200101", laterMenu);
+        SysPrivPrivilege earlierPrivilege = privilege("01010200201", earlierMenu);
         Set<String> privilegeCodes = Set.of("01010200101", "01010200201");
 
         when(authModuleGateway.getUserAccess("operator")).thenReturn(AuthUserAccessDto.builder()
@@ -90,9 +90,9 @@ class PrivilegeServiceImplTest {
                 .containsExactly(10, 30);
     }
 
-    private SysSubMenu subMenu(Long id, String name, Integer menuOrder, Integer subMenuOrder) {
-        SysFeature feature = feature(id, name);
-        return SysSubMenu.builder()
+    private SysPrivSubMenu subMenu(Long id, String name, Integer menuOrder, Integer subMenuOrder) {
+        SysPrivFeature feature = feature(id, name);
+        return SysPrivSubMenu.builder()
                 .id(id)
                 .name(name)
                 .url("/" + name.toLowerCase())
@@ -104,21 +104,21 @@ class PrivilegeServiceImplTest {
                 .build();
     }
 
-    private SysFeature feature(Long id, String name) {
-        SysModule module = SysModule.builder()
+    private SysPrivFeature feature(Long id, String name) {
+        SysPrivModule module = SysPrivModule.builder()
                 .id(1L)
                 .code("01")
                 .name("KYC")
                 .active(true)
                 .build();
-        SysSubmodule submodule = SysSubmodule.builder()
+        SysPrivSubmodule submodule = SysPrivSubmodule.builder()
                 .id(1L)
                 .module(module)
                 .code("01")
                 .name("Person")
                 .active(true)
                 .build();
-        return SysFeature.builder()
+        return SysPrivFeature.builder()
                 .id(id)
                 .submodule(submodule)
                 .featureTypeCode(FeatureType.OPERATIONS.getCode())
@@ -129,8 +129,8 @@ class PrivilegeServiceImplTest {
                 .build();
     }
 
-    private SysPrivilege privilege(String privilegeCode, SysSubMenu subMenu) {
-        return SysPrivilege.builder()
+    private SysPrivPrivilege privilege(String privilegeCode, SysPrivSubMenu subMenu) {
+        return SysPrivPrivilege.builder()
                 .privilegeCode(privilegeCode)
                 .moduleCode(subMenu.getModuleCode())
                 .moduleName(subMenu.getModuleName())

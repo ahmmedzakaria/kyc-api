@@ -1,9 +1,9 @@
 package com.nexacore.systemmodule.privilege.catalog.service.implementations;
 
-import com.nexacore.systemmodule.privilege.catalog.entity.SysFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
@@ -48,13 +48,13 @@ class SystemPrivilegeRegistryServiceImplTest {
 
     @Test
     void syncsApplicationModulesAndSubmodulesToCatalogTables() {
-        Map<String, SysModule> modules = new HashMap<>();
-        Map<String, SysSubmodule> submodules = new HashMap<>();
+        Map<String, SysPrivModule> modules = new HashMap<>();
+        Map<String, SysPrivSubmodule> submodules = new HashMap<>();
 
         when(moduleRepository.findByCode(any())).thenAnswer(invocation ->
                 Optional.ofNullable(modules.get(invocation.getArgument(0, String.class))));
-        when(moduleRepository.save(any(SysModule.class))).thenAnswer(invocation -> {
-            SysModule module = invocation.getArgument(0, SysModule.class);
+        when(moduleRepository.save(any(SysPrivModule.class))).thenAnswer(invocation -> {
+            SysPrivModule module = invocation.getArgument(0, SysPrivModule.class);
             modules.put(module.getCode(), module);
             return module;
         });
@@ -63,21 +63,21 @@ class SystemPrivilegeRegistryServiceImplTest {
             String submoduleCode = invocation.getArgument(1, String.class);
             return Optional.ofNullable(submodules.get(moduleCode + ":" + submoduleCode));
         });
-        when(submoduleRepository.save(any(SysSubmodule.class))).thenAnswer(invocation -> {
-            SysSubmodule submodule = invocation.getArgument(0, SysSubmodule.class);
+        when(submoduleRepository.save(any(SysPrivSubmodule.class))).thenAnswer(invocation -> {
+            SysPrivSubmodule submodule = invocation.getArgument(0, SysPrivSubmodule.class);
             submodules.put(submodule.getModule().getCode() + ":" + submodule.getCode(), submodule);
             return submodule;
         });
 
         service.syncApplicationCatalog();
 
-        ArgumentCaptor<SysModule> moduleCaptor = ArgumentCaptor.forClass(SysModule.class);
-        ArgumentCaptor<SysSubmodule> submoduleCaptor = ArgumentCaptor.forClass(SysSubmodule.class);
+        ArgumentCaptor<SysPrivModule> moduleCaptor = ArgumentCaptor.forClass(SysPrivModule.class);
+        ArgumentCaptor<SysPrivSubmodule> submoduleCaptor = ArgumentCaptor.forClass(SysPrivSubmodule.class);
         verify(moduleRepository, times(ApplicationModule.values().length)).save(moduleCaptor.capture());
         verify(submoduleRepository, times(ApplicationSubmodule.values().length)).save(submoduleCaptor.capture());
 
         assertThat(moduleCaptor.getAllValues())
-                .extracting(SysModule::getCode)
+                .extracting(SysPrivModule::getCode)
                 .containsExactlyInAnyOrderElementsOf(List.of(ApplicationModule.values()).stream()
                         .map(ApplicationModule::getCode)
                         .toList());
@@ -92,7 +92,7 @@ class SystemPrivilegeRegistryServiceImplTest {
 
     @Test
     void delegatesPrivilegeQueriesToSystemRepository() {
-        SysPrivilege privilege = SysPrivilege.builder()
+        SysPrivPrivilege privilege = SysPrivPrivilege.builder()
                 .privilegeCode("01010100101")
                 .feature(feature())
                 .active(true)
@@ -117,7 +117,7 @@ class SystemPrivilegeRegistryServiceImplTest {
 
     @Test
     void delegatesSaveToSystemRepository() {
-        SysPrivilege privilege = SysPrivilege.builder()
+        SysPrivPrivilege privilege = SysPrivPrivilege.builder()
                 .privilegeCode("01010100101")
                 .feature(feature())
                 .active(true)
@@ -129,21 +129,21 @@ class SystemPrivilegeRegistryServiceImplTest {
         verify(privilegeRepository).save(privilege);
     }
 
-    private SysFeature feature() {
-        SysModule module = SysModule.builder()
+    private SysPrivFeature feature() {
+        SysPrivModule module = SysPrivModule.builder()
                 .id(1L)
                 .code("01")
                 .name("KYC")
                 .active(true)
                 .build();
-        SysSubmodule submodule = SysSubmodule.builder()
+        SysPrivSubmodule submodule = SysPrivSubmodule.builder()
                 .id(1L)
                 .module(module)
                 .code("01")
                 .name("Person")
                 .active(true)
                 .build();
-        return SysFeature.builder()
+        return SysPrivFeature.builder()
                 .id(1L)
                 .submodule(submodule)
                 .featureTypeCode("01")

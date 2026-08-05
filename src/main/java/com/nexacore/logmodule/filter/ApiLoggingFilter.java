@@ -3,8 +3,8 @@ package com.nexacore.logmodule.filter;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.logmodule.dto.LogContextDto;
 import com.nexacore.logmodule.service.LogService;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.security.ClientApplicationContext;
 import com.nexacore.systemmodule.privilege.accesscontrol.security.ClientApplicationContextHolder;
 import jakarta.servlet.FilterChain;
@@ -109,8 +109,8 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
 
     private LogContextDto buildLogContext(String username) {
         ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
-        SysClientApplication clientApplication = context == null ? null : context.clientApplication();
-        SysApiRegistry apiRegistry = context == null ? null : context.apiRegistry();
+        SysPrivClientApplication clientApplication = context == null ? null : context.clientApplication();
+        SysPrivApiRegistry apiRegistry = context == null ? null : context.apiRegistry();
 
         return LogContextDto.builder()
                 .traceId(context == null ? null : context.traceId())

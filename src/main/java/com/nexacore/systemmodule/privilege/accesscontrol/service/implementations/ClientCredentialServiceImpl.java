@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.service.implementations;
 
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientCredentialRepository;
@@ -23,12 +23,12 @@ public class ClientCredentialServiceImpl implements ClientCredentialService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
-    public Optional<SysClientApplication> validateApiKey(String clientCode, String apiKey) {
+    public Optional<SysPrivClientApplication> validateApiKey(String clientCode, String apiKey) {
         if (clientCode == null || clientCode.isBlank() || apiKey == null || apiKey.isBlank()) {
             return Optional.empty();
         }
 
-        Optional<SysClientApplication> application = clientApplicationRepository.findByClientCode(clientCode.trim());
+        Optional<SysPrivClientApplication> application = clientApplicationRepository.findByClientCode(clientCode.trim());
         if (application.isEmpty() || application.get().getStatus() != ClientApplicationStatus.ACTIVE) {
             return Optional.empty();
         }

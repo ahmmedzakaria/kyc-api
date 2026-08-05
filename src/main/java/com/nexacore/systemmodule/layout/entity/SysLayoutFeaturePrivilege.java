@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.layout.entity;
 
 import com.nexacore.systemmodule.layout.enums.PrivilegeMatchMode;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,7 +37,7 @@ public class SysLayoutFeaturePrivilege extends LayoutAuditInfo {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "privilege_id", nullable = false)
-    private SysPrivilege privilege;
+    private SysPrivPrivilege privilege;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "match_mode", nullable = false, length = 20)

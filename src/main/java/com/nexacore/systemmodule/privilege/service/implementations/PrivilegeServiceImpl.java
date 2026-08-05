@@ -15,15 +15,15 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientApplicationContextDto;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.assignment.entity.SysRolePrivilege;
-import com.nexacore.systemmodule.privilege.assignment.entity.RolePrivilegeId;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubMenu;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
-import com.nexacore.systemmodule.privilege.assignment.entity.SysUserPrivilege;
-import com.nexacore.systemmodule.privilege.assignment.entity.UserPrivilegeId;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilege;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilegeId;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivUserPrivilege;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivUserPrivilegeId;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
@@ -95,8 +95,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 requestDto.getActionCode()
         );
 
-        SysPrivilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
-                .orElseGet(SysPrivilege::new);
+        SysPrivPrivilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
+                .orElseGet(SysPrivPrivilege::new);
 
         privilege.setPrivilegeCode(privilegeCode);
         privilege.setFeature(resolveFeature(requestDto));
@@ -128,8 +128,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public SubMenuDto saveSubMenu(SubMenuRequestDto requestDto, String username) {
         Long loginUserId = authModuleGateway.getUserId(username);
 
-        SysSubMenu subMenu = requestDto.getId() == null
-                ? new SysSubMenu()
+        SysPrivSubMenu subMenu = requestDto.getId() == null
+                ? new SysPrivSubMenu()
                 : subMenuRepository.findById(requestDto.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Sub menu not found: " + requestDto.getId()));
 
@@ -153,13 +153,13 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<SubMenuDto> getAllSubMenus() {
         return subMenuRepository.findAll().stream()
-                .sorted(Comparator.comparingInt((SysSubMenu subMenu) -> defaultOrder(subMenu.getMenuOrder()))
+                .sorted(Comparator.comparingInt((SysPrivSubMenu subMenu) -> defaultOrder(subMenu.getMenuOrder()))
                         .thenComparingInt(subMenu -> defaultOrder(subMenu.getSubMenuOrder()))
-                        .thenComparing(SysSubMenu::getModuleCode)
-                        .thenComparing(SysSubMenu::getSubmoduleCode)
-                        .thenComparing(SysSubMenu::getFeatureTypeCode)
-                        .thenComparing(SysSubMenu::getFeatureCode)
-                        .thenComparing(SysSubMenu::getName))
+                        .thenComparing(SysPrivSubMenu::getModuleCode)
+                        .thenComparing(SysPrivSubMenu::getSubmoduleCode)
+                        .thenComparing(SysPrivSubMenu::getFeatureTypeCode)
+                        .thenComparing(SysPrivSubMenu::getFeatureCode)
+                        .thenComparing(SysPrivSubMenu::getName))
                 .map(SubMenuDto::fromEntity)
                 .toList();
     }
@@ -249,11 +249,11 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         authModuleGateway.requireRoleExists(requestDto.getRoleId());
 
-        Set<SysPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
+        Set<SysPrivPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
         rolePrivilegeRepository.deleteByIdRoleId(requestDto.getRoleId());
         rolePrivilegeRepository.saveAll(privileges.stream()
-                .map(privilege -> SysRolePrivilege.builder()
-                        .id(new RolePrivilegeId(requestDto.getRoleId(), privilege.getId()))
+                .map(privilege -> SysPrivRolePrivilege.builder()
+                        .id(new SysPrivRolePrivilegeId(requestDto.getRoleId(), privilege.getId()))
                         .build())
                 .toList());
     }
@@ -267,24 +267,24 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         authModuleGateway.requireUserExists(requestDto.getUserId());
 
-        Set<SysPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
+        Set<SysPrivPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
         userPrivilegeRepository.deleteByIdUserId(requestDto.getUserId());
         userPrivilegeRepository.saveAll(privileges.stream()
-                .map(privilege -> SysUserPrivilege.builder()
-                        .id(new UserPrivilegeId(requestDto.getUserId(), privilege.getId()))
+                .map(privilege -> SysPrivUserPrivilege.builder()
+                        .id(new SysPrivUserPrivilegeId(requestDto.getUserId(), privilege.getId()))
                         .build())
                 .toList());
     }
 
-    private Set<SysPrivilege> loadPrivileges(Set<String> privilegeCodes) {
+    private Set<SysPrivPrivilege> loadPrivileges(Set<String> privilegeCodes) {
         if (privilegeCodes == null || privilegeCodes.isEmpty()) {
             return new HashSet<>();
         }
 
-        List<SysPrivilege> privileges = privilegeRepository.findByPrivilegeCodeIn(privilegeCodes);
+        List<SysPrivPrivilege> privileges = privilegeRepository.findByPrivilegeCodeIn(privilegeCodes);
         if (privileges.size() != privilegeCodes.size()) {
             Set<String> foundCodes = privileges.stream()
-                    .map(SysPrivilege::getPrivilegeCode)
+                    .map(SysPrivPrivilege::getPrivilegeCode)
                     .collect(Collectors.toSet());
 
             Set<String> missingCodes = privilegeCodes.stream()
@@ -301,12 +301,12 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                                          String icon,
                                          Set<String> userPrivilegeCodes,
                                          boolean admin) {
-        List<SysPrivilege> privileges = admin
+        List<SysPrivPrivilege> privileges = admin
                 ? privilegeRepository.findAll()
                 : privilegeRepository.findByPrivilegeCodeIn(userPrivilegeCodes);
         if (admin && clientApplicationContextService.hasCurrentClient()) {
             Set<String> allPrivilegeCodes = privileges.stream()
-                    .map(SysPrivilege::getPrivilegeCode)
+                    .map(SysPrivPrivilege::getPrivilegeCode)
                     .collect(Collectors.toSet());
             Set<String> clientPrivilegeCodes = clientApplicationContextService.getCurrentClientPrivilegeCodes(allPrivilegeCodes);
             privileges = privileges.stream()
@@ -316,16 +316,16 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         Map<Long, SidebarMenuDto> childMenus = new LinkedHashMap<>();
         privileges.stream()
-                .filter(SysPrivilege::isActive)
+                .filter(SysPrivPrivilege::isActive)
                 .filter(privilege -> privilege.getSubMenu() != null)
                 .filter(privilege -> privilege.getSubMenu().isActive())
                 .filter(privilege -> featureType.getCode().equals(privilege.getSubMenu().getFeatureTypeCode()))
-                .sorted(Comparator.comparingInt((SysPrivilege privilege) -> defaultOrder(privilege.getSubMenu().getMenuOrder()))
+                .sorted(Comparator.comparingInt((SysPrivPrivilege privilege) -> defaultOrder(privilege.getSubMenu().getMenuOrder()))
                         .thenComparingInt(privilege -> defaultOrder(privilege.getSubMenu().getSubMenuOrder()))
-                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getModuleCode())
-                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getSubmoduleCode())
-                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getFeatureCode())
-                        .thenComparing((SysPrivilege privilege) -> privilege.getSubMenu().getName()))
+                        .thenComparing((SysPrivPrivilege privilege) -> privilege.getSubMenu().getModuleCode())
+                        .thenComparing((SysPrivPrivilege privilege) -> privilege.getSubMenu().getSubmoduleCode())
+                        .thenComparing((SysPrivPrivilege privilege) -> privilege.getSubMenu().getFeatureCode())
+                        .thenComparing((SysPrivPrivilege privilege) -> privilege.getSubMenu().getName()))
                 .forEach(privilege -> childMenus.computeIfAbsent(
                         privilege.getSubMenu().getId(),
                         id -> toSidebarMenu(privilege.getSubMenu())
@@ -343,7 +343,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .build();
     }
 
-    private SidebarMenuDto toSidebarMenu(SysSubMenu subMenu) {
+    private SidebarMenuDto toSidebarMenu(SysPrivSubMenu subMenu) {
         return SidebarMenuDto.builder()
                 .label(subMenu.getName())
                 .icon(subMenu.getIcon())
@@ -361,7 +361,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .orElse(0);
     }
 
-    private SysSubMenu resolveSubMenu(Long subMenuId) {
+    private SysPrivSubMenu resolveSubMenu(Long subMenuId) {
         if (subMenuId == null) {
             return null;
         }
@@ -377,7 +377,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
     private Set<String> resolveEnabledModules(Set<String> privilegeCodes) {
         return privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
-                .map(SysPrivilege::getModuleCode)
+                .map(SysPrivPrivilege::getModuleCode)
                 .collect(Collectors.toSet());
     }
 
@@ -403,7 +403,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         return order == null ? 0 : order;
     }
 
-    private SysFeature resolveFeature(PrivilegeRequestDto requestDto) {
+    private SysPrivFeature resolveFeature(PrivilegeRequestDto requestDto) {
         return resolveFeature(
                 requestDto.getModuleCode(),
                 requestDto.getModuleName(),
@@ -416,7 +416,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         );
     }
 
-    private SysFeature resolveFeature(SubMenuRequestDto requestDto) {
+    private SysPrivFeature resolveFeature(SubMenuRequestDto requestDto) {
         return resolveFeature(
                 requestDto.getModuleCode(),
                 requestDto.getModuleName(),
@@ -429,7 +429,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         );
     }
 
-    private SysFeature resolveFeature(String moduleCode,
+    private SysPrivFeature resolveFeature(String moduleCode,
                                       String moduleName,
                                       String submoduleCode,
                                       String submoduleName,
@@ -437,8 +437,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                                       String featureTypeName,
                                       String featureCode,
                                       String featureName) {
-        SysModule module = moduleRepository.findByCode(moduleCode)
-                .orElseGet(() -> moduleRepository.save(SysModule.builder()
+        SysPrivModule module = moduleRepository.findByCode(moduleCode)
+                .orElseGet(() -> moduleRepository.save(SysPrivModule.builder()
                         .code(moduleCode)
                         .name(moduleName)
                         .active(true)
@@ -449,9 +449,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
             module = moduleRepository.save(module);
         }
 
-        SysModule resolvedModule = module;
-        SysSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(moduleCode, submoduleCode)
-                .orElseGet(() -> submoduleRepository.save(SysSubmodule.builder()
+        SysPrivModule resolvedModule = module;
+        SysPrivSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(moduleCode, submoduleCode)
+                .orElseGet(() -> submoduleRepository.save(SysPrivSubmodule.builder()
                         .module(resolvedModule)
                         .code(submoduleCode)
                         .name(submoduleName)
@@ -463,7 +463,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
             submodule = submoduleRepository.save(submodule);
         }
 
-        SysSubmodule resolvedSubmodule = submodule;
+        SysPrivSubmodule resolvedSubmodule = submodule;
         return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndCode(
                         moduleCode,
                         submoduleCode,
@@ -481,7 +481,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                     }
                     return feature;
                 })
-                .orElseGet(() -> featureRepository.save(SysFeature.builder()
+                .orElseGet(() -> featureRepository.save(SysPrivFeature.builder()
                         .submodule(resolvedSubmodule)
                         .featureTypeCode(featureTypeCode)
                         .featureTypeName(featureTypeName)

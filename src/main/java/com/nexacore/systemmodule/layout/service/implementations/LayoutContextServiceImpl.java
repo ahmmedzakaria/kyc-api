@@ -31,7 +31,7 @@ import com.nexacore.systemmodule.layout.repository.LayoutThemeChromeOverridesRep
 import com.nexacore.systemmodule.layout.repository.LayoutThemePrimariesRepository;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -109,7 +109,7 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                     .toList();
         }
         return clientApplicationRepository.findByClientCode(clientCode)
-                .map(SysClientApplication::getId)
+                .map(SysPrivClientApplication::getId)
                 .map(clientLayoutProfileRepository::findByClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc)
                 .orElse(List.of())
                 .stream()

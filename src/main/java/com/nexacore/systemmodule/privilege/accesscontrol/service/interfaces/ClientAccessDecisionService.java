@@ -1,13 +1,13 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces;
 
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 
 import java.util.Set;
 
 public interface ClientAccessDecisionService {
-    ClientAccessDecisionDto decide(SysClientApplication clientApplication, SysApiRegistry apiRegistry);
+    ClientAccessDecisionDto decide(SysPrivClientApplication clientApplication, SysPrivApiRegistry apiRegistry);
 
-    Set<String> filterPrivilegeCodesForClient(SysClientApplication clientApplication, Set<String> userPrivilegeCodes);
+    Set<String> filterPrivilegeCodesForClient(SysPrivClientApplication clientApplication, Set<String> userPrivilegeCodes);
 }

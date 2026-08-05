@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.privilege.accesscontrol.service.implementations;
 
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysClientApplication;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientApiPermissionRepository;
 import com.nexacore.systemmodule.privilege.accesscontrol.repository.ClientFeaturePermissionRepository;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientAccessDecisionService;
@@ -23,7 +23,7 @@ public class ClientAccessDecisionServiceImpl implements ClientAccessDecisionServ
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public ClientAccessDecisionDto decide(SysClientApplication clientApplication, SysApiRegistry apiRegistry) {
+    public ClientAccessDecisionDto decide(SysPrivClientApplication clientApplication, SysPrivApiRegistry apiRegistry) {
         if (apiRegistry == null || apiRegistry.isPublicApi()) {
             return ClientAccessDecisionDto.allowed(clientApplication, apiRegistry);
         }
@@ -51,7 +51,7 @@ public class ClientAccessDecisionServiceImpl implements ClientAccessDecisionServ
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Set<String> filterPrivilegeCodesForClient(SysClientApplication clientApplication, Set<String> userPrivilegeCodes) {
+    public Set<String> filterPrivilegeCodesForClient(SysPrivClientApplication clientApplication, Set<String> userPrivilegeCodes) {
         if (clientApplication == null || userPrivilegeCodes == null || userPrivilegeCodes.isEmpty()) {
             return userPrivilegeCodes == null ? Set.of() : userPrivilegeCodes;
         }

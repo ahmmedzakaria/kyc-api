@@ -10,11 +10,11 @@ import com.nexacore.systemmodule.license.enums.LicensePlanType;
 import com.nexacore.systemmodule.license.repository.LicensePlanEntitlementRepository;
 import com.nexacore.systemmodule.license.repository.LicensePlanRepository;
 import com.nexacore.systemmodule.license.service.interfaces.LicensePlanService;
-import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysApiRegistry;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysSubmodule;
+import com.nexacore.systemmodule.privilege.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,24 +87,24 @@ public class LicensePlanServiceImpl implements LicensePlanService {
                 .build();
     }
 
-    private SysModule referenceModule(Long id) {
-        return id == null ? null : SysModule.builder().id(id).build();
+    private SysPrivModule referenceModule(Long id) {
+        return id == null ? null : SysPrivModule.builder().id(id).build();
     }
 
-    private SysSubmodule referenceSubmodule(Long id) {
-        return id == null ? null : SysSubmodule.builder().id(id).build();
+    private SysPrivSubmodule referenceSubmodule(Long id) {
+        return id == null ? null : SysPrivSubmodule.builder().id(id).build();
     }
 
-    private SysFeature referenceFeature(Long id) {
-        return id == null ? null : SysFeature.builder().id(id).build();
+    private SysPrivFeature referenceFeature(Long id) {
+        return id == null ? null : SysPrivFeature.builder().id(id).build();
     }
 
-    private SysPrivilege referencePrivilege(Long id) {
-        return id == null ? null : SysPrivilege.builder().id(id).build();
+    private SysPrivPrivilege referencePrivilege(Long id) {
+        return id == null ? null : SysPrivPrivilege.builder().id(id).build();
     }
 
-    private SysApiRegistry referenceApi(Long id) {
-        return id == null ? null : SysApiRegistry.builder().id(id).build();
+    private SysPrivApiRegistry referenceApi(Long id) {
+        return id == null ? null : SysPrivApiRegistry.builder().id(id).build();
     }
 
     private String normalizeCode(String value) {
