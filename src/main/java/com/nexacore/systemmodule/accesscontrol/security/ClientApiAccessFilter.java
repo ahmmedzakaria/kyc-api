@@ -1,6 +1,8 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
+import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
+import com.nexacore.systemmodule.accesscontrol.config.EnforcementMode;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
@@ -11,6 +13,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -20,6 +23,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ClientApiAccessFilter extends OncePerRequestFilter {
 
     private static final String[] PUBLIC_PATHS = {
@@ -38,12 +42,14 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
     private final ClientApiRegistryService clientApiRegistryService;
     private final ClientAccessDecisionService clientAccessDecisionService;
     private final ApiResponseJsonWriter responseWriter;
+    private final AccessControlProperties accessControlProperties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+        return !accessControlProperties.isDecisionEvaluationEnabled()
+                || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || matchesPublicPath(path);
     }
 
@@ -53,6 +59,16 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         Optional<SysPrivApiRegistry> api = clientApiRegistryService.resolve(request);
         if (api.isEmpty()) {
+            if (accessControlProperties.isRegistryCoverageEnabled()
+                    && accessControlProperties.getEnforcementMode() == EnforcementMode.ENFORCE) {
+                AccessControlError error = AccessControlError.API_NOT_REGISTERED;
+                responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
+                return;
+            }
+            if (accessControlProperties.isRegistryCoverageEnabled()) {
+                log.warn("Access-control registry coverage gap: method={} path={} mode={}",
+                        request.getMethod(), request.getRequestURI(), accessControlProperties.getEnforcementMode());
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -64,12 +80,24 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
         updateContext(decision);
 
         if (!decision.allowed()) {
+            if ("CLIENT_REQUIRED".equals(decision.denyReason()) && !requiresClient(request)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             AccessControlError error = AccessControlError.fromClientDecision(decision.denyReason());
             responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean requiresClient(HttpServletRequest request) {
+        boolean browserRequest = request.getHeader("Origin") != null
+                || request.getHeader("Sec-Fetch-Site") != null;
+        return browserRequest
+                ? accessControlProperties.isRequireClientForBrowser()
+                : accessControlProperties.isRequireClientForConfidential();
     }
 
     private void updateContext(ClientAccessDecisionDto decision) {

@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
@@ -37,12 +38,14 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
     private final ClientApiRegistryService clientApiRegistryService;
     private final PrivilegeService privilegeService;
     private final ApiResponseJsonWriter responseWriter;
+    private final AccessControlProperties accessControlProperties;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+        return !accessControlProperties.isDecisionEvaluationEnabled()
+                || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || matchesPublicPath(path);
     }
 

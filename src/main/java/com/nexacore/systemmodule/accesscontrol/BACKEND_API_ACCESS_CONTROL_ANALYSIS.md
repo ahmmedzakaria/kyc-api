@@ -321,6 +321,8 @@ Return the standard `ApiResponse` JSON shape instead of servlet-container HTML f
 
 #### Step 0.3: Add configuration switches
 
+Implementation status: **implemented**. `AccessControlProperties` binds all five switches and `EnforcementMode` defines `DISABLED`, `REPORT`, and `ENFORCE`. Disabled evaluation bypasses access-control authorization filters while retaining the normal JWT security chain; report mode logs unresolved protected mappings; enforce mode returns `403 API_NOT_REGISTERED` when registry coverage is enabled. Browser requests are identified by `Origin` or `Sec-Fetch-Site`; other requests use the confidential-client requirement. Startup rejects disabled access control under the `prod` or `production` profile.
+
 Create typed access-control properties under the privilege access-control package:
 
 ```properties
