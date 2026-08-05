@@ -283,6 +283,8 @@ The implementation must be delivered in dependency order. Do not switch the runt
 
 #### Step 0.1: Capture the current API inventory
 
+Implementation status: **implemented**. `ApiInventoryService` enumerates application-owned `/api/**` mappings from `RequestMappingHandlerMapping`; `POST /api/v1/system/api-registry/inventory` returns the inventory for review. Undeclared ownership, client audience, data scope, and authorization decisions are deliberately marked `REVIEW_REQUIRED` until a security owner approves them.
+
 Use Spring's `RequestMappingHandlerMapping` to enumerate every application-owned controller mapping and record:
 
 - HTTP method.

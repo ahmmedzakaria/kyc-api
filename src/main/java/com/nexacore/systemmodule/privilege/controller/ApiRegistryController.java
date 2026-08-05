@@ -3,6 +3,8 @@ package com.nexacore.systemmodule.privilege.controller;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiRegistryRequestDto;
+import com.nexacore.systemmodule.privilege.accesscontrol.dto.ApiInventoryItemDto;
+import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ApiInventoryService;
 import com.nexacore.systemmodule.privilege.accesscontrol.service.interfaces.ClientApiRegistryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,15 @@ import java.util.List;
 public class ApiRegistryController {
 
     private final ClientApiRegistryService clientApiRegistryService;
+    private final ApiInventoryService apiInventoryService;
+
+    @PostMapping("/inventory")
+    public ResponseEntity<ApiResponse<List<ApiInventoryItemDto>>> inventory() {
+        return ResponseEntity.ok(ApiResponse.success(
+                apiInventoryService.inventory(),
+                "Application API inventory loaded"
+        ));
+    }
 
     @PostMapping("/save")
     public ResponseEntity<ApiResponse<ApiRegistryDto>> save(@RequestBody ApiRegistryRequestDto requestDto,
