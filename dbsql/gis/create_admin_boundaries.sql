@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- =====================================================================
 -- LEVEL 0 - COUNTRY
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_0 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_0 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     country_code VARCHAR,
     country_name VARCHAR,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_0 (
 -- =====================================================================
 -- LEVEL 1 - STATE
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_1 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_1 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     state_code VARCHAR,
     state_name VARCHAR,
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_1 (
 -- =====================================================================
 -- LEVEL 2 - DIVISION
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_2 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_2 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     division_code VARCHAR,
     division_name VARCHAR,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_2 (
 -- =====================================================================
 -- LEVEL 3 - DISTRICT
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_3 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_3 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     district_code VARCHAR,
     district_name VARCHAR,
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_3 (
 -- =====================================================================
 -- LEVEL 4 - SUB-DISTRICT
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_4 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_4 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sub_district_code VARCHAR,
     sub_district_name VARCHAR,
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_4 (
 -- =====================================================================
 -- LEVEL 5 - UNION
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_5 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_5 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     union_code VARCHAR,
     union_name VARCHAR,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_5 (
 -- =====================================================================
 -- LEVEL 6 - VILLAGE
 -- =====================================================================
-CREATE TABLE IF NOT EXISTS public.administrative_boundaries_level_6 (
+CREATE TABLE IF NOT EXISTS public.gis_administrative_boundaries_level_6 (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     village_code VARCHAR,
     village_name VARCHAR,
@@ -177,8 +177,8 @@ DECLARE
 lvl INT;
 BEGIN
 FOR lvl IN 0..6 LOOP
-        EXECUTE format('CREATE INDEX IF NOT EXISTS idx_adm%d_geom ON public.administrative_boundaries_level_%d USING GIST (wkb_geometry);', lvl, lvl);
-EXECUTE format('CREATE INDEX IF NOT EXISTS idx_adm%d_center ON public.administrative_boundaries_level_%d USING GIST (center_point);', lvl, lvl);
+        EXECUTE format('CREATE INDEX IF NOT EXISTS idx_adm%d_geom ON public.gis_administrative_boundaries_level_%d USING GIST (wkb_geometry);', lvl, lvl);
+EXECUTE format('CREATE INDEX IF NOT EXISTS idx_adm%d_center ON public.gis_administrative_boundaries_level_%d USING GIST (center_point);', lvl, lvl);
 END LOOP;
 END $$;
 
