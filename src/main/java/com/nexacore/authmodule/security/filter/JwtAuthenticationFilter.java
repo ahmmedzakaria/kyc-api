@@ -2,6 +2,8 @@ package com.nexacore.authmodule.security.filter;
 
 
 import com.nexacore.authmodule.security.jwt.JwtUtil;
+import com.nexacore.authmodule.security.jwt.JwtTokenType;
+import com.nexacore.authmodule.security.jwt.InvalidTokenTypeException;
 import com.nexacore.authmodule.core.service.implementations.LogoutSessionService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -38,6 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             try {
                 String jwt = authHeader.substring(7);
+                jwtUtil.requireTokenType(jwt, JwtTokenType.ACCESS);
                 String username = jwtUtil.extractUsername(jwt);
                 List<String> roles = jwtUtil.extractRoles(jwt);
                 Instant issuedAt = jwtUtil.extractIssuedAt(jwt).toInstant();
@@ -58,9 +61,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
+            } catch (InvalidTokenTypeException ex) {
+                SecurityContextHolder.clearContext();
+                request.setAttribute("jwt_error_code", "INVALID_TOKEN_TYPE");
             } catch (JwtException | IllegalArgumentException ex) {
                 SecurityContextHolder.clearContext();
-                request.setAttribute("jwt_exception", ex.getMessage());
+                request.setAttribute("jwt_error_code", "AUTHENTICATION_REQUIRED");
             }
         }
 

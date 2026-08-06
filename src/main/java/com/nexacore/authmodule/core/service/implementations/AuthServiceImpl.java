@@ -14,6 +14,9 @@ import com.nexacore.authmodule.core.dto.RefreshTokenRequest;
 import com.nexacore.authmodule.core.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.authmodule.security.jwt.JwtUtil;
+import com.nexacore.authmodule.security.jwt.JwtTokenType;
+import com.nexacore.authmodule.security.jwt.InvalidTokenTypeException;
+import io.jsonwebtoken.JwtException;
 import com.nexacore.gatewaymodule.layout.service.interfaces.LayoutModuleGateway;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
 	private final AuthenticationProperties authenticationProperties;
 	private final KeycloakProperties keycloakProperties;
 	private final LogoutSessionService logoutSessionService;
+	private final RefreshTokenSessionService refreshTokenSessionService;
 	private final AuthApplicationContextService authApplicationContextService;
 	private final AuthClientPolicyService authClientPolicyService;
 	private final LayoutModuleGateway layoutModuleGateway;
@@ -62,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
 				logoutSessionService.login(userDetails.getUsername());
 				String accessToken = jwtUtil.generateToken(userDetails);
 				String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+				refreshTokenSessionService.register(userDetails.getUsername(), jwtUtil.extractJwtId(refreshToken));
 
 				AuthResponse response =  AuthResponse.builder()
 						.accessToken(accessToken)
@@ -126,6 +131,7 @@ public class AuthServiceImpl implements AuthService {
 	public ResponseEntity<ApiResponse<Void>> logout(String username) {
 		if (StringUtils.hasText(username)) {
 			logoutSessionService.logout(username);
+			refreshTokenSessionService.revoke(username);
 			log.info("User logged out from shared session: {}", username);
 		}
 		return ResponseEntity.ok(ApiResponse.<Void>success("Logout successful"));
@@ -150,30 +156,50 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid RefreshTokenRequest requestDto) {
+		if (!authenticationProperties.isRefreshTokenEnabled()) {
+			return unauthorized("AUTHENTICATION_REQUIRED", "Refresh tokens are disabled");
+		}
 		try {
-			String username = jwtUtil.extractUsername(requestDto.refreshToken());
+			String refreshToken = requestDto.refreshToken();
+			jwtUtil.requireTokenType(refreshToken, JwtTokenType.REFRESH);
+			String username = jwtUtil.extractUsername(refreshToken);
+			String tokenId = jwtUtil.extractJwtId(refreshToken);
+			if (!logoutSessionService.isSessionActive(username, jwtUtil.extractIssuedAt(refreshToken).toInstant())
+					|| !refreshTokenSessionService.isActive(username, tokenId)) {
+				return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token is revoked or inactive");
+			}
 
 			var userDetails = userDetailsService.loadUserByUsername(username);
 
-			if (jwtUtil.validateToken(requestDto.refreshToken(), userDetails)) {
+			if (jwtUtil.validateToken(refreshToken, userDetails, JwtTokenType.REFRESH)) {
 				String newAccessToken = jwtUtil.generateToken(userDetails);
 				String newRefreshToken = jwtUtil.generateRefreshToken(userDetails);
+				if (!refreshTokenSessionService.rotate(username, tokenId, jwtUtil.extractJwtId(newRefreshToken))) {
+					return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token has already been rotated");
+				}
 
 				AuthResponse response =  AuthResponse.builder()
 						.accessToken(newAccessToken)
 						.refreshToken(newRefreshToken)
 						.build();
 
-				return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(response,"access token is generated"));
+				return ResponseEntity.ok(ApiResponse.success(response, "Access token refreshed"));
 
 			} else {
-				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"No such user is exist!"));
+				return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token is invalid");
 			}
-
-		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), List.of("Exception occurs: " + e.getLocalizedMessage())));
+		} catch (InvalidTokenTypeException exception) {
+			return unauthorized("INVALID_TOKEN_TYPE", "The supplied token type cannot refresh a session");
+		} catch (JwtException | IllegalArgumentException exception) {
+			return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token is invalid or expired");
+		} catch (RuntimeException exception) {
+			return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token cannot be accepted");
 		}
+	}
+
+	private ResponseEntity<ApiResponse<AuthResponse>> unauthorized(String code, String message) {
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(ApiResponse.errorCode(null, HttpStatus.UNAUTHORIZED.value(), code, message));
 	}
 
 }

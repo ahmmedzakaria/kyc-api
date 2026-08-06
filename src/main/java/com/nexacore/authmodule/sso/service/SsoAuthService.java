@@ -6,6 +6,7 @@ import com.nexacore.authmodule.security.jwt.JwtUtil;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import com.nexacore.authmodule.core.dto.AuthResponse;
 import com.nexacore.authmodule.core.service.implementations.LogoutSessionService;
+import com.nexacore.authmodule.core.service.implementations.RefreshTokenSessionService;
 import com.nexacore.authmodule.sso.dto.SsoAuthenticateRequest;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SsoAuthService {
     private final UserDetailsService userDetailsService;
     private final JwtUtil jwtUtil;
     private final LogoutSessionService logoutSessionService;
+    private final RefreshTokenSessionService refreshTokenSessionService;
     private final AuthClientPolicyService authClientPolicyService;
 
     public ResponseEntity<ApiResponse<AuthResponse>> authenticate(SsoAuthenticateRequest request, String clientCode) {
@@ -44,6 +46,7 @@ public class SsoAuthService {
             logoutSessionService.login(userDetails.getUsername());
             String accessToken = jwtUtil.generateToken(userDetails);
             String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+            refreshTokenSessionService.register(userDetails.getUsername(), jwtUtil.extractJwtId(refreshToken));
 
             AuthResponse response = AuthResponse.builder()
                     .accessToken(accessToken)

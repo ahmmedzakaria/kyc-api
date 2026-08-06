@@ -406,6 +406,8 @@ Acceptance criteria:
 
 #### Step 2.1: Define token types
 
+Implementation status: **implemented**. Locally issued JWTs now carry an explicit `token_type` (`ACCESS` or `REFRESH`), issuer, audience, unique JWT ID, subject, issued-at, and expiration. Roles are included only in access tokens. Issuer, audience, secret, lifetimes, and clock skew are environment-backed, and parsing requires the configured issuer and audience.
+
 Introduce a token-type enum such as:
 
 ```text
@@ -427,6 +429,8 @@ Keep secrets and issuer/audience values environment-driven.
 
 #### Step 2.2: Enforce token purpose
 
+Implementation status: **implemented**. `JwtAuthenticationFilter` accepts only ACCESS tokens and treats missing or malformed roles and claim/parsing failures as authentication failures without logging token material. Refresh processing accepts only REFRESH tokens, checks the existing login/logout session state, tracks the active refresh JWT ID, rotates it atomically, and rejects reuse, revoked, expired, malformed, access-purpose, wrong-issuer, or wrong-audience tokens with a consistent `401` response.
+
 Update `JwtAuthenticationFilter` to:
 
 - Accept only `ACCESS` tokens.
@@ -443,6 +447,8 @@ Update refresh processing to:
 - Rotate the refresh token when configured.
 
 #### Step 2.3: Correct refresh routing
+
+Implementation status: **implemented**. `/api/v1/auth/refresh-token` is part of the centralized `PublicRoutePolicy`, so it does not require an access token while still requiring a valid active REFRESH token in the request body.
 
 Add `/api/v1/auth/refresh-token` to the authoritative public authentication paths. It is public only in the sense that it does not require an access token; it still requires a valid refresh token and applicable client/origin controls.
 
