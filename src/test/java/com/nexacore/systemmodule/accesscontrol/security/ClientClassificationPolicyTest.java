@@ -40,5 +40,20 @@ class ClientClassificationPolicyTest {
         assertThat(clientOriginPolicy.isAllowed(client, "http://localhost:4200")).isTrue();
         assertThat(clientOriginPolicy.isAllowed(client, "https://attacker.example.com")).isFalse();
         assertThat(clientOriginPolicy.isAllowed(client, "https://portal.example.com/path")).isFalse();
+        assertThat(clientOriginPolicy.isAllowed(client, null)).isTrue();
+        assertThat(clientOriginPolicy.isAllowed(client, "null")).isFalse();
+        assertThat(clientOriginPolicy.isAllowed(client, "https://user@portal.example.com")).isFalse();
+    }
+
+    @Test
+    void canonicalizesAndDeduplicatesOriginsAtConfigurationBoundary() {
+        assertThat(clientOriginPolicy.normalizeConfiguredOrigins(
+                " HTTPS://PORTAL.EXAMPLE.COM:443/,http://localhost:80,http://localhost "))
+                .isEqualTo("https://portal.example.com,http://localhost");
+        assertThat(clientOriginPolicy.normalizeConfiguredOrigins("  ")).isNull();
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> clientOriginPolicy.normalizeConfiguredOrigins("*"));
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> clientOriginPolicy.normalizeConfiguredOrigins("https://portal.example.com/path"));
     }
 }

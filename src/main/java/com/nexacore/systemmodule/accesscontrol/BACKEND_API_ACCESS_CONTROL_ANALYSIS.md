@@ -698,7 +698,17 @@ The tests deliberately expect not-found behavior for inaccessible object IDs, av
 
 #### Step 8.1: Allowed origins
 
+**Status: implemented.**
+
 Parse and normalize configured origins. Reject mismatched origins for browser traffic where origin validation applies. Treat absent `Origin` correctly for server-to-server calls.
+
+- Client application writes now validate, canonicalize, and deduplicate comma-separated origins before persistence.
+- Only HTTP(S) origins are accepted. Scheme and host are case-normalized, IDN hosts are canonicalized, default ports are removed, and an optional trailing slash is removed.
+- Wildcard (`*`), opaque (`null`), credential-bearing, path-bearing, query-bearing, fragment-bearing, and malformed origins are rejected.
+- Actual browser requests for a resolved client must match that client's allowlist or receive `403 CLIENT_ORIGIN_NOT_ALLOWED`.
+- Requests without `Origin` remain valid for server-to-server and same-origin traffic; confidential clients still require their normal credentials.
+- `OPTIONS` preflight remains delegated to the centralized environment-backed Spring CORS configuration. The actual request is additionally constrained by the resolved client's narrower allowlist.
+- Tests cover normalized matches, mismatches, malformed values, absent origins, configuration validation/deduplication, and preflight delegation.
 
 #### Step 8.2: Allowed IP addresses
 

@@ -5,7 +5,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.net.URI;
-import java.util.Arrays;
+import java.net.IDN;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 
 @Component
 public class ClientOriginPolicy {
@@ -18,28 +21,56 @@ public class ClientOriginPolicy {
         }
         try {
             String normalizedRequestOrigin = normalize(requestOrigin);
-            return Arrays.stream(application.getAllowedOrigins().split(","))
-                    .map(String::trim)
-                    .filter(StringUtils::hasText)
-                    .map(this::normalize)
-                    .anyMatch(normalizedRequestOrigin::equals);
+            return parse(application.getAllowedOrigins()).contains(normalizedRequestOrigin);
         } catch (IllegalArgumentException ignored) {
             return false;
         }
     }
 
+    public String normalizeConfiguredOrigins(String configuredOrigins) {
+        if (!StringUtils.hasText(configuredOrigins)) {
+            return null;
+        }
+        Set<String> normalized = parse(configuredOrigins);
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return String.join(",", normalized);
+    }
+
+    private Set<String> parse(String configuredOrigins) {
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String configuredOrigin : configuredOrigins.split(",")) {
+            if (StringUtils.hasText(configuredOrigin)) {
+                normalized.add(normalize(configuredOrigin));
+            }
+        }
+        return normalized;
+    }
+
     private String normalize(String origin) {
+        if (!StringUtils.hasText(origin) || "null".equalsIgnoreCase(origin.trim()) || "*".equals(origin.trim())) {
+            throw new IllegalArgumentException("Opaque and wildcard origins are not allowed");
+        }
         URI uri = URI.create(origin.trim());
-        if (uri.getScheme() == null || uri.getHost() == null
+        String scheme = uri.getScheme() == null ? null : uri.getScheme().toLowerCase(Locale.ROOT);
+        if (!("http".equals(scheme) || "https".equals(scheme)) || uri.getHost() == null
+                || uri.getUserInfo() != null
                 || uri.getRawQuery() != null || uri.getRawFragment() != null
-                || uri.getPath() != null && !uri.getPath().isEmpty()) {
+                || uri.getPath() != null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())) {
             throw new IllegalArgumentException("Invalid origin");
+        }
+        String host = uri.getHost().toLowerCase(Locale.ROOT);
+        if (!host.contains(":")) {
+            host = IDN.toASCII(host);
+        } else {
+            host = "[" + host + "]";
         }
         int port = uri.getPort();
         boolean defaultPort = port == -1
-                || "http".equalsIgnoreCase(uri.getScheme()) && port == 80
-                || "https".equalsIgnoreCase(uri.getScheme()) && port == 443;
-        return uri.getScheme().toLowerCase() + "://" + uri.getHost().toLowerCase()
+                || "http".equals(scheme) && port == 80
+                || "https".equals(scheme) && port == 443;
+        return scheme + "://" + host
                 + (defaultPort ? "" : ":" + port);
     }
 }
