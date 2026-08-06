@@ -794,6 +794,8 @@ Invalidate caches after registry sync, permission assignment, user/role privileg
 
 #### Step 10.1: Emit structured authorization events
 
+**Status: implemented.**
+
 Record safe fields:
 
 - Trace ID.
@@ -804,6 +806,10 @@ Record safe fields:
 - Required privilege code.
 - Tenant/business/branch identifiers where non-sensitive.
 - Duration.
+
+`AuthorizationEventEmitter` publishes one immutable `AuthorizationDecisionEvent` for every access-control-evaluated request and writes the same event as a single JSON structured-log field. Emission occurs inside the client security filter before thread-local context cleanup, including early credential, origin, IP, rate-limit, unresolved-route, ambiguous-route, client-grant, and user-privilege denials.
+
+The event contains only the fields listed above. The user is represented by the server-resolved numeric user ID; organizational scopes are emitted as identifier sets. API keys, credential hashes, JWTs, headers, request/response bodies, usernames, and exception messages are excluded. Duration uses monotonic elapsed time and is reported in microseconds. Application-event publication provides an extension point for Step 10.2 metrics or a dedicated audit sink without coupling authorization to the log datasource.
 
 #### Step 10.2: Add metrics
 

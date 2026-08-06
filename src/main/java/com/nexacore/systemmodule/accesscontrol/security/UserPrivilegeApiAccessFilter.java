@@ -90,6 +90,8 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
                 .clientDenyReason(context.clientDenyReason())
                 .userDecision(status)
                 .userDenyReason(denyReason)
+                .userId(context.userId())
+                .scopeAssignments(context.scopeAssignments())
                 .build());
     }
 

@@ -48,6 +48,7 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
             api = clientApiRegistryService.resolve(request);
         } catch (ApiRouteAmbiguityException exception) {
             AccessControlError error = AccessControlError.API_REGISTRY_AMBIGUOUS;
+            updateDeniedContext(error.name());
             responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
             return;
         }
@@ -116,6 +117,8 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
                 .clientDenyReason(denyReason)
                 .userDecision(existing == null ? null : existing.userDecision())
                 .userDenyReason(existing == null ? null : existing.userDenyReason())
+                .userId(existing == null ? null : existing.userId())
+                .scopeAssignments(existing == null ? java.util.Set.of() : existing.scopeAssignments())
                 .build());
     }
 
@@ -126,6 +129,19 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
                 .clientApplication(existing == null ? null : existing.clientApplication())
                 .clientDecision("DENIED")
                 .clientDenyReason(AccessControlError.API_NOT_REGISTERED.name())
+                .userId(existing == null ? null : existing.userId())
+                .scopeAssignments(existing == null ? java.util.Set.of() : existing.scopeAssignments())
+                .build());
+    }
+
+    private void updateDeniedContext(String denialCode) {
+        ClientApplicationContext existing = ClientApplicationContextHolder.get().orElse(null);
+        ClientApplicationContextHolder.set(ClientApplicationContext.builder()
+                .traceId(existing == null ? null : existing.traceId())
+                .clientApplication(existing == null ? null : existing.clientApplication())
+                .clientDecision("DENIED").clientDenyReason(denialCode)
+                .userId(existing == null ? null : existing.userId())
+                .scopeAssignments(existing == null ? java.util.Set.of() : existing.scopeAssignments())
                 .build());
     }
 

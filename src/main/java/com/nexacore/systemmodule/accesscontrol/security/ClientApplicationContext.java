@@ -13,7 +13,9 @@ public record ClientApplicationContext(
         String clientDecision,
         String clientDenyReason,
         String userDecision,
-        String userDenyReason
+        String userDenyReason,
+        Long userId,
+        java.util.Set<UserScopeAssignment> scopeAssignments
 ) {
     public String decision() {
         if ("DENIED".equals(userDecision) || "DENIED".equals(clientDecision)) return "DENIED";

@@ -47,6 +47,19 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                         accessContext == null ? null : accessContext.traceId(),
                         privileges
                 ));
+                ClientApplicationContext current = ClientApplicationContextHolder.get().orElse(null);
+                if (current != null) {
+                    ClientApplicationContextHolder.set(ClientApplicationContext.builder()
+                            .traceId(current.traceId()).clientApplication(current.clientApplication())
+                            .apiRegistry(current.apiRegistry()).requiredPrivilegeCode(current.requiredPrivilegeCode())
+                            .clientDecision(current.clientDecision()).clientDenyReason(current.clientDenyReason())
+                            .userDecision(current.userDecision()).userDenyReason(current.userDenyReason())
+                            .userId(user.userId())
+                            .scopeAssignments(user.scopeAssignments() == null ? Set.of() : user.scopeAssignments().stream()
+                                    .map(scope -> new UserScopeAssignment(scope.tenantId(), scope.businessId(), scope.branchId()))
+                                    .collect(java.util.stream.Collectors.toUnmodifiableSet()))
+                            .build());
+                }
             }
             filterChain.doFilter(request, response);
         } finally {

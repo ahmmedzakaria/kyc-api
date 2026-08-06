@@ -31,6 +31,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     private final PublicRoutePolicy publicRoutePolicy;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
+    private final AuthorizationEventEmitter authorizationEventEmitter;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -45,6 +46,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String traceId = resolveTraceId(request);
+        long startedAt = System.nanoTime();
         response.setHeader(TRACE_ID_HEADER, traceId);
         SysPrivClientApplication application = null;
 
@@ -71,22 +73,22 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                     candidate = resolvedClient.get();
                 }
                 if (!clientOriginPolicy.isAllowed(candidate, request.getHeader("Origin"))) {
-                    deny(response, traceId, AccessControlError.CLIENT_ORIGIN_NOT_ALLOWED);
+                    deny(response, traceId, candidate, AccessControlError.CLIENT_ORIGIN_NOT_ALLOWED);
                     return;
                 }
                 if (!clientIpPolicy.isAllowed(candidate, request)) {
-                    deny(response, traceId, AccessControlError.CLIENT_IP_NOT_ALLOWED);
+                    deny(response, traceId, candidate, AccessControlError.CLIENT_IP_NOT_ALLOWED);
                     return;
                 }
                 try {
                     ClientRateLimitDecision rateLimit = clientRateLimiter.check(candidate, request);
                     applyRateLimitHeaders(response, rateLimit);
                     if (!rateLimit.allowed()) {
-                        deny(response, traceId, AccessControlError.RATE_LIMIT_EXCEEDED);
+                        deny(response, traceId, candidate, AccessControlError.RATE_LIMIT_EXCEEDED);
                         return;
                     }
                 } catch (RateLimitBackendUnavailableException ex) {
-                    deny(response, traceId, AccessControlError.RATE_LIMIT_UNAVAILABLE);
+                    deny(response, traceId, candidate, AccessControlError.RATE_LIMIT_UNAVAILABLE);
                     return;
                 }
                 application = candidate;
@@ -95,6 +97,8 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
             setContext(traceId, application, null, null);
             filterChain.doFilter(request, response);
         } finally {
+            authorizationEventEmitter.emit(request.getMethod(), ClientApplicationContextHolder.get().orElse(null),
+                    System.nanoTime() - startedAt);
             ClientApplicationContextHolder.clear();
         }
     }
@@ -102,7 +106,14 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     private void deny(HttpServletResponse response,
                       String traceId,
                       AccessControlError error) throws IOException {
-        setContext(traceId, null, "DENIED", error.name());
+        deny(response, traceId, null, error);
+    }
+
+    private void deny(HttpServletResponse response,
+                      String traceId,
+                      SysPrivClientApplication application,
+                      AccessControlError error) throws IOException {
+        setContext(traceId, application, "DENIED", error.name());
         responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
     }
 
@@ -112,6 +123,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                 .clientApplication(application)
                 .clientDecision(decision)
                 .clientDenyReason(denyReason)
+                .scopeAssignments(java.util.Set.of())
                 .build());
     }
 

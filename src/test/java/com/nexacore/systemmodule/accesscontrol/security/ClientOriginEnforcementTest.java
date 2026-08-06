@@ -42,7 +42,8 @@ class ClientOriginEnforcementTest {
     };
     private final ClientApplicationAuthenticationFilter filter = new ClientApplicationAuthenticationFilter(
             credentials, new ClientOriginPolicy(), new ClientIpPolicy(properties), rateLimiter, new PublicRoutePolicy(),
-            new ApiResponseJsonWriter(new ObjectMapper()), properties);
+            new ApiResponseJsonWriter(new ObjectMapper()), properties,
+            new AuthorizationEventEmitter(event -> {}, new ObjectMapper()));
 
     @Test
     void allowsConfiguredBrowserOrigin() throws Exception {
