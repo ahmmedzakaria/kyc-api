@@ -54,19 +54,37 @@ public class ClientOriginPolicy {
         }
         URI uri = URI.create(origin.trim());
         String scheme = uri.getScheme() == null ? null : uri.getScheme().toLowerCase(Locale.ROOT);
-        if (!("http".equals(scheme) || "https".equals(scheme)) || uri.getHost() == null
+        String parsedHost = uri.getHost();
+        int port = uri.getPort();
+        if (parsedHost == null && uri.getRawAuthority() != null && !uri.getRawAuthority().contains("@")) {
+            String authority = uri.getRawAuthority();
+            int portSeparator = authority.lastIndexOf(':');
+            if (portSeparator > -1 && authority.indexOf(':') == portSeparator) {
+                try {
+                    port = Integer.parseInt(authority.substring(portSeparator + 1));
+                    parsedHost = authority.substring(0, portSeparator);
+                } catch (NumberFormatException ignored) {
+                    parsedHost = authority;
+                }
+            } else {
+                parsedHost = authority;
+            }
+        }
+        if (!("http".equals(scheme) || "https".equals(scheme)) || parsedHost == null
                 || uri.getUserInfo() != null
                 || uri.getRawQuery() != null || uri.getRawFragment() != null
                 || uri.getPath() != null && !uri.getPath().isEmpty() && !"/".equals(uri.getPath())) {
             throw new IllegalArgumentException("Invalid origin");
         }
-        String host = uri.getHost().toLowerCase(Locale.ROOT);
+        String host = parsedHost.toLowerCase(Locale.ROOT);
         if (!host.contains(":")) {
             host = IDN.toASCII(host);
         } else {
             host = "[" + host + "]";
         }
-        int port = uri.getPort();
+        if (port < -1 || port > 65535) {
+            throw new IllegalArgumentException("Invalid origin port");
+        }
         boolean defaultPort = port == -1
                 || "http".equals(scheme) && port == 80
                 || "https".equals(scheme) && port == 443;

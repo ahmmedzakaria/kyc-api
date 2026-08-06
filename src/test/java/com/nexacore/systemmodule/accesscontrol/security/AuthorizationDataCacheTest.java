@@ -54,4 +54,15 @@ class AuthorizationDataCacheTest {
         verify(cacheService).delete("authorization:client-grants:9");
         verify(cacheService).deleteByPattern("authorization:user-privileges:*:9");
     }
+
+    @Test
+    void registryAndUserInvalidationsEvictOnlyTheirNamespaces() {
+        cache.invalidateRegistryAfterCommit();
+        cache.invalidateUserAfterCommit(7L);
+        cache.invalidateAllUserPrivilegesAfterCommit();
+
+        verify(cacheService).deleteByPattern("authorization:registry:*");
+        verify(cacheService).deleteByPattern("authorization:user-privileges:7:*");
+        verify(cacheService).deleteByPattern("authorization:user-privileges:*");
+    }
 }

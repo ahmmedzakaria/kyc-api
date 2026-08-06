@@ -831,6 +831,8 @@ Alert on spikes in administrative denials, invalid credentials, and unregistered
 
 #### Step 11.1: Unit tests
 
+Implementation status: **implemented**. Focused unit tests cover access/refresh token purpose binding, deterministic and fail-closed route matching, public/private client decisions and API/feature grants, enforced and report-mode user privilege decisions, hierarchical tenant/business/branch scope and client scope, strict origin normalization, trusted-proxy IP/CIDR parsing, and registry/client/user authorization-cache invalidation.
+
 Cover token type, route matching, client decisions, user privilege decisions, tenant scope, origin/IP parsing, and cache invalidation.
 
 #### Step 11.2: Filter-chain integration tests

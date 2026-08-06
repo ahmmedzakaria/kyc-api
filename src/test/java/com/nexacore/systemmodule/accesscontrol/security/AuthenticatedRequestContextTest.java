@@ -76,4 +76,31 @@ class AuthenticatedRequestContextTest {
         assertThat(new DataScopeService().requireWritableScope(11L, 12L, 13L))
                 .isEqualTo(new UserScopeAssignment(11L, 12L, 13L));
     }
+
+    @Test
+    void multipleAssignmentsRequireExplicitWritableScope() {
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                7L, "operator", 3L, "WEB", Set.of(
+                new UserScopeAssignment(11L, null, null),
+                new UserScopeAssignment(22L, 23L, null)), "trace-1", Set.of()));
+        DataScopeService service = new DataScopeService();
+
+        assertThatThrownBy(() -> service.requireWritableScope(null, null, null))
+                .isInstanceOf(DataScopeAccessDeniedException.class)
+                .hasMessageContaining("explicit organizational scope");
+        assertThat(service.requireWritableScope(22L, 23L, 24L))
+                .isEqualTo(new UserScopeAssignment(22L, 23L, 24L));
+    }
+
+    @Test
+    void currentClientScopeMustMatchExactly() {
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                7L, "operator", 3L, "WEB", Set.of(new UserScopeAssignment(11L, null, null)),
+                "trace-1", Set.of()));
+        DataScopeService service = new DataScopeService();
+
+        service.requireCurrentClient(3L);
+        assertThatThrownBy(() -> service.requireCurrentClient(4L))
+                .isInstanceOf(DataScopeAccessDeniedException.class);
+    }
 }

@@ -77,6 +77,31 @@ class ClientAccessDecisionServiceImplTest {
     }
 
     @Test
+    void deniesWhenClientDoesNotHaveApiGrant() {
+        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysPrivApiRegistry api = SysPrivApiRegistry.builder().id(20L).publicApi(false).active(true).build();
+        when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of());
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L)).thenReturn(Set.of());
+
+        ClientAccessDecisionDto decision = service.decide(client, api);
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.denyReason()).isEqualTo("CLIENT_API_NOT_ALLOWED");
+    }
+
+    @Test
+    void allowsClientWithApiAndRequiredFeatureGrants() {
+        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysPrivApiRegistry api = SysPrivApiRegistry.builder().id(20L)
+                .requiredPrivilegeCode("01010200101").publicApi(false).active(true).build();
+        when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of(20L));
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L))
+                .thenReturn(Set.of("01010200101"));
+
+        assertThat(service.decide(client, api).allowed()).isTrue();
+    }
+
+    @Test
     void filtersUserPrivilegeCodesByClientFeaturePermissions() {
         SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
         Set<String> userPrivilegeCodes = Set.of("01010200101", "01010200201");
