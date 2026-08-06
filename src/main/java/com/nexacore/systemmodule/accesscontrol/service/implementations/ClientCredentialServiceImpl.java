@@ -22,14 +22,24 @@ public class ClientCredentialServiceImpl implements ClientCredentialService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public Optional<SysPrivClientApplication> resolveActiveClient(String clientCode) {
+        if (clientCode == null || clientCode.isBlank()) {
+            return Optional.empty();
+        }
+        return clientApplicationRepository.findByClientCode(clientCode.trim())
+                .filter(application -> application.getStatus() == ClientApplicationStatus.ACTIVE);
+    }
+
+    @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public Optional<SysPrivClientApplication> validateApiKey(String clientCode, String apiKey) {
         if (clientCode == null || clientCode.isBlank() || apiKey == null || apiKey.isBlank()) {
             return Optional.empty();
         }
 
-        Optional<SysPrivClientApplication> application = clientApplicationRepository.findByClientCode(clientCode.trim());
-        if (application.isEmpty() || application.get().getStatus() != ClientApplicationStatus.ACTIVE) {
+        Optional<SysPrivClientApplication> application = resolveActiveClient(clientCode);
+        if (application.isEmpty()) {
             return Optional.empty();
         }
 

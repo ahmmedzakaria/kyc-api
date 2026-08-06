@@ -457,6 +457,8 @@ Acceptance criteria:
 
 #### Step 3.1: Create one public-route source
 
+Implementation status: **implemented**. `PublicRoutePolicy` is the authoritative public-path list used by `SecurityConfig`, `ClientApplicationAuthenticationFilter`, `ClientApiAccessFilter`, and `UserPrivilegeApiAccessFilter`. The refresh endpoint is included as an unauthenticated-access-token route, and browser origin URLs have been removed from Spring request matchers.
+
 Remove duplicated arrays from the security filters. Define one shared public-route policy used by:
 
 - `SecurityConfig`.
@@ -468,6 +470,8 @@ Remove origin URLs such as `http://localhost:4200` from request matchers. Origin
 
 #### Step 3.2: Distinguish public and confidential clients
 
+Implementation status: **implemented**. `ClientApplicationType` classifies WEB and MOBILE as public clients and POS, ERP, PARTNER_PORTAL, and INTERNAL_SERVICE as confidential clients. Public clients establish application context with an active client code and do not treat a bundled API key as a secret requirement. Confidential clients require a valid API key. Resolved browser clients are also checked against their normalized per-client allowed-origin list.
+
 Define client authentication behavior by `ClientApplicationType`:
 
 - Browser SPA/public client: client code is context, not a secret credential.
@@ -477,6 +481,8 @@ Define client authentication behavior by `ClientApplicationType`:
 Do not ship a confidential API key inside Angular bundles.
 
 #### Step 3.3: Externalize CORS
+
+Implementation status: **implemented**. `CorsProperties` binds allowed origins, methods, headers, exposed headers, credential behavior, and preflight max age from environment-backed configuration. `SecurityConfig` consumes these properties rather than compiled localhost values, while `ClientOriginPolicy` enforces the resolved client's narrower origin allowlist.
 
 Move allowed origins, methods, and headers to typed configuration. Validate requested origin against deployment policy and, where applicable, the resolved client application's allowed origins.
 

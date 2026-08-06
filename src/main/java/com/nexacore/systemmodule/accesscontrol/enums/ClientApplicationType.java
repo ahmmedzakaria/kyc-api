@@ -6,5 +6,12 @@ public enum ClientApplicationType {
     POS,
     ERP,
     PARTNER_PORTAL,
-    INTERNAL_SERVICE
+    INTERNAL_SERVICE;
+
+    public boolean isConfidential() {
+        return switch (this) {
+            case WEB, MOBILE -> false;
+            case POS, ERP, PARTNER_PORTAL, INTERNAL_SERVICE -> true;
+        };
+    }
 }

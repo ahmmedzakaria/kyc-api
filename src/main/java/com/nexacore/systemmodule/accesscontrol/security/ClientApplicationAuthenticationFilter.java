@@ -10,7 +10,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -25,30 +24,18 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     public static final String API_KEY_HEADER = "X-API-Key";
     public static final String TRACE_ID_HEADER = "X-Trace-Id";
 
-    private static final String[] PUBLIC_PATHS = {
-            "/api/v1/auth/login",
-            "/api/v1/auth/authenticate",
-            "/api/v1/auth/config",
-            "/api/v1/auth/application-context/public",
-            "/api/v1/auth/sso/authenticate",
-            "/api/v1/auth/login-status",
-            "/oauth2/**",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html"
-    };
-
     private final ClientCredentialService clientCredentialService;
+    private final ClientOriginPolicy clientOriginPolicy;
+    private final PublicRoutePolicy publicRoutePolicy;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
         return !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || matchesPublicPath(path);
+                || publicRoutePolicy.isPublic(path);
     }
 
     @Override
@@ -62,15 +49,30 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         try {
             String clientCode = request.getHeader(CLIENT_CODE_HEADER);
             String apiKey = request.getHeader(API_KEY_HEADER);
-            if (hasText(clientCode) || hasText(apiKey)) {
-                Optional<SysPrivClientApplication> resolvedClient = clientCredentialService.validateApiKey(clientCode, apiKey);
+            if (hasText(apiKey) && !hasText(clientCode)) {
+                deny(response, traceId, AccessControlError.INVALID_CLIENT_CREDENTIALS);
+                return;
+            }
+            if (hasText(clientCode)) {
+                Optional<SysPrivClientApplication> resolvedClient = clientCredentialService.resolveActiveClient(clientCode);
                 if (resolvedClient.isEmpty()) {
-                    setContext(traceId, null, "DENIED", "INVALID_CLIENT_CREDENTIALS");
-                    AccessControlError error = AccessControlError.INVALID_CLIENT_CREDENTIALS;
-                    responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
+                    deny(response, traceId, AccessControlError.INVALID_CLIENT_CREDENTIALS);
                     return;
                 }
-                application = resolvedClient.get();
+                SysPrivClientApplication candidate = resolvedClient.get();
+                if (candidate.getClientType() == null || candidate.getClientType().isConfidential()) {
+                    resolvedClient = clientCredentialService.validateApiKey(clientCode, apiKey);
+                    if (resolvedClient.isEmpty()) {
+                        deny(response, traceId, AccessControlError.INVALID_CLIENT_CREDENTIALS);
+                        return;
+                    }
+                    candidate = resolvedClient.get();
+                }
+                if (!clientOriginPolicy.isAllowed(candidate, request.getHeader("Origin"))) {
+                    deny(response, traceId, AccessControlError.CLIENT_ORIGIN_NOT_ALLOWED);
+                    return;
+                }
+                application = candidate;
             }
 
             setContext(traceId, application, null, null);
@@ -78,6 +80,13 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         } finally {
             ClientApplicationContextHolder.clear();
         }
+    }
+
+    private void deny(HttpServletResponse response,
+                      String traceId,
+                      AccessControlError error) throws IOException {
+        setContext(traceId, null, "DENIED", error.name());
+        responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
     }
 
     private void setContext(String traceId, SysPrivClientApplication application, String decision, String denyReason) {
@@ -92,15 +101,6 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     private String resolveTraceId(HttpServletRequest request) {
         String existingTraceId = request.getHeader(TRACE_ID_HEADER);
         return hasText(existingTraceId) ? existingTraceId.trim() : UUID.randomUUID().toString();
-    }
-
-    private boolean matchesPublicPath(String path) {
-        for (String pattern : PUBLIC_PATHS) {
-            if (pathMatcher.match(pattern, path)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean hasText(String value) {

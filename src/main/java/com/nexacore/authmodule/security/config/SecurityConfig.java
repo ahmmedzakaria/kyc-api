@@ -6,6 +6,7 @@ import com.nexacore.authmodule.security.jwt.JwtAuthEntryPoint;
 import com.nexacore.systemmodule.accesscontrol.security.ClientApiAccessFilter;
 import com.nexacore.systemmodule.accesscontrol.security.ClientApplicationAuthenticationFilter;
 import com.nexacore.systemmodule.accesscontrol.security.UserPrivilegeApiAccessFilter;
+import com.nexacore.systemmodule.accesscontrol.security.PublicRoutePolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,11 +17,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
-
-import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
@@ -33,24 +29,8 @@ public class SecurityConfig {
     private final UserPrivilegeApiAccessFilter userPrivilegeApiAccessFilter;
     private final AuthenticationProviderConfig authenticationProviderConfig;
     private final JwtAuthEntryPoint authenticationEntryPoint;
-
-    private final String[] AUTH_WHITELIST = {
-            "/api/v1/auth/login",
-            "/api/v1/auth/authenticate",
-            "/api/v1/auth/config",
-            "/api/v1/auth/application-context/public",
-            "/api/v1/auth/sso/authenticate",
-            "/api/v1/auth/login-status",
-            "/oauth2/**",
-            "/users/register",
-            "/api/v1/auth/test",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "http://localhost:4200",
-            "http://localhost:4300",
-            "http://localhost:5300"
-    };
+    private final PublicRoutePolicy publicRoutePolicy;
+    private final CorsProperties corsProperties;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -58,7 +38,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(AUTH_WHITELIST).permitAll()
+                        .requestMatchers(publicRoutePolicy.patterns()).permitAll()
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // expects ROLE_ADMIN
 //                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
@@ -72,14 +52,12 @@ public class SecurityConfig {
                 .addFilterAfter(userPrivilegeApiAccessFilter, JwtAuthenticationFilter.class)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOrigins(List.of(
-                            "http://localhost:4200",
-                            "http://localhost:4300",
-                            "http://localhost:5300"
-                    ));
-                    config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
-                    config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Silent", "X-Client-Code", "X-API-Key", "X-Trace-Id"));
-                    config.setExposedHeaders(List.of("X-Trace-Id"));
+                    config.setAllowedOrigins(corsProperties.getAllowedOrigins());
+                    config.setAllowedMethods(corsProperties.getAllowedMethods());
+                    config.setAllowedHeaders(corsProperties.getAllowedHeaders());
+                    config.setExposedHeaders(corsProperties.getExposedHeaders());
+                    config.setAllowCredentials(corsProperties.isAllowCredentials());
+                    config.setMaxAge(corsProperties.getMaxAgeSeconds());
                     return config;
                 }));
 

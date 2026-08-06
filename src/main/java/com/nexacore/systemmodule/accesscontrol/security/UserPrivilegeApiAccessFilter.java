@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -23,30 +22,18 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
 
-    private static final String[] PUBLIC_PATHS = {
-            "/api/v1/auth/login",
-            "/api/v1/auth/authenticate",
-            "/api/v1/auth/config",
-            "/api/v1/auth/sso/authenticate",
-            "/api/v1/auth/login-status",
-            "/oauth2/**",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html"
-    };
-
     private final ClientApiRegistryService clientApiRegistryService;
     private final PrivilegeService privilegeService;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+    private final PublicRoutePolicy publicRoutePolicy;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
         return !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || matchesPublicPath(path);
+                || publicRoutePolicy.isPublic(path);
     }
 
     @Override
@@ -79,12 +66,4 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean matchesPublicPath(String path) {
-        for (String pattern : PUBLIC_PATHS) {
-            if (pathMatcher.match(pattern, path)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }
