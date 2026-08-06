@@ -679,7 +679,20 @@ Do not fetch cross-tenant data and filter it in memory.
 
 #### Step 7.4: Test object-level authorization
 
+**Status: implemented for the current scoped Person and Workflow runtime surfaces.**
+
 Add tests proving that a user/client authorized for tenant A cannot read, update, delete, or download tenant B records, including direct-ID requests.
+
+Coverage now includes:
+
+- Tenant A cannot read a tenant B KYC profile or profile photo by direct profile ID.
+- Tenant A cannot update or delete a tenant B KYC profile.
+- Tenant A cannot list or download tenant B profile documents; document and file-storage repositories are not reached after scoped profile resolution fails.
+- Tenant A cannot read or complete a tenant B workflow task by direct task ID.
+- Tenant A cannot read a tenant B workflow instance or its history by direct instance ID; workflow mutation/history repositories are not reached.
+- Hierarchical assignment tests separately prove that branch scope cannot widen to business/tenant scope and that tenant assignments cover permitted descendants.
+
+The tests deliberately expect not-found behavior for inaccessible object IDs, avoiding cross-tenant object-existence disclosure. PostgreSQL/Testcontainers application-context coverage remains environment-dependent and is skipped when Docker is unavailable.
 
 ### Phase 8: Enforce client operational policy
 
