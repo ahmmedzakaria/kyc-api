@@ -18,7 +18,7 @@ public interface UserPrivilegeRepository extends JpaRepository<SysPrivUserPrivil
             USING sys_priv_privileges privilege
             WHERE assignment.privilege_id = privilege.id
               AND assignment.user_id = :userId
-              AND privilege.module_code = :moduleCode
+              AND privilege.privilege_code LIKE CONCAT(:moduleCode, '%')
             """, nativeQuery = true)
     void deleteByUserIdAndPrivilegeModuleCode(@Param("userId") Long userId,
                                                @Param("moduleCode") String moduleCode);

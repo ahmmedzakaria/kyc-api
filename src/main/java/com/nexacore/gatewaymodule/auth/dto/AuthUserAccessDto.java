@@ -8,6 +8,9 @@ import java.util.Set;
 public record AuthUserAccessDto(
         Long userId,
         Long personId,
+        Long tenantId,
+        Long businessId,
+        Long branchId,
         Set<Long> roleIds,
         boolean admin
 ) {

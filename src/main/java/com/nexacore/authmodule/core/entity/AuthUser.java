@@ -30,6 +30,15 @@ public class AuthUser extends ActionInfo {
     @Column(name = "person_id", unique = true)
     private Long personId;
 
+    @Column(name = "tenant_id")
+    private Long tenantId;
+
+    @Column(name = "business_id")
+    private Long businessId;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
     @JsonIgnore
     @Column(nullable = true)
     private String password;

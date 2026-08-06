@@ -4,6 +4,7 @@ import com.nexacore.appconfigmodule.ConfigConstants;
 import com.nexacore.authmodule.security.filter.JwtAuthenticationFilter;
 import com.nexacore.authmodule.security.jwt.JwtAuthEntryPoint;
 import com.nexacore.systemmodule.accesscontrol.security.ClientApiAccessFilter;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextFilter;
 import com.nexacore.systemmodule.accesscontrol.security.ClientApplicationAuthenticationFilter;
 import com.nexacore.systemmodule.accesscontrol.security.UserPrivilegeApiAccessFilter;
 import com.nexacore.systemmodule.accesscontrol.security.PublicRoutePolicy;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     private final ClientApplicationAuthenticationFilter clientApplicationAuthenticationFilter;
     private final ClientApiAccessFilter clientApiAccessFilter;
     private final UserPrivilegeApiAccessFilter userPrivilegeApiAccessFilter;
+    private final AuthenticatedRequestContextFilter authenticatedRequestContextFilter;
     private final AuthenticationProviderConfig authenticationProviderConfig;
     private final JwtAuthEntryPoint authenticationEntryPoint;
     private final PublicRoutePolicy publicRoutePolicy;
@@ -49,7 +51,8 @@ public class SecurityConfig {
                 .addFilterBefore(clientApplicationAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(clientApiAccessFilter, ClientApplicationAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(userPrivilegeApiAccessFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(authenticatedRequestContextFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(userPrivilegeApiAccessFilter, AuthenticatedRequestContextFilter.class)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(corsProperties.getAllowedOrigins());

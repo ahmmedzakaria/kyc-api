@@ -2,7 +2,6 @@ package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
-import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,7 +20,6 @@ import java.io.IOException;
 @Slf4j
 public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
 
-    private final PrivilegeService privilegeService;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
     private final PublicRoutePolicy publicRoutePolicy;
@@ -54,8 +52,9 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
             return;
         }
 
-        boolean allowed = privilegeService.getUserPrivilegeCodes(authentication.getName())
-                .contains(context.requiredPrivilegeCode());
+        AuthenticatedRequestContext authenticatedContext = AuthenticatedRequestContextHolder.get().orElse(null);
+        boolean allowed = authenticatedContext != null
+                && authenticatedContext.effectivePrivilegeCodes().contains(context.requiredPrivilegeCode());
         updateUserDecision(context, allowed ? "ALLOWED" : "DENIED",
                 allowed ? null : AccessControlError.USER_PRIVILEGE_NOT_ALLOWED.name());
         if (!allowed) {
