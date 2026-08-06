@@ -205,7 +205,7 @@ Each module implementation provides:
 Example owner:
 
 ```text
-KYC module owns Person, KYC Record, and KYC Report feature definitions.
+KYC currently publishes only the implemented Person feature definition. KYC Record and KYC Report remain retired until their application features are implemented.
 ```
 
 This keeps inter-module communication interface-based and loosely coupled. Auth only depends on the interface and DTOs, not on KYC internals.

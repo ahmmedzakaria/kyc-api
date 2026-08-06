@@ -6,12 +6,15 @@ import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
@@ -19,6 +22,8 @@ import com.nexacore.systemmodule.privilege.catalog.repository.SubMenuRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.UserPrivilegeRepository;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -36,11 +41,15 @@ class PrivilegeServiceImplTest {
     private final ModuleRepository moduleRepository = mock(ModuleRepository.class);
     private final SubmoduleRepository submoduleRepository = mock(SubmoduleRepository.class);
     private final FeatureRepository featureRepository = mock(FeatureRepository.class);
+    private final FeatureTypeRepository featureTypeRepository = mock(FeatureTypeRepository.class);
+    private final ActionRepository actionRepository = mock(ActionRepository.class);
     private final AuthModuleGateway authModuleGateway = mock(AuthModuleGateway.class);
     private final SubMenuRepository subMenuRepository = mock(SubMenuRepository.class);
     private final ClientApplicationContextService clientApplicationContextService = mock(ClientApplicationContextService.class);
     private final AuthApplicationContextService authApplicationContextService = mock(AuthApplicationContextService.class);
     private final LayoutContextService layoutContextService = mock(LayoutContextService.class);
+    private final LayoutRoutePolicyService layoutRoutePolicyService = mock(LayoutRoutePolicyService.class);
+    private final LayoutUiPolicyService layoutUiPolicyService = mock(LayoutUiPolicyService.class);
     private final PrivilegeServiceImpl service = new PrivilegeServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
@@ -48,12 +57,16 @@ class PrivilegeServiceImplTest {
             moduleRepository,
             submoduleRepository,
             featureRepository,
+            featureTypeRepository,
+            actionRepository,
             authModuleGateway,
             subMenuRepository,
             List.of(),
             clientApplicationContextService,
             authApplicationContextService,
-            layoutContextService
+            layoutContextService,
+            layoutRoutePolicyService,
+            layoutUiPolicyService
     );
 
     @Test
@@ -121,10 +134,14 @@ class PrivilegeServiceImplTest {
         return SysPrivFeature.builder()
                 .id(id)
                 .submodule(submodule)
-                .featureTypeCode(FeatureType.OPERATIONS.getCode())
-                .featureTypeName(FeatureType.OPERATIONS.getDisplayName())
-                .code(String.format("%03d", id))
-                .name(name)
+                .featureType(SysPrivFeatureType.builder()
+                        .id(1L)
+                        .featureTypeCode(FeatureType.OPERATIONS.getCode())
+                        .featureTypeName(FeatureType.OPERATIONS.getDisplayName())
+                        .active(true)
+                        .build())
+                .featureCode(String.format("%03d", id))
+                .featureName(name)
                 .active(true)
                 .build();
     }

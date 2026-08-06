@@ -32,6 +32,7 @@ public class KycPrivilegeProvider implements ModulePrivilegeProvider {
                         action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.CREATE),
                         action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.UPDATE),
                         action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.DELETE),
+                        action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.APPROVE),
                         action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.REJECT),
                         action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.SEND_BACK),
                         action(FeatureType.OPERATIONS, PERSON_FEATURE_CODE, PrivilegeAction.VIEW),

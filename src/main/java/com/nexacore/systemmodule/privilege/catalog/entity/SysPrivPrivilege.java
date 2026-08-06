@@ -62,10 +62,15 @@ public class SysPrivPrivilege extends ActionInfo {
     @Transient
     private String featureName;
 
-    @Column(nullable = false, length = 2)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "action_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    private SysPrivAction action;
+
+    @Transient
     private String actionCode;
 
-    @Column(nullable = false)
+    @Transient
     private String actionName;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -109,10 +114,18 @@ public class SysPrivPrivilege extends ActionInfo {
     }
 
     public String getFeatureCode() {
-        return feature != null ? feature.getCode() : featureCode;
+        return feature != null ? feature.getFeatureCode() : featureCode;
     }
 
     public String getFeatureName() {
-        return feature != null ? feature.getName() : featureName;
+        return feature != null ? feature.getFeatureName() : featureName;
+    }
+
+    public String getActionCode() {
+        return action != null ? action.getActionCode() : actionCode;
+    }
+
+    public String getActionName() {
+        return action != null ? action.getActionName() : actionName;
     }
 }

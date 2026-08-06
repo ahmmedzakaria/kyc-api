@@ -28,6 +28,9 @@ import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.catalog.enums.PrivilegeAction;
+import com.nexacore.systemmodule.layout.enums.PrivilegeMatchMode;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -51,6 +54,8 @@ public class DataSeeder {
                                    ClientApplicationService clientApplicationService,
                                    ClientPermissionService clientPermissionService,
                                    ClientApiRegistryService clientApiRegistryService,
+                                   LayoutRoutePolicyService layoutRoutePolicyService,
+                                   LayoutUiPolicyService layoutUiPolicyService,
                                    AuthClientAuthPolicyRepository authPolicyRepository,
                                    AuthenticationProperties authenticationProperties,
                                    PasswordEncoder passwordEncoder) {
@@ -61,33 +66,22 @@ public class DataSeeder {
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_OPERATOR"));
             AuthRole kycApproverRole = roleRepository.findByName("ROLE_KYC_APPROVER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_APPROVER"));
-            AuthRole reportViewerRole = roleRepository.findByName("ROLE_REPORT_VIEWER")
-                    .orElseGet(() -> createRole(roleRepository, "ROLE_REPORT_VIEWER"));
-
             systemPrivilegeRegistryService.syncApplicationCatalog();
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
             systemPrivilegeRegistryService.assignRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
-            assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
+            assignRolePrivileges(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.DELETE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.CREATE),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.UPDATE),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH)
             ));
-            assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, kycApproverRole, Set.of(
+            assignRolePrivileges(systemPrivilegeRegistryService, kycApproverRole, Set.of(
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.APPROVE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.REJECT),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEND_BACK),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "002", PrivilegeAction.SEARCH)
-            ));
-            assignRolePrivilegesIfMissing(systemPrivilegeRegistryService, reportViewerRole, Set.of(
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.REPORT, "003", PrivilegeAction.SEARCH)
+                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH)
             ));
 
             seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
@@ -100,11 +94,8 @@ public class DataSeeder {
                     "kyc_approver", "123", "approver@example.com", "01700000002", "Kyc", "Approver", kycApproverRole);
 
             seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
-                    "report_user", "123", "report@example.com", "01700000003", "Report", "User", reportViewerRole);
-
-            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
                     "kyc_manager", "123", "manager@example.com", "01700000004", "Kyc", "Manager",
-                    kycOperatorRole, kycApproverRole, reportViewerRole);
+                    kycOperatorRole, kycApproverRole);
 
             seedDefaultWebClient(
                     clientApplicationService,
@@ -112,6 +103,9 @@ public class DataSeeder {
                     clientApiRegistryService,
                     adminPrivilegeCodes
             );
+
+            seedPersonRoutePolicies(layoutRoutePolicyService);
+            seedPersonUiPolicies(layoutUiPolicyService);
 
             seedDefaultAuthPolicies(authPolicyRepository, authenticationProperties);
         };
@@ -191,6 +185,39 @@ public class DataSeeder {
         seedClientAuthPolicy(authPolicyRepository, "nexacore-client", authenticationProperties);
 
         seedClientAuthPolicy(authPolicyRepository, "privilege-frontend", authenticationProperties);
+    }
+
+    private void seedPersonRoutePolicies(LayoutRoutePolicyService routePolicyService) {
+        routePolicyService.synchronizePolicy("WEB", "/person", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW)
+        ), 0L);
+        routePolicyService.synchronizePolicy("WEB", "/person/create", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE)
+        ), 0L);
+        routePolicyService.synchronizePolicy("WEB", "/person/:id/edit", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE)
+        ), 0L);
+        routePolicyService.synchronizePolicy("WEB", "/person/:id/preview", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW)
+        ), 0L);
+    }
+
+    private void seedPersonUiPolicies(LayoutUiPolicyService uiPolicyService) {
+        uiPolicyService.synchronizePolicy("WEB", "person.list.add-button", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE)
+        ), 0L);
+        uiPolicyService.synchronizePolicy("WEB", "person.list.edit-button", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE)
+        ), 0L);
+        uiPolicyService.synchronizePolicy("WEB", "person.list.delete-button", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.DELETE)
+        ), 0L);
+        uiPolicyService.synchronizePolicy("WEB", "person.list.preview-button", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW)
+        ), 0L);
+        uiPolicyService.synchronizePolicy("WEB", "person.preview.edit-button", PrivilegeMatchMode.ANY, Set.of(
+                code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE)
+        ), 0L);
     }
 
     private void seedClientAuthPolicy(AuthClientAuthPolicyRepository authPolicyRepository,
@@ -324,10 +351,7 @@ public class DataSeeder {
         return systemPrivilegeRegistryService.savePrivilege(privilege);
     }
 
-    private void assignRolePrivilegesIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService, AuthRole role, Set<String> privilegeCodes) {
-        if (systemPrivilegeRegistryService.countRolePrivileges(role.getId()) > 0) {
-            return;
-        }
+    private void assignRolePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService, AuthRole role, Set<String> privilegeCodes) {
         systemPrivilegeRegistryService.assignRolePrivileges(role.getId(), privilegeCodes);
     }
 

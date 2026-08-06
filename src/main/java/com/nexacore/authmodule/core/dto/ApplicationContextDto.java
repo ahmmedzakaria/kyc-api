@@ -1,5 +1,7 @@
 package com.nexacore.authmodule.core.dto;
 
+import com.nexacore.commonmodule.dto.RoutePrivilegePolicyDto;
+import com.nexacore.commonmodule.dto.UiPrivilegePolicyDto;
 import com.nexacore.authmodule.core.enums.LoginIdentifierType;
 import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.core.enums.RegistrationCredentialModel;
@@ -11,6 +13,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -46,6 +50,12 @@ public class ApplicationContextDto {
 
     @Builder.Default
     private Set<String> enabledFeatures = new HashSet<>();
+
+    @Builder.Default
+    private List<RoutePrivilegePolicyDto> routePolicies = new ArrayList<>();
+
+    @Builder.Default
+    private List<UiPrivilegePolicyDto> uiPolicies = new ArrayList<>();
 
     private Object layout;
 }

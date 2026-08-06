@@ -16,6 +16,8 @@ import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationContextDto;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilege;
@@ -26,7 +28,11 @@ import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivUserPrivileg
 import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivUserPrivilegeId;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
@@ -66,12 +72,16 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final ModuleRepository moduleRepository;
     private final SubmoduleRepository submoduleRepository;
     private final FeatureRepository featureRepository;
+    private final FeatureTypeRepository featureTypeRepository;
+    private final ActionRepository actionRepository;
     private final AuthModuleGateway authModuleGateway;
     private final SubMenuRepository subMenuRepository;
     private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
     private final ClientApplicationContextService clientApplicationContextService;
     private final AuthApplicationContextService authApplicationContextService;
     private final LayoutContextService layoutContextService;
+    private final LayoutRoutePolicyService layoutRoutePolicyService;
+    private final LayoutUiPolicyService layoutUiPolicyService;
 
     @Override
     public String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode) {
@@ -100,8 +110,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         privilege.setPrivilegeCode(privilegeCode);
         privilege.setFeature(resolveFeature(requestDto));
-        privilege.setActionCode(requestDto.getActionCode());
-        privilege.setActionName(requestDto.getActionName());
+        privilege.setAction(resolveAction(requestDto.getActionCode(), requestDto.getActionName()));
         privilege.setSubMenu(resolveSubMenu(requestDto.getSubMenuId()));
         privilege.setActive(requestDto.getActive() == null || requestDto.getActive());
 
@@ -176,6 +185,12 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .enabledModules(resolveEnabledModules(privilegeCodes))
                 .enabledSubmodules(resolveEnabledSubmodules(privilegeCodes))
                 .enabledFeatures(resolveEnabledFeatures(privilegeCodes))
+                .routePolicies(layoutRoutePolicyService.getEffectivePolicies(
+                        clientContext == null ? null : clientContext.getClientCode()
+                ))
+                .uiPolicies(layoutUiPolicyService.getEffectivePolicies(
+                        clientContext == null ? null : clientContext.getClientCode()
+                ))
                 .layout(layoutContextService.getEffectiveLayout(
                         clientContext == null ? null : clientContext.getClientCode(),
                         username,
@@ -464,18 +479,16 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         }
 
         SysPrivSubmodule resolvedSubmodule = submodule;
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndCode(
+        SysPrivFeatureType featureType = resolveFeatureType(featureTypeCode, featureTypeName);
+        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeFeatureTypeCodeAndFeatureCode(
                         moduleCode,
                         submoduleCode,
                         featureTypeCode,
                         featureCode
                 )
                 .map(feature -> {
-                    if (!Objects.equals(featureName, feature.getName())
-                            || !Objects.equals(featureTypeName, feature.getFeatureTypeName())
-                            || !feature.isActive()) {
-                        feature.setName(featureName);
-                        feature.setFeatureTypeName(featureTypeName);
+                    if (!Objects.equals(featureName, feature.getFeatureName()) || !feature.isActive()) {
+                        feature.setFeatureName(featureName);
                         feature.setActive(true);
                         return featureRepository.save(feature);
                     }
@@ -483,12 +496,48 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 })
                 .orElseGet(() -> featureRepository.save(SysPrivFeature.builder()
                         .submodule(resolvedSubmodule)
-                        .featureTypeCode(featureTypeCode)
-                        .featureTypeName(featureTypeName)
-                        .code(featureCode)
-                        .name(featureName)
+                        .featureType(featureType)
+                        .featureCode(featureCode)
+                        .featureName(featureName)
                         .active(true)
                         .build()));
+    }
+
+    private SysPrivFeatureType resolveFeatureType(String code, String name) {
+        SysPrivFeatureType featureType = featureTypeRepository.findByTenantIdIsNullAndFeatureTypeCode(code)
+                .orElseGet(() -> featureTypeRepository.save(SysPrivFeatureType.builder()
+                        .featureTypeCode(code)
+                        .featureTypeName(name)
+                        .active(true)
+                        .createdBy(0L)
+                        .updatedBy(0L)
+                        .build()));
+        if (!Objects.equals(name, featureType.getFeatureTypeName()) || !featureType.isActive()) {
+            featureType.setFeatureTypeName(name);
+            featureType.setActive(true);
+            featureType.setUpdatedBy(0L);
+            featureType = featureTypeRepository.save(featureType);
+        }
+        return featureType;
+    }
+
+    private SysPrivAction resolveAction(String code, String name) {
+        SysPrivAction action = actionRepository.findByActionCode(code)
+                .orElseGet(() -> actionRepository.save(SysPrivAction.builder()
+                        .actionCode(code)
+                        .actionName(name)
+                        .displayOrder(Integer.valueOf(code))
+                        .active(true)
+                        .createdBy(0L)
+                        .updatedBy(0L)
+                        .build()));
+        if (!Objects.equals(name, action.getActionName()) || !action.isActive()) {
+            action.setActionName(name);
+            action.setActive(true);
+            action.setUpdatedBy(0L);
+            action = actionRepository.save(action);
+        }
+        return action;
     }
 
     private void validateCodePart(String value, int expectedLength, String fieldName) {

@@ -1,12 +1,16 @@
 package com.nexacore.systemmodule.privilege.catalog.service.implementations;
 
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
@@ -37,13 +41,17 @@ class SystemPrivilegeRegistryServiceImplTest {
     private final ModuleRepository moduleRepository = mock(ModuleRepository.class);
     private final SubmoduleRepository submoduleRepository = mock(SubmoduleRepository.class);
     private final FeatureRepository featureRepository = mock(FeatureRepository.class);
+    private final FeatureTypeRepository featureTypeRepository = mock(FeatureTypeRepository.class);
+    private final ActionRepository actionRepository = mock(ActionRepository.class);
     private final SystemPrivilegeRegistryServiceImpl service = new SystemPrivilegeRegistryServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
             subMenuRepository,
             moduleRepository,
             submoduleRepository,
-            featureRepository
+            featureRepository,
+            featureTypeRepository,
+            actionRepository
     );
 
     @Test
@@ -95,6 +103,7 @@ class SystemPrivilegeRegistryServiceImplTest {
         SysPrivPrivilege privilege = SysPrivPrivilege.builder()
                 .privilegeCode("01010100101")
                 .feature(feature())
+                .action(action())
                 .active(true)
                 .build();
         Set<String> privilegeCodes = Set.of("01010100101");
@@ -120,6 +129,7 @@ class SystemPrivilegeRegistryServiceImplTest {
         SysPrivPrivilege privilege = SysPrivPrivilege.builder()
                 .privilegeCode("01010100101")
                 .feature(feature())
+                .action(action())
                 .active(true)
                 .build();
 
@@ -146,11 +156,14 @@ class SystemPrivilegeRegistryServiceImplTest {
         return SysPrivFeature.builder()
                 .id(1L)
                 .submodule(submodule)
-                .featureTypeCode("01")
-                .featureTypeName("Setup")
-                .code("001")
-                .name("Person")
+                .featureType(SysPrivFeatureType.builder().id(1L).featureTypeCode("01").featureTypeName("Setup").active(true).build())
+                .featureCode("001")
+                .featureName("Person")
                 .active(true)
                 .build();
+    }
+
+    private SysPrivAction action() {
+        return SysPrivAction.builder().id(1L).actionCode("01").actionName("View").active(true).build();
     }
 }

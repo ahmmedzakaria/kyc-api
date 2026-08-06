@@ -118,10 +118,10 @@ public class SysPrivSubMenu extends ActionInfo {
     }
 
     public String getFeatureCode() {
-        return feature != null ? feature.getCode() : featureCode;
+        return feature != null ? feature.getFeatureCode() : featureCode;
     }
 
     public String getFeatureName() {
-        return feature != null ? feature.getName() : featureName;
+        return feature != null ? feature.getFeatureName() : featureName;
     }
 }

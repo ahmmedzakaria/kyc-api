@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.layout.controller;
 
 import com.nexacore.commonmodule.dto.ApiResponse;
+import com.nexacore.commonmodule.dto.UiPrivilegePolicyDto;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentDto;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutContextDto;
@@ -9,10 +10,12 @@ import com.nexacore.systemmodule.layout.dto.LayoutNavigationNodeRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutProfileDto;
 import com.nexacore.systemmodule.layout.dto.LayoutProfileRequestDto;
 import com.nexacore.systemmodule.layout.dto.NavNodeDto;
+import com.nexacore.systemmodule.layout.dto.LayoutUiPolicyRequestDto;
 import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmentService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutProfileService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +38,24 @@ public class LayoutController {
     private final LayoutContextService layoutContextService;
     private final LayoutNavigationService layoutNavigationService;
     private final PrivilegeService privilegeService;
+    private final LayoutUiPolicyService layoutUiPolicyService;
+
+    @PostMapping("/ui-policy/save")
+    public ResponseEntity<ApiResponse<UiPrivilegePolicyDto>> saveUiPolicy(@RequestBody LayoutUiPolicyRequestDto request,
+                                                                          Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(
+                layoutUiPolicyService.save(request, authentication.getName()),
+                "UI policy saved"
+        ));
+    }
+
+    @PostMapping("/ui-policy/list")
+    public ResponseEntity<ApiResponse<List<UiPrivilegePolicyDto>>> listUiPolicies(@RequestBody LayoutContextRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                layoutUiPolicyService.getEffectivePolicies(request.getClientCode()),
+                "UI policies loaded"
+        ));
+    }
 
     @PostMapping("/profile/save")
     public ResponseEntity<ApiResponse<LayoutProfileDto>> saveProfile(@RequestBody LayoutProfileRequestDto request,

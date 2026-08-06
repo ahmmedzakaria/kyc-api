@@ -4,12 +4,16 @@ import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilege;
 import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilegeId;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
+import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
@@ -35,6 +39,8 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     private final ModuleRepository moduleRepository;
     private final SubmoduleRepository submoduleRepository;
     private final FeatureRepository featureRepository;
+    private final FeatureTypeRepository featureTypeRepository;
+    private final ActionRepository actionRepository;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -89,6 +95,9 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                     privilege.getFeatureCode(),
                     privilege.getFeatureName()
             ));
+        }
+        if (privilege.getAction() == null) {
+            privilege.setAction(resolveAction(privilege.getActionCode(), privilege.getActionName()));
         }
         return privilegeRepository.save(privilege);
     }
@@ -162,18 +171,16 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
         SysPrivSubmodule submodule = resolveSubmodule(module, submoduleCode, submoduleName);
 
         SysPrivSubmodule resolvedSubmodule = submodule;
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeCodeAndCode(
+        SysPrivFeatureType featureType = resolveFeatureType(featureTypeCode, featureTypeName);
+        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeFeatureTypeCodeAndFeatureCode(
                         moduleCode,
                         submoduleCode,
                         featureTypeCode,
                         featureCode
                 )
                 .map(feature -> {
-                    if (!Objects.equals(featureName, feature.getName())
-                            || !Objects.equals(featureTypeName, feature.getFeatureTypeName())
-                            || !feature.isActive()) {
-                        feature.setName(featureName);
-                        feature.setFeatureTypeName(featureTypeName);
+                    if (!Objects.equals(featureName, feature.getFeatureName()) || !feature.isActive()) {
+                        feature.setFeatureName(featureName);
                         feature.setActive(true);
                         return featureRepository.save(feature);
                     }
@@ -181,12 +188,48 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                 })
                 .orElseGet(() -> featureRepository.save(SysPrivFeature.builder()
                         .submodule(resolvedSubmodule)
-                        .featureTypeCode(featureTypeCode)
-                        .featureTypeName(featureTypeName)
-                        .code(featureCode)
-                        .name(featureName)
+                        .featureType(featureType)
+                        .featureCode(featureCode)
+                        .featureName(featureName)
                         .active(true)
                         .build()));
+    }
+
+    private SysPrivFeatureType resolveFeatureType(String code, String name) {
+        SysPrivFeatureType featureType = featureTypeRepository.findByTenantIdIsNullAndFeatureTypeCode(code)
+                .orElseGet(() -> featureTypeRepository.save(SysPrivFeatureType.builder()
+                        .featureTypeCode(code)
+                        .featureTypeName(name)
+                        .active(true)
+                        .createdBy(0L)
+                        .updatedBy(0L)
+                        .build()));
+        if (!Objects.equals(name, featureType.getFeatureTypeName()) || !featureType.isActive()) {
+            featureType.setFeatureTypeName(name);
+            featureType.setActive(true);
+            featureType.setUpdatedBy(0L);
+            featureType = featureTypeRepository.save(featureType);
+        }
+        return featureType;
+    }
+
+    private SysPrivAction resolveAction(String code, String name) {
+        SysPrivAction action = actionRepository.findByActionCode(code)
+                .orElseGet(() -> actionRepository.save(SysPrivAction.builder()
+                        .actionCode(code)
+                        .actionName(name)
+                        .displayOrder(Integer.valueOf(code))
+                        .active(true)
+                        .createdBy(0L)
+                        .updatedBy(0L)
+                        .build()));
+        if (!Objects.equals(name, action.getActionName()) || !action.isActive()) {
+            action.setActionName(name);
+            action.setActive(true);
+            action.setUpdatedBy(0L);
+            action = actionRepository.save(action);
+        }
+        return action;
     }
 
     private SysPrivModule resolveModule(String moduleCode, String moduleName) {

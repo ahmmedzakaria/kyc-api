@@ -62,6 +62,8 @@ public class AuthApplicationContextService {
                 .enabledModules(context.getEnabledModules())
                 .enabledSubmodules(context.getEnabledSubmodules())
                 .enabledFeatures(context.getEnabledFeatures())
+                .routePolicies(context.getRoutePolicies())
+                .uiPolicies(context.getUiPolicies())
                 .layout(context.getLayout())
                 .build();
     }

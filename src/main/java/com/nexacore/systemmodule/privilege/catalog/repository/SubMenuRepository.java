@@ -17,8 +17,8 @@ public interface SubMenuRepository extends JpaRepository<SysPrivSubMenu, Long> {
             JOIN submodule.module module
             WHERE module.code = :moduleCode
               AND submodule.code = :submoduleCode
-              AND feature.featureTypeCode = :featureTypeCode
-              AND feature.code = :featureCode
+              AND feature.featureType.featureTypeCode = :featureTypeCode
+              AND feature.featureCode = :featureCode
               AND menu.url = :url
             """)
     Optional<SysPrivSubMenu> findFirstByFeatureAndUrl(
@@ -38,8 +38,8 @@ public interface SubMenuRepository extends JpaRepository<SysPrivSubMenu, Long> {
             WHERE menu.active = true
             ORDER BY module.code ASC,
                      submodule.code ASC,
-                     feature.featureTypeCode ASC,
-                     feature.code ASC,
+                     feature.featureType.featureTypeCode ASC,
+                     feature.featureCode ASC,
                      menu.name ASC
             """)
     List<SysPrivSubMenu> findActiveOrderedByFeature();

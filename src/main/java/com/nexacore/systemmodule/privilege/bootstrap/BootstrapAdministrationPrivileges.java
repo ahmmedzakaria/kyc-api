@@ -1,0 +1,28 @@
+package com.nexacore.systemmodule.privilege.bootstrap;
+
+public final class BootstrapAdministrationPrivileges {
+
+    private BootstrapAdministrationPrivileges() {
+    }
+
+    public static final String CLIENT_APPLICATION_VIEW = "11020100101";
+    public static final String CLIENT_APPLICATION_MANAGE = "11020100187";
+    public static final String CLIENT_CREDENTIAL_ROTATE = "11020100283";
+    public static final String CLIENT_API_PERMISSION_ASSIGN = "11020100381";
+    public static final String CLIENT_FEATURE_PERMISSION_ASSIGN = "11020100481";
+    public static final String CLIENT_TENANT_ASSIGN = "11020100581";
+    public static final String API_REGISTRY_VIEW = "11020100601";
+    public static final String API_REGISTRY_MANAGE = "11020100687";
+    public static final String API_REGISTRY_SYNCHRONIZE = "11020100680";
+
+    public static final String PRIVILEGE_CATALOG_VIEW = "11010100101";
+    public static final String PRIVILEGE_CATALOG_SYNCHRONIZE = "11010100180";
+    public static final String PRIVILEGE_CATALOG_ASSIGN = "11010100181";
+
+    public static final String LAYOUT_ADMINISTRATION_VIEW = "11040100101";
+    public static final String LAYOUT_ADMINISTRATION_MANAGE = "11040100187";
+    public static final String WORKFLOW_ADMINISTRATION_VIEW = "11050100101";
+    public static final String WORKFLOW_ADMINISTRATION_MANAGE = "11050100187";
+    public static final String LICENSE_ADMINISTRATION_VIEW = "11030199901";
+    public static final String LICENSE_ADMINISTRATION_MANAGE = "11030199987";
+}

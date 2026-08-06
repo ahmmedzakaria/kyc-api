@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
         name = "sys_priv_features",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_sys_features_submodule_type_code",
-                columnNames = {"submodule_id", "feature_type_code", "code"}
+                columnNames = {"submodule_id", "feature_type_id", "feature_code"}
         )
 )
 @Data
@@ -41,18 +41,25 @@ public class SysPrivFeature extends ActionInfo {
     @EqualsAndHashCode.Exclude
     private SysPrivSubmodule submodule;
 
-    @Column(nullable = false, length = 2)
-    private String featureTypeCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "feature_type_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    private SysPrivFeatureType featureType;
 
-    @Column(nullable = false)
-    private String featureTypeName;
+    @Column(name = "feature_code", nullable = false, length = 3)
+    private String featureCode;
 
-    @Column(nullable = false, length = 3)
-    private String code;
-
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "feature_name", nullable = false)
+    private String featureName;
 
     @Column(nullable = false)
     private boolean active;
+
+    public String getFeatureTypeCode() {
+        return featureType == null ? null : featureType.getFeatureTypeCode();
+    }
+
+    public String getFeatureTypeName() {
+        return featureType == null ? null : featureType.getFeatureTypeName();
+    }
 }
