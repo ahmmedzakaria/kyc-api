@@ -366,6 +366,8 @@ Use existing module/submodule/feature/action code composition. Do not introduce 
 
 #### Step 1.2: Seed bootstrap privileges safely
 
+Implementation status: **implemented**. `V21__seed_bootstrap_administration_privileges.sql` idempotently inserts or reconciles the System module, administration submodules, setup features, and all 18 bootstrap privilege records using system actor `0`. It also adds the missing actor audit columns to privilege and role-assignment records. Because roles are owned by `auth_db` while privilege assignments are owned by `system_db`, the migration deliberately does not assume a numeric role ID. `DataSeeder` resolves `ROLE_ADMIN` by name from `auth_db` and assigns the provider-derived privilege codes through `SystemPrivilegeRegistryService`; the default KYC roles receive only their explicit KYC privilege sets.
+
 Add the next system Flyway migration after `V13__prefix_privilege_owned_tables.sql` to:
 
 - Insert the administration catalog records into `sys_priv_modules`, `sys_priv_submodules`, `sys_priv_features`, and `sys_priv_privileges`.

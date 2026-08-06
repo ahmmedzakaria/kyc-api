@@ -140,6 +140,12 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     @Transactional(transactionManager = "systemTransactionManager")
     public void assignRolePrivileges(Long roleId, Collection<String> privilegeCodes) {
         rolePrivilegeRepository.deleteByIdRoleId(roleId);
+        grantRolePrivileges(roleId, privilegeCodes);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager")
+    public void grantRolePrivileges(Long roleId, Collection<String> privilegeCodes) {
         rolePrivilegeRepository.saveAll(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes).stream()
                 .map(privilege -> SysPrivRolePrivilege.builder()
                         .id(new SysPrivRolePrivilegeId(roleId, privilege.getId()))

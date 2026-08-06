@@ -30,6 +30,8 @@ public interface SystemPrivilegeRegistryService {
 
     void assignRolePrivileges(Long roleId, Collection<String> privilegeCodes);
 
+    void grantRolePrivileges(Long roleId, Collection<String> privilegeCodes);
+
     long countRolePrivileges(Long roleId);
 
     long countSubMenus();

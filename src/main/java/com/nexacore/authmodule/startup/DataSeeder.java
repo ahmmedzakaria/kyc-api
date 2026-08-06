@@ -68,7 +68,7 @@ public class DataSeeder {
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_APPROVER"));
             systemPrivilegeRegistryService.syncApplicationCatalog();
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
-            systemPrivilegeRegistryService.assignRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
+            systemPrivilegeRegistryService.grantRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
             assignRolePrivileges(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),

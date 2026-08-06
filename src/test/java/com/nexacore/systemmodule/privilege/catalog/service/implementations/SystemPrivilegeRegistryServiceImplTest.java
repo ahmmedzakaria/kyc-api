@@ -1,5 +1,7 @@
 package com.nexacore.systemmodule.privilege.catalog.service.implementations;
 
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilege;
+import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilegeId;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
@@ -29,6 +31,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -137,6 +140,28 @@ class SystemPrivilegeRegistryServiceImplTest {
 
         assertThat(service.savePrivilege(privilege)).isSameAs(privilege);
         verify(privilegeRepository).save(privilege);
+    }
+
+    @Test
+    void grantsRolePrivilegesWithoutRemovingExistingAssignments() {
+        SysPrivPrivilege privilege = SysPrivPrivilege.builder()
+                .id(42L)
+                .privilegeCode("11020100101")
+                .feature(feature())
+                .action(action())
+                .active(true)
+                .build();
+        Set<String> privilegeCodes = Set.of(privilege.getPrivilegeCode());
+        when(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes)).thenReturn(List.of(privilege));
+
+        service.grantRolePrivileges(7L, privilegeCodes);
+
+        verify(rolePrivilegeRepository, never()).deleteByIdRoleId(7L);
+        ArgumentCaptor<Iterable<SysPrivRolePrivilege>> assignments = ArgumentCaptor.forClass(Iterable.class);
+        verify(rolePrivilegeRepository).saveAll(assignments.capture());
+        assertThat(assignments.getValue())
+                .extracting(SysPrivRolePrivilege::getId)
+                .containsExactly(new SysPrivRolePrivilegeId(7L, 42L));
     }
 
     private SysPrivFeature feature() {
