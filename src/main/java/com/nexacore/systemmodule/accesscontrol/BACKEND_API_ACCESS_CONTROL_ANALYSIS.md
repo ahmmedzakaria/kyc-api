@@ -636,7 +636,7 @@ Rollback changes only the enforcement mode. Do not delete registry or permission
 
 #### Step 7.1: Define authenticated request context
 
-Implementation status: **implemented**. After access-token validation, `AuthenticatedRequestContextFilter` builds an immutable `AuthenticatedRequestContext` containing the database-resolved user ID/username, validated client ID/code, server-owned tenant/business/branch assignments, trace ID, and an immutable snapshot of effective client-filtered privilege codes. The context is held only for the request and cleared in a `finally` block. Scope identifiers are nullable until assigned in `auth_users`; they are never read from caller headers or request DTOs. `UserPrivilegeApiAccessFilter` consumes the privilege snapshot so authorization uses the same authenticated context throughout the request.
+Implementation status: **implemented**. After access-token validation, `AuthenticatedRequestContextFilter` builds an immutable `AuthenticatedRequestContext` containing the database-resolved user ID/username, validated client ID/code, server-owned hierarchical scope assignments, trace ID, and an immutable snapshot of effective client-filtered privilege codes. Multiple tenant/business/branch paths are stored in `auth_user_scope_assignments`, preserving each valid hierarchy rather than using unsafe independent ID sets. Existing single-scope values are migrated by auth migration V10. The context is held only for the request and cleared in a `finally` block; scope is never read from caller headers or request DTOs. `UserPrivilegeApiAccessFilter` consumes the privilege snapshot so authorization uses the same authenticated context throughout the request.
 
 Create an immutable request context containing:
 

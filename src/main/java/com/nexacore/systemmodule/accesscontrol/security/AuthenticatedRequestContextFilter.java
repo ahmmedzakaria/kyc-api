@@ -40,7 +40,10 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                         user.userId(), username,
                         client == null ? null : client.getId(),
                         client == null ? null : client.getClientCode(),
-                        user.tenantId(), user.businessId(), user.branchId(),
+                        user.scopeAssignments() == null ? Set.of() : user.scopeAssignments().stream()
+                                .map(scope -> new UserScopeAssignment(
+                                        scope.tenantId(), scope.businessId(), scope.branchId()))
+                                .collect(java.util.stream.Collectors.toUnmodifiableSet()),
                         accessContext == null ? null : accessContext.traceId(),
                         privileges
                 ));

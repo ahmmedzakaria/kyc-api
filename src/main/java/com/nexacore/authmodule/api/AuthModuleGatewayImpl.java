@@ -5,6 +5,7 @@ import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
+import com.nexacore.gatewaymodule.auth.dto.AuthUserScopeAssignmentDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -30,9 +31,11 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
         return AuthUserAccessDto.builder()
                 .userId(user.getId())
                 .personId(user.getPersonId())
-                .tenantId(user.getTenantId())
-                .businessId(user.getBusinessId())
-                .branchId(user.getBranchId())
+                .scopeAssignments(user.getScopeAssignments().stream()
+                        .filter(com.nexacore.authmodule.core.entity.AuthUserScopeAssignment::isActive)
+                        .map(scope -> new AuthUserScopeAssignmentDto(
+                                scope.getTenantId(), scope.getBusinessId(), scope.getBranchId()))
+                        .collect(Collectors.toUnmodifiableSet()))
                 .roleIds(user.getRoles().stream()
                         .map(AuthRole::getId)
                         .collect(Collectors.toSet()))

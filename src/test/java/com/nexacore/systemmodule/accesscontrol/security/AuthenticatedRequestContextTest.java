@@ -19,20 +19,34 @@ class AuthenticatedRequestContextTest {
     @Test
     void snapshotsEffectivePrivilegesAndExposesTrustedScope() {
         Set<String> privileges = new HashSet<>(Set.of("01010200101"));
+        Set<UserScopeAssignment> scopes = new HashSet<>(Set.of(
+                new UserScopeAssignment(11L, 12L, 13L),
+                new UserScopeAssignment(11L, 12L, 14L)
+        ));
         AuthenticatedRequestContext context = new AuthenticatedRequestContext(
                 7L, "operator", 3L, "WEB",
-                11L, 12L, 13L, "trace-1", privileges
+                scopes, "trace-1", privileges
         );
         privileges.add("11010100180");
+        scopes.add(new UserScopeAssignment(99L, null, null));
         AuthenticatedRequestContextHolder.set(context);
 
         AuthenticatedRequestContext stored = AuthenticatedRequestContextHolder.get().orElseThrow();
         assertThat(stored.userId()).isEqualTo(7L);
-        assertThat(stored.tenantId()).isEqualTo(11L);
-        assertThat(stored.businessId()).isEqualTo(12L);
-        assertThat(stored.branchId()).isEqualTo(13L);
+        assertThat(stored.scopeAssignments()).containsExactlyInAnyOrder(
+                new UserScopeAssignment(11L, 12L, 13L),
+                new UserScopeAssignment(11L, 12L, 14L));
         assertThat(stored.effectivePrivilegeCodes()).containsExactly("01010200101");
         assertThatThrownBy(() -> stored.effectivePrivilegeCodes().add("11010100180"))
                 .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> stored.scopeAssignments().add(new UserScopeAssignment(99L, null, null)))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void rejectsBranchAssignmentWithoutBusiness() {
+        assertThatThrownBy(() -> new UserScopeAssignment(11L, null, 13L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("businessId");
     }
 }
