@@ -23,6 +23,7 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicat
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
+import com.nexacore.systemmodule.privilege.assignment.repository.UserPrivilegeRepository;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
@@ -49,6 +50,7 @@ public class DataSeeder {
     @Bean
     CommandLineRunner initDatabase(RoleRepository roleRepository,
                                    UserRepository userRepository,
+                                   UserPrivilegeRepository userPrivilegeRepository,
                                    SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
                                    PersonModuleGateway personModuleGateway,
@@ -63,13 +65,19 @@ public class DataSeeder {
         return args -> {
             AuthRole adminRole = roleRepository.findByName("ROLE_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_ADMIN"));
+            AuthRole systemAdminRole = roleRepository.findByName("ROLE_SYSTEM_ADMIN")
+                    .orElseGet(() -> createRole(roleRepository, "ROLE_SYSTEM_ADMIN"));
             AuthRole kycOperatorRole = roleRepository.findByName("ROLE_KYC_OPERATOR")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_OPERATOR"));
             AuthRole kycApproverRole = roleRepository.findByName("ROLE_KYC_APPROVER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_APPROVER"));
             systemPrivilegeRegistryService.syncApplicationCatalog();
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
-            systemPrivilegeRegistryService.grantRolePrivileges(adminRole.getId(), adminPrivilegeCodes);
+            Set<String> systemPrivilegeCodes = privilegesForModule(adminPrivilegeCodes, ApplicationModule.SYSTEM);
+            Set<String> nonSystemPrivilegeCodes = new HashSet<>(adminPrivilegeCodes);
+            nonSystemPrivilegeCodes.removeAll(systemPrivilegeCodes);
+            assignRolePrivileges(systemPrivilegeRegistryService, systemAdminRole, systemPrivilegeCodes);
+            assignRolePrivileges(systemPrivilegeRegistryService, adminRole, nonSystemPrivilegeCodes);
             assignRolePrivileges(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
@@ -85,8 +93,18 @@ public class DataSeeder {
                     code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH)
             ));
 
-            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+            seedDefaultUserWithExactRoles(userRepository, passwordEncoder, personModuleGateway,
                     "admin", "123", "admin@example.com", "01700000000", "Admin", "User", adminRole);
+
+            seedDefaultUserWithExactRoles(userRepository, passwordEncoder, personModuleGateway,
+                    "system_admin", "123", "system.admin@example.com", "01700000005",
+                    "System", "Administrator", systemAdminRole);
+
+            Long adminUserId = userRepository.findByUsername("admin")
+                    .orElseThrow(() -> new IllegalStateException("Seeded admin user not found"))
+                    .getId();
+            userPrivilegeRepository.deleteByUserIdAndPrivilegeModuleCode(
+                    adminUserId, ApplicationModule.SYSTEM.getCode());
 
             seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
                     "kyc_operator", "123", "operator@example.com", "01700000001", "Kyc", "Operator", kycOperatorRole);
@@ -142,6 +160,24 @@ public class DataSeeder {
         userRepository.save(user);
 
         System.out.println("Seeded default user: " + username + " / " + password);
+    }
+
+    private void seedDefaultUserWithExactRoles(UserRepository userRepository,
+                                               PasswordEncoder passwordEncoder,
+                                               PersonModuleGateway personModuleGateway,
+                                               String username,
+                                               String password,
+                                               String email,
+                                               String mobile,
+                                               String firstName,
+                                               String lastName,
+                                               AuthRole... roles) {
+        seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
+                username, password, email, mobile, firstName, lastName, roles);
+        AuthUser user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("Seeded user not found: " + username));
+        user.setRoles(new HashSet<>(List.of(roles)));
+        userRepository.save(user);
     }
 
     private AuthRole createRole(RoleRepository roleRepository, String roleName) {
@@ -361,6 +397,12 @@ public class DataSeeder {
 
     private void assignRolePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService, AuthRole role, Set<String> privilegeCodes) {
         systemPrivilegeRegistryService.assignRolePrivileges(role.getId(), privilegeCodes);
+    }
+
+    private Set<String> privilegesForModule(Set<String> privilegeCodes, ApplicationModule module) {
+        return privilegeCodes.stream()
+                .filter(code -> code != null && code.startsWith(module.getCode()))
+                .collect(Collectors.toSet());
     }
 
     private String code(ApplicationModule applicationModule,
