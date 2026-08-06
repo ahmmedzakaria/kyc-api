@@ -10,6 +10,8 @@ import com.nexacore.kycmodule.person.entity.PersonDocumentType;
 import com.nexacore.kycmodule.person.service.implementations.PersonService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import com.nexacore.systemmodule.accesscontrol.security.ApiDataScope;
+import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.*;
@@ -27,6 +29,7 @@ public class PersonController {
 
     @Operation(summary = "Create a new person")
     @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PrivilegeApi(value = "01010200110", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<PersonDto>> create(
             @ModelAttribute PersonDto dto,
             @RequestParam(value = "photo", required = false) MultipartFile photo) throws Exception {
@@ -35,6 +38,7 @@ public class PersonController {
 
     @Operation(summary = "Update an existing person")
     @PostMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PrivilegeApi(value = "01010200112", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<PersonDto>> update(
             @ModelAttribute PersonDto dto,
             @RequestParam(value = "photo", required = false) MultipartFile photo) throws Exception {
@@ -43,6 +47,7 @@ public class PersonController {
 
     @Operation(summary = "Search persons (paginated)")
     @PostMapping("/search")
+    @PrivilegeApi(value = "01010200102", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<Page<PersonDto>>> search(@RequestBody SearchDto dto) {
         Pageable pageable = PageRequest.of(dto.page(), dto.size(), Sort.by("firstName"));
         String searchText = dto.searchText() == null ? "" : dto.searchText();
@@ -51,6 +56,7 @@ public class PersonController {
 
     @Operation(summary = "Delete person by ID")
     @PostMapping("/delete")
+    @PrivilegeApi(value = "01010200140", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<Void>> delete(@RequestBody IdRequestDto idRequestDto) {
         service.delete(Long.valueOf(idRequestDto.getId()));
         return ResponseEntity.ok(ApiResponse.success(null, "Person deleted"));
@@ -58,6 +64,7 @@ public class PersonController {
 
     @Operation(summary = "Get person photo")
     @PostMapping("/photo")
+    @PrivilegeApi(value = "01010200101", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<byte[]> photo(@RequestBody FileRequestDto requestDto) throws Exception {
         byte[] data = service.getPhoto(requestDto.getOwnerId());
         if (data == null) {
@@ -71,6 +78,7 @@ public class PersonController {
 
     @Operation(summary = "Upload person documents")
     @PostMapping(value = "/documents/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PrivilegeApi(value = "01010200112", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<List<PersonDocumentDto>>> uploadDocuments(
             @ModelAttribute FileRequestDto requestDto,
             @RequestParam("files") MultipartFile[] files) throws Exception {
@@ -80,18 +88,21 @@ public class PersonController {
 
     @Operation(summary = "List person documents")
     @PostMapping("/documents")
+    @PrivilegeApi(value = "01010200101", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<List<PersonDocumentDto>>> documents(@RequestBody FileRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(service.getDocuments(requestDto.getOwnerId()), "Person documents fetched"));
     }
 
     @Operation(summary = "Get person document metadata")
     @PostMapping("/document")
+    @PrivilegeApi(value = "01010200101", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<PersonDocumentDto>> document(@RequestBody FileRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(service.getDocument(requestDto.getOwnerId(), requestDto.getFileId()), "Person document fetched"));
     }
 
     @Operation(summary = "Download person document content")
     @PostMapping("/document/content")
+    @PrivilegeApi(value = "01010200101", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<byte[]> documentContent(@RequestBody FileRequestDto requestDto) throws Exception {
         byte[] data = service.getDocumentContent(requestDto.getOwnerId(), requestDto.getFileId());
         if (data == null) {

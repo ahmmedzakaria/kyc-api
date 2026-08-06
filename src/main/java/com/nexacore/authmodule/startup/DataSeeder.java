@@ -167,7 +167,7 @@ public class DataSeeder {
         featureAssignment.setPrivilegeCodes(privilegeCodes);
         clientPermissionService.assignFeaturePermissions(featureAssignment, "admin");
 
-        Set<Long> apiRegistryIds = clientApiRegistryService.syncFromAnnotations("admin").stream()
+        Set<Long> apiRegistryIds = clientApiRegistryService.syncFromAnnotations("admin").getRecords().stream()
                 .map(ApiRegistryDto::getId)
                 .collect(Collectors.toSet());
         if (!apiRegistryIds.isEmpty()) {

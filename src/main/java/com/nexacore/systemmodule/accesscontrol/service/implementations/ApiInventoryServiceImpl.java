@@ -89,13 +89,15 @@ public class ApiInventoryServiceImpl implements ApiInventoryService {
             HandlerMethod handler,
             ClientSecuredApi metadata
     ) {
-        String requiredPrivilegeCode = metadata == null || metadata.publicApi()
-                ? null
-                : metadata.moduleCode()
+        String composedPrivilegeCode = metadata == null ? null : metadata.moduleCode()
                 + metadata.submoduleCode()
                 + metadata.featureTypeCode()
                 + metadata.featureCode()
                 + metadata.actionCode();
+        String requiredPrivilegeCode = metadata == null || metadata.publicApi()
+                || metadata.userAuthorization() == com.nexacore.systemmodule.accesscontrol.security.UserAuthorizationRequirement.NONE
+                ? null
+                : metadata.requiredPrivilegeCode().isBlank() ? composedPrivilegeCode : metadata.requiredPrivilegeCode();
 
         return ApiInventoryItemDto.builder()
                 .apiCode(httpMethod + ":" + path)
@@ -112,9 +114,9 @@ public class ApiInventoryServiceImpl implements ApiInventoryService {
                 .featureCode(metadata == null ? null : metadata.featureCode())
                 .actionCode(metadata == null ? null : metadata.actionCode())
                 .requiredPrivilegeCode(requiredPrivilegeCode)
-                .intendedClientTypes(List.of())
-                .dataScope(REVIEW_REQUIRED)
-                .reviewStatus(REVIEW_REQUIRED)
+                .intendedClientTypes(metadata == null ? List.of() : List.of(metadata.clientAuthentication().name()))
+                .dataScope(metadata == null ? REVIEW_REQUIRED : metadata.dataScope().name())
+                .reviewStatus(metadata == null ? REVIEW_REQUIRED : "REVIEWED")
                 .build();
     }
 

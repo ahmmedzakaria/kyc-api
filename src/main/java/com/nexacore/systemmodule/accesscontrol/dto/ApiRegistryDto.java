@@ -23,6 +23,12 @@ public class ApiRegistryDto {
     private String actionName;
     private String requiredPrivilegeCode;
     private boolean publicApi;
+    private String clientAuthenticationRequirement;
+    private String userAuthorizationRequirement;
+    private String dataScope;
+    private String source;
+    private int priority;
+    private java.time.LocalDateTime lastSynchronizedAt;
     private boolean active;
 
     public static ApiRegistryDto fromEntity(SysPrivApiRegistry api) {
@@ -43,6 +49,12 @@ public class ApiRegistryDto {
                 .actionName(api.getActionName())
                 .requiredPrivilegeCode(api.getRequiredPrivilegeCode())
                 .publicApi(api.isPublicApi())
+                .clientAuthenticationRequirement(api.getClientAuthenticationRequirement())
+                .userAuthorizationRequirement(api.getUserAuthorizationRequirement())
+                .dataScope(api.getDataScope())
+                .source(api.getSource())
+                .priority(api.getPriority())
+                .lastSynchronizedAt(api.getLastSynchronizedAt())
                 .active(api.isActive())
                 .build();
     }

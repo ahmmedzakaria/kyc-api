@@ -6,19 +6,23 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.TYPE, ElementType.METHOD})
+@Target({ElementType.TYPE, ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ClientSecuredApi {
-    String moduleCode();
-    String moduleName();
-    String submoduleCode();
-    String submoduleName();
-    String featureTypeCode();
-    String featureTypeName();
-    String featureCode();
-    String featureName();
-    String actionCode();
-    String actionName();
+    String moduleCode() default "";
+    String moduleName() default "";
+    String submoduleCode() default "";
+    String submoduleName() default "";
+    String featureTypeCode() default "";
+    String featureTypeName() default "";
+    String featureCode() default "";
+    String featureName() default "";
+    String actionCode() default "";
+    String actionName() default "";
+    String requiredPrivilegeCode() default "";
+    ClientAuthenticationRequirement clientAuthentication() default ClientAuthenticationRequirement.REQUIRED;
+    UserAuthorizationRequirement userAuthorization() default UserAuthorizationRequirement.PRIVILEGE;
+    ApiDataScope dataScope() default ApiDataScope.NONE;
     boolean publicApi() default false;
 }

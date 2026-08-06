@@ -2,6 +2,7 @@ package com.nexacore.systemmodule.accesscontrol.service.interfaces;
 
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryRequestDto;
+import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -13,7 +14,7 @@ public interface ClientApiRegistryService {
 
     List<ApiRegistryDto> list();
 
-    List<ApiRegistryDto> syncFromAnnotations(String username);
+    ApiRegistrySyncReportDto syncFromAnnotations(String username);
 
     Optional<SysPrivApiRegistry> resolve(HttpServletRequest request);
 }

@@ -20,5 +20,9 @@ public class ApiRegistryRequestDto {
     private String actionName;
     private String requiredPrivilegeCode;
     private Boolean publicApi;
+    private String clientAuthenticationRequirement;
+    private String userAuthorizationRequirement;
+    private String dataScope;
+    private Integer priority;
     private Boolean active;
 }

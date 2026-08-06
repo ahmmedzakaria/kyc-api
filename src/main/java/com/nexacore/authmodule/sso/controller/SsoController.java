@@ -4,6 +4,7 @@ import com.nexacore.authmodule.core.dto.AuthResponse;
 import com.nexacore.authmodule.sso.dto.SsoAuthenticateRequest;
 import com.nexacore.authmodule.sso.service.SsoAuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
+import com.nexacore.systemmodule.accesscontrol.security.PublicApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ public class SsoController {
 
     @Operation(summary = "Authenticate user by Keycloak access token", security = {})
     @PostMapping("/authenticate")
+    @PublicApi
     public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid SsoAuthenticateRequest requestDto,
                                                                   @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
         return ssoAuthService.authenticate(requestDto, clientCode);

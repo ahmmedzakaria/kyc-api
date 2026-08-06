@@ -60,6 +60,17 @@ public class SysPrivApiRegistry {
     private String requiredPrivilegeCode;
 
     private boolean publicApi;
+    @Column(nullable = false, length = 30)
+    private String clientAuthenticationRequirement;
+    @Column(nullable = false, length = 30)
+    private String userAuthorizationRequirement;
+    @Column(nullable = false, length = 30)
+    private String dataScope;
+    @Column(nullable = false, length = 30)
+    private String source;
+    @Column(nullable = false)
+    private int priority;
+    private LocalDateTime lastSynchronizedAt;
     private boolean active;
     private Long createdBy;
     private Long updatedBy;

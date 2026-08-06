@@ -10,6 +10,8 @@ import com.nexacore.authmodule.core.dto.LoginStatusResponse;
 import com.nexacore.authmodule.core.dto.RefreshTokenRequest;
 import com.nexacore.authmodule.core.service.interfaces.AuthService;
 import com.nexacore.commonmodule.dto.ApiResponse;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
+import com.nexacore.systemmodule.accesscontrol.security.PublicApi;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -34,6 +36,7 @@ public class AuthController {
 
     @Operation(summary = "Login user by OTP", security = {}) // security = {} make disables JWT for this method (for using swagger UI)
     @PostMapping("/authenticate")
+    @PublicApi
     public ResponseEntity<ApiResponse<AuthResponse>> authenticate(@RequestBody @Valid AuthRequest requestDto,
                                                                   @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
         return authService.authenticate(requestDto, clientCode);
@@ -41,6 +44,7 @@ public class AuthController {
 
     @Operation(summary = "Get authentication mode and SSO client config", security = {})
     @PostMapping("/config")
+    @PublicApi
     public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(@RequestHeader(value = "Origin", required = false) String origin,
                                                                          @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
         return authService.getAuthConfig(origin, clientCode);
@@ -48,6 +52,7 @@ public class AuthController {
 
     @Operation(summary = "Get public application context for login and registration", security = {})
     @PostMapping("/application-context/public")
+    @PublicApi
     public ResponseEntity<ApiResponse<ApplicationContextDto>> getPublicApplicationContext(@RequestHeader(value = "Origin", required = false) String origin,
                                                                                          @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
         return authService.getPublicApplicationContext(origin, clientCode);
@@ -55,6 +60,7 @@ public class AuthController {
 
     @Operation(summary = "Get authenticated application context")
     @PostMapping("/application-context")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<ApplicationContextDto>> getApplicationContext(@RequestHeader(value = "Origin", required = false) String origin,
                                                                                    @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
         return authService.getApplicationContext(origin, clientCode);
@@ -62,6 +68,7 @@ public class AuthController {
 
     @Operation(summary = "Logout user from shared application session")
     @PostMapping("/logout")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
         String username = authentication == null ? null : authentication.getName();
         return authService.logout(username);
@@ -69,18 +76,21 @@ public class AuthController {
 
     @Operation(summary = "Check tracked login status for a username", security = {})
     @PostMapping("/login-status")
+    @PublicApi
     public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(@RequestBody LoginStatusRequest requestDto) {
         return authService.loginStatus(requestDto);
     }
 
     @Operation(summary = "Check current application session")
     @PostMapping("/session-status")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<Void>> sessionStatus() {
         return authService.sessionStatus();
     }
 
     @Operation(summary = "Refresh Token")
     @PostMapping("/refresh-token")
+    @PublicApi
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody @Valid RefreshTokenRequest requestDto) {
         return authService.refreshToken(requestDto);
     }

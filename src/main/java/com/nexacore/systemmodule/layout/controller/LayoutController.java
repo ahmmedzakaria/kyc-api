@@ -17,6 +17,8 @@ import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationServi
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutProfileService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
+import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +44,7 @@ public class LayoutController {
     private final LayoutUiPolicyService layoutUiPolicyService;
 
     @PostMapping("/ui-policy/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<UiPrivilegePolicyDto>> saveUiPolicy(@RequestBody LayoutUiPolicyRequestDto request,
                                                                           Authentication authentication) {
@@ -52,6 +55,7 @@ public class LayoutController {
     }
 
     @PostMapping("/ui-policy/list")
+    @PrivilegeApi("11040100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<UiPrivilegePolicyDto>>> listUiPolicies(@RequestBody LayoutContextRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
@@ -61,6 +65,7 @@ public class LayoutController {
     }
 
     @PostMapping("/profile/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<LayoutProfileDto>> saveProfile(@RequestBody LayoutProfileRequestDto request,
                                                                      Authentication authentication) {
@@ -71,12 +76,14 @@ public class LayoutController {
     }
 
     @PostMapping("/profile/list")
+    @PrivilegeApi("11040100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<LayoutProfileDto>>> listProfiles() {
         return ResponseEntity.ok(ApiResponse.success(layoutProfileService.list(), "Layout profiles loaded"));
     }
 
     @PostMapping("/profile/detail")
+    @PrivilegeApi("11040100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<LayoutProfileDto>> profileDetail(@RequestBody LayoutProfileDetailRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
@@ -86,6 +93,7 @@ public class LayoutController {
     }
 
     @PostMapping("/client/assign")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<ClientLayoutAssignmentDto>> assignClientProfile(@RequestBody ClientLayoutAssignmentRequestDto request,
                                                                                      Authentication authentication) {
@@ -96,6 +104,7 @@ public class LayoutController {
     }
 
     @PostMapping("/client/list")
+    @PrivilegeApi("11040100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<ClientLayoutAssignmentDto>>> listClientProfiles(@RequestBody ClientLayoutListRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
@@ -105,6 +114,7 @@ public class LayoutController {
     }
 
     @PostMapping("/context")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<LayoutContextDto>> context(@RequestBody LayoutContextRequest request,
                                                                  Authentication authentication) {
         String username = authentication == null ? request.getUsername() : authentication.getName();
@@ -116,6 +126,7 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/group/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<NavNodeDto>> saveGroup(@RequestBody LayoutNavigationNodeRequestDto request,
                                                              Authentication authentication) {
@@ -123,6 +134,7 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/module/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<NavNodeDto>> saveModule(@RequestBody LayoutNavigationNodeRequestDto request,
                                                               Authentication authentication) {
@@ -130,6 +142,7 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/category/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<NavNodeDto>> saveCategory(@RequestBody LayoutNavigationNodeRequestDto request,
                                                                 Authentication authentication) {
@@ -137,12 +150,14 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/category/list")
+    @PrivilegeApi("11040100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<NavNodeDto>>> listCategories() {
         return ResponseEntity.ok(ApiResponse.success(layoutNavigationService.listCategories(), "Layout categories loaded"));
     }
 
     @PostMapping("/navigation/category/reorder")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<Void>> reorderCategories(@RequestBody LayoutNavigationCategoryOrderRequestDto request,
                                                                Authentication authentication) {
@@ -151,6 +166,7 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/feature-group/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<NavNodeDto>> saveFeatureGroup(@RequestBody LayoutNavigationNodeRequestDto request,
                                                                     Authentication authentication) {
@@ -158,6 +174,7 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/feature/save")
+    @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<NavNodeDto>> saveFeature(@RequestBody LayoutNavigationNodeRequestDto request,
                                                                Authentication authentication) {
@@ -165,6 +182,7 @@ public class LayoutController {
     }
 
     @PostMapping("/navigation/tree")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<List<NavNodeDto>>> navigationTree(@RequestBody LayoutContextRequest request,
                                                                         Authentication authentication) {
         String username = authentication == null ? request.getUsername() : authentication.getName();

@@ -14,6 +14,8 @@ import com.nexacore.systemmodule.license.service.interfaces.LicenseDecisionServi
 import com.nexacore.systemmodule.license.service.interfaces.LicenseKeyService;
 import com.nexacore.systemmodule.license.service.interfaces.LicensePlanService;
 import com.nexacore.systemmodule.license.service.interfaces.LicenseSubscriptionService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
+import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +36,7 @@ public class LicenseController {
     private final LicenseDecisionService licenseDecisionService;
 
     @PostMapping("/plan/save")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<LicensePlanResponseDto> savePlan(@RequestBody LicensePlanRequestDto request) {
         return ApiResponse.successCode(
@@ -44,6 +47,7 @@ public class LicenseController {
     }
 
     @PostMapping("/plan/list")
+    @PrivilegeApi("11030199901")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
     public ApiResponse<List<LicensePlanResponseDto>> listPlans() {
         return ApiResponse.successCode(
@@ -54,6 +58,7 @@ public class LicenseController {
     }
 
     @PostMapping("/plan/entitlement/save")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<Void> savePlanEntitlement(@RequestBody LicenseEntitlementRequestDto request) {
         licensePlanService.savePlanEntitlement(request);
@@ -61,6 +66,7 @@ public class LicenseController {
     }
 
     @PostMapping("/subscription/assign")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<LicenseSubscriptionResponseDto> assignSubscription(@RequestBody LicenseSubscriptionRequestDto request) {
         return ApiResponse.successCode(
@@ -71,6 +77,7 @@ public class LicenseController {
     }
 
     @PostMapping("/subscription/list")
+    @PrivilegeApi("11030199901")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
     public ApiResponse<List<LicenseSubscriptionResponseDto>> listSubscriptions() {
         return ApiResponse.successCode(
@@ -81,6 +88,7 @@ public class LicenseController {
     }
 
     @PostMapping("/subscription/suspend")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<LicenseSubscriptionResponseDto> suspendSubscription(@RequestBody SubscriptionStatusRequest request) {
         return ApiResponse.successCode(
@@ -91,6 +99,7 @@ public class LicenseController {
     }
 
     @PostMapping("/subscription/reactivate")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<LicenseSubscriptionResponseDto> reactivateSubscription(@RequestBody SubscriptionStatusRequest request) {
         return ApiResponse.successCode(
@@ -101,6 +110,7 @@ public class LicenseController {
     }
 
     @PostMapping("/subscription/cancel")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<LicenseSubscriptionResponseDto> cancelSubscription(@RequestBody SubscriptionStatusRequest request) {
         return ApiResponse.successCode(
@@ -111,6 +121,7 @@ public class LicenseController {
     }
 
     @PostMapping("/subscription/entitlement/save")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<Void> saveSubscriptionEntitlementOverride(@RequestBody LicenseEntitlementRequestDto request) {
         licenseSubscriptionService.saveEntitlementOverride(request);
@@ -118,6 +129,7 @@ public class LicenseController {
     }
 
     @PostMapping("/key/generate")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<GeneratedLicenseKeyDto> generateLicenseKey(@RequestBody LicenseKeyRequestDto request) {
         return ApiResponse.successCode(
@@ -128,6 +140,7 @@ public class LicenseController {
     }
 
     @PostMapping("/key/activate")
+    @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
     public ApiResponse<Boolean> activateLicenseKey(@RequestBody LicenseKeyRequestDto request) {
         return ApiResponse.successCode(
@@ -138,6 +151,7 @@ public class LicenseController {
     }
 
     @PostMapping("/key/validate")
+    @AuthenticatedApi
     public ApiResponse<Boolean> validateLicenseKey(@RequestBody LicenseKeyRequestDto request) {
         return ApiResponse.successCode(
                 licenseKeyService.validateLicenseKey(request),
@@ -147,6 +161,7 @@ public class LicenseController {
     }
 
     @PostMapping("/decision/check")
+    @AuthenticatedApi
     public ApiResponse<LicenseDecisionResponseDto> checkDecision(@RequestBody LicenseDecisionRequestDto request) {
         return ApiResponse.successCode(
                 licenseDecisionService.check(request),

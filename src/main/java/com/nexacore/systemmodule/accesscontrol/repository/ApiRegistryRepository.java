@@ -10,4 +10,6 @@ public interface ApiRegistryRepository extends JpaRepository<SysPrivApiRegistry,
     Optional<SysPrivApiRegistry> findByApiCode(String apiCode);
 
     List<SysPrivApiRegistry> findByHttpMethodAndActiveTrue(String httpMethod);
+
+    List<SysPrivApiRegistry> findBySource(String source);
 }

@@ -12,6 +12,8 @@ import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
+import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,18 +34,21 @@ public class PrivilegeController {
     private final PrivilegeService privilegeService;
 
     @PostMapping("/save")
+    @PrivilegeApi("11010100180")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_SYNCHRONIZE)")
     public ResponseEntity<ApiResponse<PrivilegeDto>> savePrivilege(@RequestBody PrivilegeRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(privilegeService.savePrivilege(requestDto), "Privilege saved"));
     }
 
     @PostMapping("/list")
+    @PrivilegeApi("11010100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
     public ResponseEntity<ApiResponse<List<PrivilegeDto>>> listPrivileges() {
         return ResponseEntity.ok(ApiResponse.success(privilegeService.getAllPrivileges(), "Privileges loaded"));
     }
 
     @PostMapping("/definitions")
+    @PrivilegeApi("11010100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
     public ResponseEntity<ApiResponse<List<PrivilegeFeatureDefinitionDto>>> listModulePrivilegeDefinitions() {
         return ResponseEntity.ok(ApiResponse.success(
@@ -53,6 +58,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/context")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<ApplicationContextDto>> applicationContext(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
                 privilegeService.getApplicationContext(authentication.getName()),
@@ -61,6 +67,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/sidebar-menu")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<List<SidebarMenuDto>>> sidebarMenu(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
                 privilegeService.getUserSidebarMenu(authentication.getName()),
@@ -69,6 +76,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/sub-menu/save")
+    @PrivilegeApi("11010100180")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_SYNCHRONIZE)")
     public ResponseEntity<ApiResponse<SubMenuDto>> saveSubMenu(@RequestBody SubMenuRequestDto requestDto,
                                                                Authentication authentication) {
@@ -79,6 +87,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/sub-menu/list")
+    @PrivilegeApi("11010100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
     public ResponseEntity<ApiResponse<List<SubMenuDto>>> listSubMenus() {
         return ResponseEntity.ok(ApiResponse.success(
@@ -88,6 +97,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/check")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<PrivilegeCheckResponseDto>> checkPrivilege(@RequestBody PrivilegeCheckRequestDto requestDto,
                                                                                  Authentication authentication) {
         if (requestDto.getUsername() == null || requestDto.getUsername().isBlank()) {
@@ -97,6 +107,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/my-codes")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<Set<String>>> myPrivilegeCodes(Authentication authentication) {
         return ResponseEntity.ok(ApiResponse.success(
                 privilegeService.getUserPrivilegeCodes(authentication.getName()),
@@ -105,6 +116,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/assign-role")
+    @PrivilegeApi("11010100181")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_ASSIGN)")
     public ResponseEntity<ApiResponse<Void>> assignPrivilegesToRole(@RequestBody PrivilegeAssignmentRequestDto requestDto) {
         privilegeService.assignPrivilegesToRole(requestDto);
@@ -112,6 +124,7 @@ public class PrivilegeController {
     }
 
     @PostMapping("/assign-user")
+    @PrivilegeApi("11010100181")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_ASSIGN)")
     public ResponseEntity<ApiResponse<Void>> assignPrivilegesToUser(@RequestBody PrivilegeAssignmentRequestDto requestDto) {
         privilegeService.assignPrivilegesToUser(requestDto);

@@ -15,6 +15,7 @@ import com.nexacore.systemmodule.workflow.service.interfaces.WorkflowHistoryServ
 import com.nexacore.systemmodule.workflow.service.interfaces.WorkflowRuntimeService;
 import com.nexacore.systemmodule.workflow.service.interfaces.WorkflowTaskService;
 import lombok.RequiredArgsConstructor;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,7 @@ public class WorkflowRuntimeController {
     private final WorkflowHistoryService workflowHistoryService;
 
     @PostMapping("/start")
+    @AuthenticatedApi
     public ApiResponse<WorkflowInstanceDto> start(@RequestBody WorkflowStartRequestDto request) {
         return ApiResponse.successCode(
                 workflowRuntimeService.startWorkflow(request),
@@ -41,6 +43,7 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/task/list")
+    @AuthenticatedApi
     public ApiResponse<List<WorkflowTaskSummaryDto>> listTasks(@RequestBody WorkflowTaskSearchRequestDto request) {
         return ApiResponse.successCode(
                 workflowTaskService.findUserTasks(request),
@@ -50,6 +53,7 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/task/detail")
+    @AuthenticatedApi
     public ApiResponse<WorkflowTaskDto> taskDetail(@RequestBody WorkflowTaskDetailRequestDto request) {
         return ApiResponse.successCode(
                 workflowTaskService.getTask(request),
@@ -59,6 +63,7 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/task/action")
+    @AuthenticatedApi
     public ApiResponse<WorkflowTaskDto> action(@RequestBody WorkflowActionRequestDto request) {
         return ApiResponse.successCode(
                 workflowRuntimeService.completeTask(request),
@@ -68,6 +73,7 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/task/action/check")
+    @AuthenticatedApi
     public ApiResponse<WorkflowDecisionResponseDto> checkAction(@RequestBody WorkflowActionRequestDto request) {
         return ApiResponse.successCode(
                 workflowRuntimeService.canPerformAction(request),
@@ -77,6 +83,7 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/instance/detail")
+    @AuthenticatedApi
     public ApiResponse<WorkflowInstanceDto> instanceDetail(@RequestBody WorkflowInstanceRequestDto request) {
         return ApiResponse.successCode(
                 workflowRuntimeService.getInstance(request),
@@ -86,6 +93,7 @@ public class WorkflowRuntimeController {
     }
 
     @PostMapping("/instance/history")
+    @AuthenticatedApi
     public ApiResponse<List<WorkflowHistoryDto>> history(@RequestBody WorkflowInstanceRequestDto request) {
         return ApiResponse.successCode(
                 workflowHistoryService.getHistory(request.workflowInstanceId()),

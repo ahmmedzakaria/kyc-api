@@ -498,6 +498,8 @@ Acceptance criteria: all filters agree on public paths and browser origins are c
 
 #### Step 4.1: Improve `@ClientSecuredApi`
 
+Implementation status: **implemented**. `@ClientSecuredApi` now supports a fixed privilege-code override, explicit client-authentication policy, explicit user-authorization policy, and data-scope metadata while retaining fail-closed `publicApi=false` as the default. `@PublicApi`, `@AuthenticatedApi`, and `@PrivilegeApi` are merged composed annotations, so every method has an explicit policy without duplicating low-level metadata syntax. Method metadata takes precedence over any type metadata in inventory and synchronization.
+
 Keep the existing annotation as the source for registry metadata. Where useful, add:
 
 - A required privilege-code override for exceptional mappings.
@@ -508,6 +510,8 @@ Keep the existing annotation as the source for registry metadata. Where useful, 
 Avoid making `publicApi=true` the default.
 
 #### Step 4.2: Annotate controllers in risk order
+
+Implementation status: **implemented**. Every application-owned controller mapping under `/api/**` now declares reviewed metadata. Public authentication routes use `@PublicApi`; authenticated context, GIS, workflow-runtime, and runtime license decisions use `@AuthenticatedApi`; administrative APIs use their bootstrap privilege; and person/document APIs use action-specific tenant-scoped privileges for create, update, search, delete, and view/download operations.
 
 Annotate controller methods in this order:
 
@@ -522,6 +526,8 @@ Use action-specific privilege codes. For example, person search and document dow
 
 #### Step 4.3: Make synchronization deterministic
 
+Implementation status: **implemented**. Annotation synchronization normalizes paths and methods, rejects mappings without an explicit method, detects duplicate and equivalent overlapping templates, validates privilege composition, upserts deterministic `METHOD:/path` API codes, preserves manual records, deactivates removed annotation-managed records, and returns added/changed/unchanged/deactivated/conflicted counts with conflict details. `V22__add_api_registry_metadata.sql` adds source, priority, synchronization timestamp, client/user policy, and data-scope fields plus annotation-source indexes.
+
 Update `ClientApiRegistryServiceImpl#syncFromAnnotations` to:
 
 - Normalize paths and HTTP methods.
@@ -535,6 +541,8 @@ Update `ClientApiRegistryServiceImpl#syncFromAnnotations` to:
 If required, add registry fields such as `source`, `priority`, and `last_synchronized_at` through a Flyway migration.
 
 #### Step 4.4: Add registry coverage tests
+
+Implementation status: **implemented**. `ApiMetadataCoverageTest` scans every application controller method and fails for missing metadata, unapproved public routes, duplicate API codes, or invalid privilege composition. It verifies public declarations against the centralized `PublicRoutePolicy`, while focused inventory tests retain coverage for undeclared mappings discovered outside the reviewed controller set.
 
 Create an integration test using `RequestMappingHandlerMapping` that fails when:
 

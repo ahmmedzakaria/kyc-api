@@ -7,6 +7,7 @@ import com.nexacore.gismodule.service.implementations.AdministrativeBoundaryServ
 import com.nexacore.commonmodule.dto.SearchDto;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,7 @@ public class AdministrativeBoundaryController {
 
     @Operation(summary = "Search GIS with pagination")
     @PostMapping("/search")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<Page<AdministrativeBoundaryResponse>>> search(@RequestBody SearchDto dto) {
         ApiResponse<Page<AdministrativeBoundaryResponse>> data = service.search(dto);
         return data.toResponseEntity();
@@ -29,6 +31,7 @@ public class AdministrativeBoundaryController {
 
     @Operation(summary = "Get GIS location by id and gis code")
     @PostMapping("/get-by-id")
+    @AuthenticatedApi
     public ResponseEntity<ApiResponse<AdministrativeBoundaryResponse>> getById(@RequestBody IdRequestDto dto) {
         ApiResponse<AdministrativeBoundaryResponse> data = service.getById(UUID.fromString(dto.getId()), dto.getType());
         return data.toResponseEntity();
