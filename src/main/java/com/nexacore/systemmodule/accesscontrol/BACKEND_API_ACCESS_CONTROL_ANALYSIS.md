@@ -379,6 +379,8 @@ Never assign these privileges to the default user role.
 
 #### Step 1.3: Apply method-level checks
 
+Implementation status: **implemented**. `PrivilegeAuthorizer` evaluates the authenticated username against effective privilege codes through the privilege module gateway, independently of API-registry mappings. Action-specific `@PreAuthorize` checks protect client application and API-registry administration, privilege catalog mutations and assignments, layout administration, workflow definition administration, and license plan/subscription/entitlement/key administration. Read-only administration endpoints require their corresponding VIEW privilege; specialized credential rotation, assignment, and synchronization operations use their narrower bootstrap privileges.
+
 Add `@PreAuthorize` to administrative controllers, starting with:
 
 - `ClientApplicationController`.

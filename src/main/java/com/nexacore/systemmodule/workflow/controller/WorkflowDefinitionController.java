@@ -8,6 +8,7 @@ import com.nexacore.systemmodule.workflow.definition.service.interfaces.Workflow
 import com.nexacore.systemmodule.workflow.definition.service.interfaces.WorkflowProviderSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +25,7 @@ public class WorkflowDefinitionController {
     private final WorkflowProviderSyncService workflowProviderSyncService;
 
     @PostMapping("/definition/save")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).WORKFLOW_ADMINISTRATION_MANAGE)")
     public ApiResponse<WorkflowDefinitionDto> save(@RequestBody WorkflowDefinitionDto request, Authentication authentication) {
         return ApiResponse.successCode(
                 workflowDefinitionService.save(request, username(authentication)),
@@ -33,6 +35,7 @@ public class WorkflowDefinitionController {
     }
 
     @PostMapping("/definition/list")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).WORKFLOW_ADMINISTRATION_VIEW)")
     public ApiResponse<List<WorkflowDefinitionDto>> list(@RequestBody(required = false) WorkflowDefinitionListRequestDto request) {
         boolean activeOnly = request == null || request.activeOnly() == null || request.activeOnly();
         return ApiResponse.successCode(
@@ -43,6 +46,7 @@ public class WorkflowDefinitionController {
     }
 
     @PostMapping("/definition/publish")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).WORKFLOW_ADMINISTRATION_MANAGE)")
     public ApiResponse<WorkflowDefinitionDto> publish(@RequestBody WorkflowPublishRequestDto request, Authentication authentication) {
         return ApiResponse.successCode(
                 workflowDefinitionService.publish(request, username(authentication)),
@@ -52,6 +56,7 @@ public class WorkflowDefinitionController {
     }
 
     @PostMapping("/definition/retire")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).WORKFLOW_ADMINISTRATION_MANAGE)")
     public ApiResponse<WorkflowDefinitionDto> retire(@RequestBody WorkflowPublishRequestDto request, Authentication authentication) {
         return ApiResponse.successCode(
                 workflowDefinitionService.retire(request, username(authentication)),
@@ -61,6 +66,7 @@ public class WorkflowDefinitionController {
     }
 
     @PostMapping("/provider/sync")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).WORKFLOW_ADMINISTRATION_MANAGE)")
     public ApiResponse<List<WorkflowDefinitionDto>> sync(Authentication authentication) {
         return ApiResponse.successCode(
                 workflowProviderSyncService.sync(username(authentication)),
