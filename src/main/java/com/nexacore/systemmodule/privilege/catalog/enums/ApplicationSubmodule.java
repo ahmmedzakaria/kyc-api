@@ -6,7 +6,10 @@ import lombok.Getter;
 public enum ApplicationSubmodule {
     KYC_PERSON(ApplicationModule.KYC, "01", "Person"),
     SYS_PRIVILEGE(ApplicationModule.SYSTEM, "01", "Privilege"),
+    SYSTEM_ACCESS_CONTROL(ApplicationModule.SYSTEM, "02", "Access Control"),
     SYSTEM_LICENSE(ApplicationModule.SYSTEM, "03", "License"),
+    SYSTEM_LAYOUT(ApplicationModule.SYSTEM, "04", "Layout"),
+    SYSTEM_WORKFLOW(ApplicationModule.SYSTEM, "05", "Workflow"),
     SERVICE_CACHE(ApplicationModule.SERVICES, "01", "Cache Service"),
     SERVICE_EMAIL(ApplicationModule.SERVICES, "02", "Email Service"),
     SERVICE_FILE(ApplicationModule.SERVICES, "03", "File Service"),

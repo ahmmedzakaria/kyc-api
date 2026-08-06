@@ -347,6 +347,8 @@ This phase must land before registry-driven enforcement because these APIs can c
 
 #### Step 1.1: Define bootstrap administration privileges
 
+Implementation status: **implemented**. `BootstrapAdministrationPrivilegeProvider` defines the administration catalog using the existing 11-character module/submodule/feature-type/feature/action composition. `BootstrapAdministrationPrivileges` exposes stable constants for method-level authorization. System submodules now explicitly cover Access Control (`02`), Layout (`04`), and Workflow (`05`). Actions use category ranges: read-only/low-impact `01`–`09`, data creation/modification `10`–`19`, workflow decisions `20`–`29`, lifecycle changes `30`–`39`, destructive operations `40`–`49`, and system administration `80`–`89`. This step defines catalog metadata only; persistent seeding and bootstrap-role assignment are handled by Step 1.2.
+
 Extend the system privilege catalog with explicit actions for:
 
 - Client application view/manage.
