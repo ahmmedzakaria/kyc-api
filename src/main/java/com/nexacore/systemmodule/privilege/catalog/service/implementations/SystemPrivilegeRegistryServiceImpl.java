@@ -20,6 +20,7 @@ import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRe
 import com.nexacore.systemmodule.privilege.catalog.repository.SubMenuRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     private final FeatureRepository featureRepository;
     private final FeatureTypeRepository featureTypeRepository;
     private final ActionRepository actionRepository;
+    private final AuthorizationDataCache authorizationDataCache;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -99,7 +101,9 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
         if (privilege.getAction() == null) {
             privilege.setAction(resolveAction(privilege.getActionCode(), privilege.getActionName()));
         }
-        return privilegeRepository.save(privilege);
+        SysPrivPrivilege saved = privilegeRepository.save(privilege);
+        authorizationDataCache.invalidateAllUserPrivilegesAfterCommit();
+        return saved;
     }
 
     @Override
@@ -151,6 +155,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                         .id(new SysPrivRolePrivilegeId(roleId, privilege.getId()))
                         .build())
                 .toList());
+        authorizationDataCache.invalidateAllUserPrivilegesAfterCommit();
     }
 
     @Override

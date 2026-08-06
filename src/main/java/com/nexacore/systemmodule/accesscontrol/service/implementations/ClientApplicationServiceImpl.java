@@ -12,6 +12,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialReposi
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.accesscontrol.security.ClientOriginPolicy;
 import com.nexacore.systemmodule.accesscontrol.security.ClientIpPolicy;
+import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final ClientOriginPolicy clientOriginPolicy;
     private final ClientIpPolicy clientIpPolicy;
+    private final AuthorizationDataCache authorizationDataCache;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -59,7 +61,9 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
         }
         application.setUpdatedBy(actorId);
 
-        return ClientApplicationDto.fromEntity(clientApplicationRepository.save(application));
+        ClientApplicationDto saved = ClientApplicationDto.fromEntity(clientApplicationRepository.save(application));
+        authorizationDataCache.invalidateClientAfterCommit(application.getId());
+        return saved;
     }
 
     @Override
@@ -104,6 +108,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
                 .updatedBy(actorId)
                 .build();
         clientCredentialRepository.save(credential);
+        authorizationDataCache.invalidateClientAfterCommit(application.getId());
 
         return GeneratedClientCredentialDto.builder()
                 .clientCode(application.getClientCode())

@@ -50,6 +50,7 @@ class PrivilegeServiceImplTest {
     private final LayoutContextService layoutContextService = mock(LayoutContextService.class);
     private final LayoutRoutePolicyService layoutRoutePolicyService = mock(LayoutRoutePolicyService.class);
     private final LayoutUiPolicyService layoutUiPolicyService = mock(LayoutUiPolicyService.class);
+    private final com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache authorizationDataCache = mock(com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache.class);
     private final PrivilegeServiceImpl service = new PrivilegeServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
@@ -66,8 +67,14 @@ class PrivilegeServiceImplTest {
             authApplicationContextService,
             layoutContextService,
             layoutRoutePolicyService,
-            layoutUiPolicyService
+            layoutUiPolicyService,
+            authorizationDataCache
     );
+
+    {
+        when(authorizationDataCache.userPrivileges(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
+                ((java.util.function.Supplier<Set<String>>) invocation.getArgument(2)).get());
+    }
 
     @Test
     void sortsSidebarChildrenByConfiguredSubMenuOrder() {

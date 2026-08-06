@@ -46,6 +46,7 @@ class SystemPrivilegeRegistryServiceImplTest {
     private final FeatureRepository featureRepository = mock(FeatureRepository.class);
     private final FeatureTypeRepository featureTypeRepository = mock(FeatureTypeRepository.class);
     private final ActionRepository actionRepository = mock(ActionRepository.class);
+    private final com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache authorizationDataCache = mock(com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache.class);
     private final SystemPrivilegeRegistryServiceImpl service = new SystemPrivilegeRegistryServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
@@ -54,7 +55,8 @@ class SystemPrivilegeRegistryServiceImplTest {
             submoduleRepository,
             featureRepository,
             featureTypeRepository,
-            actionRepository
+            actionRepository,
+            authorizationDataCache
     );
 
     @Test

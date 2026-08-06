@@ -14,6 +14,7 @@ import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationContextDto;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
@@ -82,6 +83,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final LayoutContextService layoutContextService;
     private final LayoutRoutePolicyService layoutRoutePolicyService;
     private final LayoutUiPolicyService layoutUiPolicyService;
+    private final AuthorizationDataCache authorizationDataCache;
 
     @Override
     public String buildPrivilegeCode(String moduleCode, String submoduleCode, String featureTypeCode, String featureCode, String actionCode) {
@@ -114,7 +116,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         privilege.setSubMenu(resolveSubMenu(requestDto.getSubMenuId()));
         privilege.setActive(requestDto.getActive() == null || requestDto.getActive());
 
-        return PrivilegeDto.fromEntity(privilegeRepository.save(privilege));
+        PrivilegeDto saved = PrivilegeDto.fromEntity(privilegeRepository.save(privilege));
+        authorizationDataCache.invalidateAllUserPrivilegesAfterCommit();
+        return saved;
     }
 
     @Override
@@ -221,16 +225,14 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public Set<String> getUserPrivilegeCodes(String username) {
         AuthUserAccessDto userAccess = authModuleGateway.getUserAccess(username);
 
-        Set<String> directPrivileges = new HashSet<>(privilegeRepository.findActivePrivilegeCodesByUserId(userAccess.userId()));
-
-        Set<String> rolePrivileges = userAccess.roleIds().isEmpty()
-                ? Set.of()
-                : new HashSet<>(privilegeRepository.findActivePrivilegeCodesByRoleIdIn(userAccess.roleIds()));
-
-        Set<String> privilegeCodes = Stream.concat(directPrivileges.stream(), rolePrivileges.stream())
-                .collect(Collectors.toSet());
-
-        return clientApplicationContextService.getCurrentClientPrivilegeCodes(privilegeCodes);
+        ClientApplicationContextDto client = clientApplicationContextService.getCurrentClientContext().orElse(null);
+        return authorizationDataCache.userPrivileges(userAccess.userId(), client == null ? null : client.getClientApplicationId(), () -> {
+            Set<String> directPrivileges = new HashSet<>(privilegeRepository.findActivePrivilegeCodesByUserId(userAccess.userId()));
+            Set<String> rolePrivileges = userAccess.roleIds().isEmpty() ? Set.of()
+                    : new HashSet<>(privilegeRepository.findActivePrivilegeCodesByRoleIdIn(userAccess.roleIds()));
+            Set<String> privilegeCodes = Stream.concat(directPrivileges.stream(), rolePrivileges.stream()).collect(Collectors.toSet());
+            return clientApplicationContextService.getCurrentClientPrivilegeCodes(privilegeCodes);
+        });
     }
 
     @Override
@@ -271,6 +273,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                         .id(new SysPrivRolePrivilegeId(requestDto.getRoleId(), privilege.getId()))
                         .build())
                 .toList());
+        authorizationDataCache.invalidateAllUserPrivilegesAfterCommit();
     }
 
     @Override
@@ -289,6 +292,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                         .id(new SysPrivUserPrivilegeId(requestDto.getUserId(), privilege.getId()))
                         .build())
                 .toList());
+        authorizationDataCache.invalidateUserAfterCommit(requestDto.getUserId());
     }
 
     private Set<SysPrivPrivilege> loadPrivileges(Set<String> privilegeCodes) {

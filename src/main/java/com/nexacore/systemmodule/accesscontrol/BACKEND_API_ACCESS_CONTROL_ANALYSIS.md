@@ -764,6 +764,8 @@ Add a unique constraint where possible and synchronization-time overlap validati
 
 #### Step 9.2: Cache safe authorization data
 
+**Status: implemented.**
+
 Cache:
 
 - Active API registry mappings.
@@ -771,6 +773,11 @@ Cache:
 - User effective privilege codes.
 
 Invalidate caches after registry sync, permission assignment, user/role privilege changes, client status changes, or credential rotation. Keep TTLs short enough to bound stale authorization.
+
+- `AuthorizationDataCache` uses the cache-service `CacheService` abstraction and stores immutable snapshots only; it never caches API keys, password hashes, request contexts, or managed JPA entities.
+- Active API mappings are cached by HTTP method, client API/feature grants by client ID, and effective privilege codes by user ID plus client ID. The default TTL is 30 seconds and can be changed with `access-control.authorization-cache.ttl`.
+- Cache read/write failures fall back to authoritative database reads. Empty grant and privilege snapshots are cached and remain deny-all, avoiding unsafe negative-cache behavior.
+- Registry writes/synchronization, client permission changes, privilege catalog and user/role assignment changes, client status/configuration changes, and credential rotation schedule invalidation after transaction commit. Role/catalog changes invalidate all user privilege snapshots; narrower mutations evict only affected user/client namespaces.
 
 #### Step 9.3: Avoid writes on every API-key request
 

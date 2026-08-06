@@ -15,6 +15,7 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicat
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
+import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     private final ClientFeaturePermissionRepository clientFeaturePermissionRepository;
     private final ClientApplicationTenantRepository clientApplicationTenantRepository;
     private final AuthModuleGateway authModuleGateway;
+    private final AuthorizationDataCache authorizationDataCache;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -58,6 +60,7 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
                             .build();
                 })
                 .toList());
+        authorizationDataCache.invalidateClientAfterCommit(application.getId());
     }
 
     @Override
@@ -85,6 +88,7 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
                             .build();
                 })
                 .toList());
+        authorizationDataCache.invalidateClientAfterCommit(application.getId());
     }
 
     @Override

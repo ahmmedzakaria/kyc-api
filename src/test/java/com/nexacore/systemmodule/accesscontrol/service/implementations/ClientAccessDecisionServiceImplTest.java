@@ -5,9 +5,12 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApiPermissionRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissionRepository;
+import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -17,10 +20,15 @@ class ClientAccessDecisionServiceImplTest {
 
     private final ClientApiPermissionRepository clientApiPermissionRepository = mock(ClientApiPermissionRepository.class);
     private final ClientFeaturePermissionRepository clientFeaturePermissionRepository = mock(ClientFeaturePermissionRepository.class);
+    private final CacheService cacheService = mock(CacheService.class);
+    private final AuthorizationDataCache authorizationDataCache = new AuthorizationDataCache(cacheService);
     private final ClientAccessDecisionServiceImpl service = new ClientAccessDecisionServiceImpl(
             clientApiPermissionRepository,
-            clientFeaturePermissionRepository
+            clientFeaturePermissionRepository,
+            authorizationDataCache
     );
+
+    { when(cacheService.get(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(Optional.empty()); }
 
     @Test
     void allowsPublicApiWithoutClient() {
@@ -59,9 +67,8 @@ class ClientAccessDecisionServiceImplTest {
                 .active(true)
                 .build();
 
-        when(clientApiPermissionRepository.existsByClientApplicationIdAndApiRegistryIdAndActiveTrue(10L, 20L)).thenReturn(true);
-        when(clientFeaturePermissionRepository.existsByClientApplicationIdAndPrivilegePrivilegeCodeAndActiveTrue(10L, "01010200101"))
-                .thenReturn(false);
+        when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of(20L));
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L)).thenReturn(Set.of());
 
         ClientAccessDecisionDto decision = service.decide(client, api);
 

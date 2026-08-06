@@ -8,6 +8,7 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.accesscontrol.security.ClientSecuredApi;
 import com.nexacore.systemmodule.accesscontrol.security.ApiRouteMatcher;
+import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     private final AuthModuleGateway authModuleGateway;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private final ApiRouteMatcher apiRouteMatcher;
+    private final AuthorizationDataCache authorizationDataCache;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -77,7 +79,9 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
 
         validateNoAmbiguousActiveRoute(api);
 
-        return ApiRegistryDto.fromEntity(apiRegistryRepository.save(api));
+        ApiRegistryDto saved = ApiRegistryDto.fromEntity(apiRegistryRepository.save(api));
+        authorizationDataCache.invalidateRegistryAfterCommit();
+        return saved;
     }
 
     @Override
@@ -159,6 +163,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
             }
         }
 
+        authorizationDataCache.invalidateRegistryAfterCommit();
         return ApiRegistrySyncReportDto.builder()
                 .added(added).changed(changed).unchanged(unchanged).deactivated(deactivated)
                 .conflicted(conflicts.size()).conflicts(List.copyOf(conflicts)).records(list())
@@ -170,7 +175,8 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     public Optional<SysPrivApiRegistry> resolve(HttpServletRequest request) {
         String method = request.getMethod().toUpperCase();
         String path = request.getRequestURI();
-        return apiRouteMatcher.resolve(apiRegistryRepository.findByHttpMethodAndActiveTrue(method), path);
+        return apiRouteMatcher.resolve(authorizationDataCache.registryMappings(method,
+                () -> apiRegistryRepository.findByHttpMethodAndActiveTrue(method)), path);
     }
 
     private ClientSecuredApi findClientSecuredApi(HandlerMethod handlerMethod) {
