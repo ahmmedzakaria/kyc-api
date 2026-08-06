@@ -781,7 +781,14 @@ Invalidate caches after registry sync, permission assignment, user/role privileg
 
 #### Step 9.3: Avoid writes on every API-key request
 
+**Status: implemented.**
+
 `lastUsedAt` updates currently write during credential validation. Throttle or asynchronously aggregate these updates to avoid turning every authenticated request into a database write.
+
+- Successful API-key validation updates credential usage at most once per configured interval; the default is five minutes (`access-control.credential-usage-write-interval`, environment variable `ACCESS_CONTROL_CREDENTIAL_USAGE_WRITE_INTERVAL`).
+- Requests inside the interval perform no update statement. Expired, inactive, malformed, and incorrect credentials never update usage.
+- A conditional repository update repeats the cutoff predicate in SQL, so concurrent backend instances cannot repeatedly overwrite a timestamp after another instance has already refreshed it.
+- Credential validity and revocation remain database-authoritative on every validation. Usage tracking is operational metadata only and never participates in the allow/deny decision.
 
 ### Phase 10: Audit and observability
 

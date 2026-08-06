@@ -6,11 +6,13 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepos
 import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialRepository;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredentialService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.Optional;
 
 @Service
@@ -20,6 +22,9 @@ public class ClientCredentialServiceImpl implements ClientCredentialService {
     private final ClientApplicationRepository clientApplicationRepository;
     private final ClientCredentialRepository clientCredentialRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${access-control.credential-usage-write-interval:PT5M}")
+    private Duration usageWriteInterval;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
@@ -48,9 +53,19 @@ public class ClientCredentialServiceImpl implements ClientCredentialService {
                 .filter(credential -> credential.getApiKeyHash() != null && passwordEncoder.matches(apiKey, credential.getApiKeyHash()))
                 .findFirst()
                 .map(credential -> {
-                    credential.setLastUsedAt(LocalDateTime.now());
-                    clientCredentialRepository.save(credential);
+                    recordUsageIfDue(credential.getId(), credential.getLastUsedAt(), LocalDateTime.now());
                     return application.get();
                 });
+    }
+
+    private void recordUsageIfDue(Long credentialId, LocalDateTime lastUsedAt, LocalDateTime usedAt) {
+        Duration interval = usageWriteInterval == null ? Duration.ofMinutes(5) : usageWriteInterval;
+        if (interval.isNegative() || interval.isZero()) {
+            throw new IllegalStateException("access-control.credential-usage-write-interval must be positive");
+        }
+        LocalDateTime cutoff = usedAt.minus(interval);
+        if (lastUsedAt == null || lastUsedAt.isBefore(cutoff)) {
+            clientCredentialRepository.updateLastUsedAtIfBefore(credentialId, usedAt, cutoff);
+        }
     }
 }
