@@ -9,7 +9,19 @@ public record ClientApplicationContext(
         String traceId,
         SysPrivClientApplication clientApplication,
         SysPrivApiRegistry apiRegistry,
-        String decision,
-        String denyReason
+        String requiredPrivilegeCode,
+        String clientDecision,
+        String clientDenyReason,
+        String userDecision,
+        String userDenyReason
 ) {
+    public String decision() {
+        if ("DENIED".equals(userDecision) || "DENIED".equals(clientDecision)) return "DENIED";
+        if (userDecision != null) return userDecision;
+        return clientDecision;
+    }
+
+    public String denyReason() {
+        return userDenyReason != null ? userDenyReason : clientDenyReason;
+    }
 }

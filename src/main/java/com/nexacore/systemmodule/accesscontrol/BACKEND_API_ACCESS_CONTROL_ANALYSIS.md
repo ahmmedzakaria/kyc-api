@@ -595,6 +595,8 @@ Acceptance criterion: normal approved workflows produce no unexplained would-den
 
 #### Step 6.1: Resolve once per request
 
+Implementation status: **implemented**. `ClientApiAccessFilter` is the single registry resolver for protected requests and stores the resolved record in `ClientApplicationContext`. The context now carries the client application, required privilege, separate client/user decisions and denial reasons, and trace ID. `UserPrivilegeApiAccessFilter` consumes that exact record and no longer queries the registry independently; API access logging reads the same aggregate context.
+
 Avoid resolving the API registry independently in multiple filters. Introduce a single resolver filter or request-scoped decision context containing:
 
 - Resolved API registry record.
@@ -608,6 +610,8 @@ This prevents inconsistent database reads and matching results.
 
 #### Step 6.2: Enforce unresolved-route denial
 
+Implementation status: **implemented**. In `ENFORCE`, every non-public `/api/**` request without an active registry match returns `403 API_NOT_REGISTERED`, regardless of the legacy registry-coverage reporting switch. Explicit routes in `PublicRoutePolicy` bypass protected resolution; absence from the registry never implies public access. `REPORT` records the unresolved decision and continues for rollout diagnostics.
+
 In `ENFORCE` mode:
 
 ```text
@@ -617,6 +621,8 @@ protected /api/** + no active registry match -> deny API_NOT_REGISTERED
 Public routes must be explicitly approved. Do not infer public access merely because an endpoint is absent from the registry.
 
 #### Step 6.3: Roll out progressively
+
+Implementation status: **supported operationally**. `REPORT` remains the non-blocking validation/rollback mode and `ENFORCE` activates fail-closed behavior without deleting or rewriting registry and permission data. Environment promotion and production canary execution remain deployment operations rather than application code.
 
 Recommended rollout:
 

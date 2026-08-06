@@ -61,8 +61,44 @@ class ClientApiAccessFilterReportModeTest {
         assertThat(response.getContentAsString()).contains("CLIENT_API_NOT_ALLOWED");
     }
 
+    @Test
+    void enforceModeFailsClosedForUnresolvedApplicationApi() throws Exception {
+        AccessControlProperties properties = properties(EnforcementMode.ENFORCE);
+        properties.setRegistryCoverageEnabled(false);
+        ClientApiAccessFilter filter = filter(properties, null);
+        MockHttpServletRequest request = protectedRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (req, res) -> continued.set(true));
+
+        assertThat(continued).isFalse();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getContentAsString()).contains("API_NOT_REGISTERED");
+        assertThat(ClientApplicationContextHolder.get().orElseThrow().clientDenyReason())
+                .isEqualTo("API_NOT_REGISTERED");
+    }
+
+    @Test
+    void reportModeAllowsUnresolvedApplicationApiForRollback() throws Exception {
+        AccessControlProperties properties = properties(EnforcementMode.REPORT);
+        ClientApiAccessFilter filter = filter(properties, null);
+        MockHttpServletRequest request = protectedRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (req, res) -> continued.set(true));
+
+        assertThat(continued).isTrue();
+        assertThat(ClientApplicationContextHolder.get().orElseThrow().clientDenyReason())
+                .isEqualTo("API_NOT_REGISTERED");
+    }
+
     private ClientApiAccessFilter filter(AccessControlProperties properties) {
-        SysPrivApiRegistry api = protectedApi();
+        return filter(properties, protectedApi());
+    }
+
+    private ClientApiAccessFilter filter(AccessControlProperties properties, SysPrivApiRegistry api) {
         ClientApiRegistryService registryService = new StubRegistryService(api);
         ClientAccessDecisionService decisionService = new StubDecisionService(api);
         return new ClientApiAccessFilter(
@@ -96,7 +132,7 @@ class ClientApiAccessFilterReportModeTest {
     }
 
     private record StubRegistryService(SysPrivApiRegistry api) implements ClientApiRegistryService {
-        @Override public Optional<SysPrivApiRegistry> resolve(jakarta.servlet.http.HttpServletRequest request) { return Optional.of(api); }
+        @Override public Optional<SysPrivApiRegistry> resolve(jakarta.servlet.http.HttpServletRequest request) { return Optional.ofNullable(api); }
         @Override public ApiRegistryDto save(ApiRegistryRequestDto requestDto, String username) { throw new UnsupportedOperationException(); }
         @Override public List<ApiRegistryDto> list() { return List.of(); }
         @Override public ApiRegistrySyncReportDto syncFromAnnotations(String username) { throw new UnsupportedOperationException(); }

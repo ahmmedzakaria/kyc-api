@@ -2,7 +2,6 @@ package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
-import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
@@ -17,14 +16,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
 
-    private final ClientApiRegistryService clientApiRegistryService;
     private final PrivilegeService privilegeService;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
@@ -42,11 +38,12 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        Optional<SysPrivApiRegistry> api = clientApiRegistryService.resolve(request);
-        if (api.isEmpty()
-                || api.get().isPublicApi()
-                || api.get().getRequiredPrivilegeCode() == null
-                || api.get().getRequiredPrivilegeCode().isBlank()) {
+        ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
+        SysPrivApiRegistry api = context == null ? null : context.apiRegistry();
+        if (api == null
+                || api.isPublicApi()
+                || context.requiredPrivilegeCode() == null
+                || context.requiredPrivilegeCode().isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -58,19 +55,20 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
         }
 
         boolean allowed = privilegeService.getUserPrivilegeCodes(authentication.getName())
-                .contains(api.get().getRequiredPrivilegeCode());
+                .contains(context.requiredPrivilegeCode());
+        updateUserDecision(context, allowed ? "ALLOWED" : "DENIED",
+                allowed ? null : AccessControlError.USER_PRIVILEGE_NOT_ALLOWED.name());
         if (!allowed) {
             if (accessControlProperties.getEnforcementMode()
                     == com.nexacore.systemmodule.accesscontrol.config.EnforcementMode.REPORT) {
-                ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
                 log.warn("access-control would-deny traceId={} apiCode={} clientCode={} username={} "
                                 + "requiredPrivilegeCode={} denialReason={}",
                         context == null ? null : context.traceId(),
-                        api.get().getApiCode(),
+                        api.getApiCode(),
                         context == null || context.clientApplication() == null
                                 ? null : context.clientApplication().getClientCode(),
                         authentication.getName(),
-                        api.get().getRequiredPrivilegeCode(),
+                        context.requiredPrivilegeCode(),
                         AccessControlError.USER_PRIVILEGE_NOT_ALLOWED.name());
                 filterChain.doFilter(request, response);
                 return;
@@ -81,6 +79,19 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void updateUserDecision(ClientApplicationContext context, String status, String denyReason) {
+        ClientApplicationContextHolder.set(ClientApplicationContext.builder()
+                .traceId(context.traceId())
+                .clientApplication(context.clientApplication())
+                .apiRegistry(context.apiRegistry())
+                .requiredPrivilegeCode(context.requiredPrivilegeCode())
+                .clientDecision(context.clientDecision())
+                .clientDenyReason(context.clientDenyReason())
+                .userDecision(status)
+                .userDenyReason(denyReason)
+                .build());
     }
 
 }

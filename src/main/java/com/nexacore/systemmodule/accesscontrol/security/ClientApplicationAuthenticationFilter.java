@@ -93,8 +93,8 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         ClientApplicationContextHolder.set(ClientApplicationContext.builder()
                 .traceId(traceId)
                 .clientApplication(application)
-                .decision(decision)
-                .denyReason(denyReason)
+                .clientDecision(decision)
+                .clientDenyReason(denyReason)
                 .build());
     }
 

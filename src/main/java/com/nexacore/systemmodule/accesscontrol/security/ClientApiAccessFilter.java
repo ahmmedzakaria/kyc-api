@@ -45,7 +45,8 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         Optional<SysPrivApiRegistry> api = clientApiRegistryService.resolve(request);
         if (api.isEmpty()) {
-            if (accessControlProperties.isRegistryCoverageEnabled()
+            updateUnresolvedContext();
+            if (isApplicationApi(request)
                     && accessControlProperties.getEnforcementMode() == EnforcementMode.ENFORCE) {
                 AccessControlError error = AccessControlError.API_NOT_REGISTERED;
                 responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
@@ -67,6 +68,7 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
 
         if (!decision.allowed()) {
             if ("CLIENT_REQUIRED".equals(decision.denyReason()) && !requiresClient(request)) {
+                updateClientDecision(decision, "NOT_REQUIRED", null);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -92,14 +94,37 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
     }
 
     private void updateContext(ClientAccessDecisionDto decision) {
+        updateClientDecision(decision, decision.allowed() ? "ALLOWED" : "DENIED", decision.denyReason());
+    }
+
+    private void updateClientDecision(ClientAccessDecisionDto decision, String status, String denyReason) {
         ClientApplicationContext existing = ClientApplicationContextHolder.get().orElse(null);
         ClientApplicationContextHolder.set(ClientApplicationContext.builder()
                 .traceId(existing == null ? null : existing.traceId())
                 .clientApplication(decision.clientApplication())
                 .apiRegistry(decision.apiRegistry())
-                .decision(decision.allowed() ? "ALLOWED" : "DENIED")
-                .denyReason(decision.denyReason())
+                .requiredPrivilegeCode(decision.apiRegistry() == null
+                        ? null : decision.apiRegistry().getRequiredPrivilegeCode())
+                .clientDecision(status)
+                .clientDenyReason(denyReason)
+                .userDecision(existing == null ? null : existing.userDecision())
+                .userDenyReason(existing == null ? null : existing.userDenyReason())
                 .build());
+    }
+
+    private void updateUnresolvedContext() {
+        ClientApplicationContext existing = ClientApplicationContextHolder.get().orElse(null);
+        ClientApplicationContextHolder.set(ClientApplicationContext.builder()
+                .traceId(existing == null ? null : existing.traceId())
+                .clientApplication(existing == null ? null : existing.clientApplication())
+                .clientDecision("DENIED")
+                .clientDenyReason(AccessControlError.API_NOT_REGISTERED.name())
+                .build());
+    }
+
+    private boolean isApplicationApi(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path != null && (path.equals("/api") || path.startsWith("/api/"));
     }
 
     private void logWouldDeny(ClientAccessDecisionDto decision) {
