@@ -10,6 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
 
     private final ClientApiRegistryService clientApiRegistryService;
@@ -58,6 +60,21 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
         boolean allowed = privilegeService.getUserPrivilegeCodes(authentication.getName())
                 .contains(api.get().getRequiredPrivilegeCode());
         if (!allowed) {
+            if (accessControlProperties.getEnforcementMode()
+                    == com.nexacore.systemmodule.accesscontrol.config.EnforcementMode.REPORT) {
+                ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
+                log.warn("access-control would-deny traceId={} apiCode={} clientCode={} username={} "
+                                + "requiredPrivilegeCode={} denialReason={}",
+                        context == null ? null : context.traceId(),
+                        api.get().getApiCode(),
+                        context == null || context.clientApplication() == null
+                                ? null : context.clientApplication().getClientCode(),
+                        authentication.getName(),
+                        api.get().getRequiredPrivilegeCode(),
+                        AccessControlError.USER_PRIVILEGE_NOT_ALLOWED.name());
+                filterChain.doFilter(request, response);
+                return;
+            }
             AccessControlError error = AccessControlError.USER_PRIVILEGE_NOT_ALLOWED;
             responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
             return;

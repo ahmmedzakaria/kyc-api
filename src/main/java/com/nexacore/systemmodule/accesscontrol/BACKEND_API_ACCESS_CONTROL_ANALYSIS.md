@@ -557,9 +557,13 @@ Acceptance criterion: 100% of application-owned API mappings have reviewed metad
 
 #### Step 5.1: Synchronize API registry in a controlled environment
 
+Implementation status: **implemented**. Bootstrap synchronization runs with the authorized `admin` actor, produces the Phase 4 synchronization report, and aborts startup when annotation conflicts remain. Client grants are selected only from active, annotation-owned, non-public registry records; manual, stale, inactive, and public records are not implicitly granted.
+
 Run annotation synchronization using an authorized system actor. Review the generated registry before enabling enforcement.
 
 #### Step 5.2: Assign client API permissions
+
+Implementation status: **implemented for the default WEB client**. Startup replaces the WEB client's API grant set with the reviewed annotation inventory and explicitly assigns its feature catalog. Empty API or feature assignments remain deny-all in `ClientAccessDecisionService`; they are never interpreted as unrestricted. WEB remains a public browser client and receives no confidential credential. Tenant/business assignments remain explicit and are not synthesized before Phase 7 introduces trusted scope identifiers.
 
 For each registered client:
 
@@ -571,6 +575,8 @@ For each registered client:
 Do not interpret an empty permission set as unrestricted access.
 
 #### Step 5.3: Validate frontend traffic in report mode
+
+Implementation status: **implemented**. Known client-permission and user-privilege failures in `REPORT` mode now continue through the filter chain and emit structured `access-control would-deny` events containing trace ID, API code, client code, safe username when authentication is available, required privilege code, and denial reason. `ENFORCE` retains the existing denial responses. Credentials, tokens, PII, and request bodies are not logged.
 
 Run normal Angular workflows with `enforcement-mode=REPORT`. Record would-deny decisions by:
 

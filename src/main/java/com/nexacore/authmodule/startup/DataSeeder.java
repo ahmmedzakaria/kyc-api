@@ -13,6 +13,7 @@ import com.nexacore.authmodule.core.repository.UserRepository;
 import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
 import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryDto;
+import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationRequestDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientPermissionAssignmentRequestDto;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
@@ -167,15 +168,22 @@ public class DataSeeder {
         featureAssignment.setPrivilegeCodes(privilegeCodes);
         clientPermissionService.assignFeaturePermissions(featureAssignment, "admin");
 
-        Set<Long> apiRegistryIds = clientApiRegistryService.syncFromAnnotations("admin").getRecords().stream()
+        ApiRegistrySyncReportDto syncReport = clientApiRegistryService.syncFromAnnotations("admin");
+        if (syncReport.getConflicted() > 0) {
+            throw new IllegalStateException("API registry synchronization has unresolved conflicts: "
+                    + syncReport.getConflicts());
+        }
+
+        Set<Long> apiRegistryIds = syncReport.getRecords().stream()
+                .filter(ApiRegistryDto::isActive)
+                .filter(api -> "ANNOTATION".equals(api.getSource()))
+                .filter(api -> !api.isPublicApi())
                 .map(ApiRegistryDto::getId)
                 .collect(Collectors.toSet());
-        if (!apiRegistryIds.isEmpty()) {
-            ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
-            apiAssignment.setClientCode("WEB");
-            apiAssignment.setApiRegistryIds(apiRegistryIds);
-            clientPermissionService.assignApiPermissions(apiAssignment, "admin");
-        }
+        ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+        apiAssignment.setClientCode("WEB");
+        apiAssignment.setApiRegistryIds(apiRegistryIds);
+        clientPermissionService.assignApiPermissions(apiAssignment, "admin");
     }
 
     private void seedDefaultAuthPolicies(AuthClientAuthPolicyRepository authPolicyRepository,

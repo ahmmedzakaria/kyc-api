@@ -70,6 +70,11 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
                 filterChain.doFilter(request, response);
                 return;
             }
+            if (accessControlProperties.getEnforcementMode() == EnforcementMode.REPORT) {
+                logWouldDeny(decision);
+                filterChain.doFilter(request, response);
+                return;
+            }
             AccessControlError error = AccessControlError.fromClientDecision(decision.denyReason());
             responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
             return;
@@ -95,6 +100,20 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
                 .decision(decision.allowed() ? "ALLOWED" : "DENIED")
                 .denyReason(decision.denyReason())
                 .build());
+    }
+
+    private void logWouldDeny(ClientAccessDecisionDto decision) {
+        ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
+        SysPrivApiRegistry api = decision.apiRegistry();
+        SysPrivClientApplication client = decision.clientApplication();
+        log.warn("access-control would-deny traceId={} apiCode={} clientCode={} username={} "
+                        + "requiredPrivilegeCode={} denialReason={}",
+                context == null ? null : context.traceId(),
+                api == null ? null : api.getApiCode(),
+                client == null ? null : client.getClientCode(),
+                null,
+                api == null ? null : api.getRequiredPrivilegeCode(),
+                decision.denyReason());
     }
 
 }
