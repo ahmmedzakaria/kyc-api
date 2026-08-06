@@ -813,6 +813,8 @@ The event contains only the fields listed above. The user is represented by the 
 
 #### Step 10.2: Add metrics
 
+Implementation status: **implemented**. Micrometer now publishes bounded-cardinality decision counters (`nexacore.access.control.requests`), denial counters by reason (`nexacore.access.control.denials`), API-registry resolution timers by outcome (`nexacore.access.control.registry.resolution`), and authorization-cache request counters by cache and hit/miss result (`nexacore.access.control.cache.requests`). Prometheus exposure uses the existing Actuator endpoint. Dashboards and deployment-specific alert thresholds should alert on `API_NOT_REGISTERED`, `INVALID_CLIENT_CREDENTIALS`, `INVALID_TOKEN_TYPE`, and administrative `USER_PRIVILEGE_NOT_ALLOWED` spikes.
+
 Track at minimum:
 
 - Allowed and denied request counts.

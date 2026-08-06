@@ -9,6 +9,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.accesscontrol.security.ClientSecuredApi;
 import com.nexacore.systemmodule.accesscontrol.security.ApiRouteMatcher;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.systemmodule.accesscontrol.security.AccessControlMetrics;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private final ApiRouteMatcher apiRouteMatcher;
     private final AuthorizationDataCache authorizationDataCache;
+    private final AccessControlMetrics accessControlMetrics;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -173,10 +175,19 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public Optional<SysPrivApiRegistry> resolve(HttpServletRequest request) {
+        long startedAt = System.nanoTime();
         String method = request.getMethod().toUpperCase();
         String path = request.getRequestURI();
-        return apiRouteMatcher.resolve(authorizationDataCache.registryMappings(method,
-                () -> apiRegistryRepository.findByHttpMethodAndActiveTrue(method)), path);
+        try {
+            Optional<SysPrivApiRegistry> resolved = apiRouteMatcher.resolve(authorizationDataCache.registryMappings(method,
+                    () -> apiRegistryRepository.findByHttpMethodAndActiveTrue(method)), path);
+            accessControlMetrics.recordRegistryResolution(System.nanoTime() - startedAt,
+                    resolved.isPresent() ? "matched" : "unregistered");
+            return resolved;
+        } catch (RuntimeException exception) {
+            accessControlMetrics.recordRegistryResolution(System.nanoTime() - startedAt, "error");
+            throw exception;
+        }
     }
 
     private ClientSecuredApi findClientSecuredApi(HandlerMethod handlerMethod) {

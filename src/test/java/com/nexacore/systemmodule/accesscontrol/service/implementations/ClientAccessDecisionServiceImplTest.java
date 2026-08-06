@@ -21,7 +21,7 @@ class ClientAccessDecisionServiceImplTest {
     private final ClientApiPermissionRepository clientApiPermissionRepository = mock(ClientApiPermissionRepository.class);
     private final ClientFeaturePermissionRepository clientFeaturePermissionRepository = mock(ClientFeaturePermissionRepository.class);
     private final CacheService cacheService = mock(CacheService.class);
-    private final AuthorizationDataCache authorizationDataCache = new AuthorizationDataCache(cacheService);
+    private final AuthorizationDataCache authorizationDataCache = new AuthorizationDataCache(cacheService, mock(com.nexacore.systemmodule.accesscontrol.security.AccessControlMetrics.class));
     private final ClientAccessDecisionServiceImpl service = new ClientAccessDecisionServiceImpl(
             clientApiPermissionRepository,
             clientFeaturePermissionRepository,

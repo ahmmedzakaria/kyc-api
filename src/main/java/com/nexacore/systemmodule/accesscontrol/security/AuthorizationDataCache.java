@@ -25,6 +25,7 @@ public class AuthorizationDataCache {
     private static final String USER_PRIVILEGES = "authorization:user-privileges:";
 
     private final CacheService cacheService;
+    private final AccessControlMetrics metrics;
 
     @Value("${access-control.authorization-cache.ttl:PT30S}")
     private Duration ttl;
@@ -32,7 +33,11 @@ public class AuthorizationDataCache {
     public List<SysPrivApiRegistry> registryMappings(String method, Supplier<List<SysPrivApiRegistry>> loader) {
         String key = REGISTRY + method.toUpperCase();
         RegistrySnapshot snapshot = get(key, RegistrySnapshot.class);
-        if (snapshot != null) return Arrays.stream(snapshot.getMappings()).map(ApiSnapshot::toEntity).toList();
+        if (snapshot != null) {
+            metrics.recordCacheRequest("registry", "hit");
+            return Arrays.stream(snapshot.getMappings()).map(ApiSnapshot::toEntity).toList();
+        }
+        metrics.recordCacheRequest("registry", "miss");
         List<SysPrivApiRegistry> loaded = List.copyOf(loader.get());
         put(key, new RegistrySnapshot(loaded.stream().map(ApiSnapshot::from).toArray(ApiSnapshot[]::new)));
         return loaded;
@@ -41,7 +46,11 @@ public class AuthorizationDataCache {
     public ClientGrantSnapshot clientGrants(Long clientId, Supplier<ClientGrantSnapshot> loader) {
         String key = CLIENT_GRANTS + clientId;
         ClientGrantSnapshot cached = get(key, ClientGrantSnapshot.class);
-        if (cached != null) return cached;
+        if (cached != null) {
+            metrics.recordCacheRequest("client_grants", "hit");
+            return cached;
+        }
+        metrics.recordCacheRequest("client_grants", "miss");
         ClientGrantSnapshot loaded = loader.get();
         put(key, loaded);
         return loaded;
@@ -50,7 +59,11 @@ public class AuthorizationDataCache {
     public Set<String> userPrivileges(Long userId, Long clientId, Supplier<Set<String>> loader) {
         String key = USER_PRIVILEGES + userId + ":" + (clientId == null ? "none" : clientId);
         StringSetSnapshot cached = get(key, StringSetSnapshot.class);
-        if (cached != null) return Set.copyOf(Arrays.asList(cached.getValues()));
+        if (cached != null) {
+            metrics.recordCacheRequest("user_privileges", "hit");
+            return Set.copyOf(Arrays.asList(cached.getValues()));
+        }
+        metrics.recordCacheRequest("user_privileges", "miss");
         Set<String> loaded = Set.copyOf(loader.get());
         put(key, new StringSetSnapshot(loaded.toArray(String[]::new)));
         return loaded;

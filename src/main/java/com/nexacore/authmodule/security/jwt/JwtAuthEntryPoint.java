@@ -1,6 +1,8 @@
 package com.nexacore.authmodule.security.jwt;
 
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
+import com.nexacore.systemmodule.accesscontrol.security.ClientApplicationContext;
+import com.nexacore.systemmodule.accesscontrol.security.ClientApplicationContextHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,15 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
 		String message = INVALID_TOKEN_TYPE.equals(code)
 				? "The supplied token type cannot access this resource"
 				: "A valid user access token is required";
+		ClientApplicationContext current = ClientApplicationContextHolder.get().orElse(null);
+		if (current != null) {
+			ClientApplicationContextHolder.set(ClientApplicationContext.builder()
+					.traceId(current.traceId()).clientApplication(current.clientApplication())
+					.apiRegistry(current.apiRegistry()).requiredPrivilegeCode(current.requiredPrivilegeCode())
+					.clientDecision(current.clientDecision()).clientDenyReason(current.clientDenyReason())
+					.userDecision("DENIED").userDenyReason(code).userId(current.userId())
+					.scopeAssignments(current.scopeAssignments()).build());
+		}
 		responseWriter.writeError(response, HttpServletResponse.SC_UNAUTHORIZED, code, message);
 	}
 

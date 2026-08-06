@@ -23,7 +23,7 @@ class AuthorizationDataCacheTest {
     @BeforeEach
     void setUp() {
         cacheService = mock(CacheService.class);
-        cache = new AuthorizationDataCache(cacheService);
+        cache = new AuthorizationDataCache(cacheService, mock(AccessControlMetrics.class));
         ReflectionTestUtils.setField(cache, "ttl", Duration.ofSeconds(30));
     }
 
