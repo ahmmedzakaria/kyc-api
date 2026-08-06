@@ -33,7 +33,7 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String path = requestPath(request);
         return !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || publicRoutePolicy.isPublic(path);
@@ -146,8 +146,13 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
     }
 
     private boolean isApplicationApi(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String path = requestPath(request);
         return path != null && (path.equals("/api") || path.startsWith("/api/"));
+    }
+
+    private String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        return servletPath == null || servletPath.isBlank() ? request.getRequestURI() : servletPath;
     }
 
     private void logWouldDeny(ClientAccessDecisionDto decision) {

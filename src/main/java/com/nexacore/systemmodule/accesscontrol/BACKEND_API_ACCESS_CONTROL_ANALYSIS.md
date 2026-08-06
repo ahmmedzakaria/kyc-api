@@ -837,6 +837,8 @@ Cover token type, route matching, client decisions, user privilege decisions, te
 
 #### Step 11.2: Filter-chain integration tests
 
+Implementation status: **implemented**. A narrow Spring web integration suite builds MockMvc from the real `SecurityConfig`, all configured access-control/JWT/context filters, method security, and the standard exception/JSON response handlers. It covers every required matrix row using deterministic mocked auth and registry boundaries, including public access, client credential/API/feature failures, missing/invalid/refresh JWTs, user privilege decisions, successful dual authorization, fail-closed unregistered routes, IP policy, cross-tenant scope, and administration denial.
+
 Use MockMvc or Spring Boot integration tests to verify the complete filter order and response contract for every row in the required test matrix below.
 
 #### Step 11.3: Database migration tests

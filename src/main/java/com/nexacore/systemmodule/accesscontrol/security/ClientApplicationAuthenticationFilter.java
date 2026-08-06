@@ -35,10 +35,15 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String path = requestPath(request);
         return !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || publicRoutePolicy.isPublic(path);
+    }
+
+    private String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        return servletPath == null || servletPath.isBlank() ? request.getRequestURI() : servletPath;
     }
 
     @Override

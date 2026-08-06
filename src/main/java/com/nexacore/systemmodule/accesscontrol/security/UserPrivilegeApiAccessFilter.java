@@ -26,7 +26,8 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String servletPath = request.getServletPath();
+        String path = servletPath == null || servletPath.isBlank() ? request.getRequestURI() : servletPath;
         return !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || publicRoutePolicy.isPublic(path);

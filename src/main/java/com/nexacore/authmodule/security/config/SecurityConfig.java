@@ -8,6 +8,9 @@ import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestCont
 import com.nexacore.systemmodule.accesscontrol.security.ClientApplicationAuthenticationFilter;
 import com.nexacore.systemmodule.accesscontrol.security.UserPrivilegeApiAccessFilter;
 import com.nexacore.systemmodule.accesscontrol.security.PublicRoutePolicy;
+import com.nexacore.systemmodule.accesscontrol.security.AccessControlError;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
+import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,12 +36,20 @@ public class SecurityConfig {
     private final JwtAuthEntryPoint authenticationEntryPoint;
     private final PublicRoutePolicy publicRoutePolicy;
     private final CorsProperties corsProperties;
+    private final ApiResponseJsonWriter responseWriter;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler((request, response, exception) -> {
+                            AccessControlError error = exception instanceof DataScopeAccessDeniedException
+                                    ? AccessControlError.DATA_SCOPE_NOT_ALLOWED
+                                    : AccessControlError.USER_PRIVILEGE_NOT_ALLOWED;
+                            responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(publicRoutePolicy.patterns()).permitAll()
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // expects ROLE_ADMIN
