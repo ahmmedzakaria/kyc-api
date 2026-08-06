@@ -49,4 +49,31 @@ class AuthenticatedRequestContextTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("businessId");
     }
+
+    @Test
+    void writableScopeCannotEscalateBranchAssignmentToTenantWideOwnership() {
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                7L, "operator", 3L, "WEB",
+                Set.of(new UserScopeAssignment(11L, 12L, 13L)), "trace-1", Set.of()
+        ));
+        DataScopeService service = new DataScopeService();
+
+        assertThat(service.requireWritableScope(null, null, null))
+                .isEqualTo(new UserScopeAssignment(11L, 12L, 13L));
+        assertThatThrownBy(() -> service.requireWritableScope(11L, null, null))
+                .isInstanceOf(DataScopeAccessDeniedException.class);
+        assertThat(service.requireWritableScope(11L, 12L, 13L))
+                .isEqualTo(new UserScopeAssignment(11L, 12L, 13L));
+    }
+
+    @Test
+    void tenantWideAssignmentCanCreateWithinDescendantScope() {
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                7L, "manager", 3L, "WEB",
+                Set.of(new UserScopeAssignment(11L, null, null)), "trace-1", Set.of()
+        ));
+
+        assertThat(new DataScopeService().requireWritableScope(11L, 12L, 13L))
+                .isEqualTo(new UserScopeAssignment(11L, 12L, 13L));
+    }
 }

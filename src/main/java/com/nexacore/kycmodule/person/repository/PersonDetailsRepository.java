@@ -4,6 +4,5 @@ import com.nexacore.kycmodule.person.entity.KycPersonDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PersonDetailsRepository extends JpaRepository<KycPersonDetails, Long> {
-    KycPersonDetails findByPersonId(Long personId);
+    KycPersonDetails findByProfileId(Long profileId);
 }
-

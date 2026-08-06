@@ -16,6 +16,7 @@ import com.nexacore.systemmodule.license.service.interfaces.LicensePlanService;
 import com.nexacore.systemmodule.license.service.interfaces.LicenseSubscriptionService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
 import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
+import com.nexacore.systemmodule.accesscontrol.security.ApiDataScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -161,7 +162,7 @@ public class LicenseController {
     }
 
     @PostMapping("/decision/check")
-    @AuthenticatedApi
+    @AuthenticatedApi(dataScope = ApiDataScope.TENANT)
     public ApiResponse<LicenseDecisionResponseDto> checkDecision(@RequestBody LicenseDecisionRequestDto request) {
         return ApiResponse.successCode(
                 licenseDecisionService.check(request),

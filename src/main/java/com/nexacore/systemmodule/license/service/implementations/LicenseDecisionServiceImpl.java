@@ -19,6 +19,7 @@ import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.license.service.interfaces.LicenseDecisionService;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +43,7 @@ public class LicenseDecisionServiceImpl implements LicenseDecisionService {
     private final FeatureRepository featureRepository;
     private final PrivilegeRepository privilegeRepository;
     private final ApiRegistryRepository apiRegistryRepository;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
@@ -49,6 +51,11 @@ public class LicenseDecisionServiceImpl implements LicenseDecisionService {
         LicenseEntitlementType entitlementType = resolveEntitlementType(request);
         if (request.tenantId() == null && request.businessId() == null && request.clientApplicationId() == null) {
             return denied(LicenseDecisionCode.MISSING_CONTEXT, "system.license.context.missing", "License context is required", null);
+        }
+        if (request.tenantId() != null || request.businessId() != null) {
+            dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
+        } else {
+            dataScopeService.requireCurrentClient(request.clientApplicationId());
         }
 
         Optional<SysLicenseSubscription> subscription = subscriptionRepository.findDecisionCandidates(

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PersonDocumentRepository extends JpaRepository<KycPersonDocument, Long> {
-    List<KycPersonDocument> findByPersonIdOrderByCreatedAtDesc(Long personId);
-    Optional<KycPersonDocument> findFirstByPersonIdAndDocumentTypeOrderByCreatedAtDesc(Long personId, PersonDocumentType documentType);
-    void deleteByPerson(KycPerson person);
+    List<KycPersonDocument> findByProfileIdOrderByCreatedAtDesc(Long profileId);
+    Optional<KycPersonDocument> findFirstByProfileIdAndDocumentTypeOrderByCreatedAtDesc(Long profileId, PersonDocumentType documentType);
+    void deleteByProfileId(Long profileId);
 }

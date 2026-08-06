@@ -656,12 +656,24 @@ Use `sys_priv_client_application_tenants` to verify that the resolved client can
 
 #### Step 7.3: Apply data scope in services and repositories
 
+**Status: implemented for tenant-owned runtime data using normalized person profiles.**
+
 Update sensitive queries so scope is part of the database predicate. Start with:
 
-- Person search and detail.
-- Photos and documents.
-- Workflow tasks and history.
-- Client, privilege, layout, and license configuration.
+- `KycPerson` is a global human identity and no longer owns a single tenant/business/branch tuple.
+- `KycPersonOrganizationMembership` is the source of truth for the person's potentially multiple organizational relationships. Membership does not grant application authority.
+- `KycPersonProfile` owns each tenant/business/branch-specific KYC relationship. Person search, detail, create, update, and delete resolve this profile through database scope predicates.
+- Scoped person APIs use the KYC profile ID as their resource ID and return the global person ID separately; this avoids ambiguity when one person has multiple profiles visible to the same operator.
+- Tenant-specific details, photos, and documents belong to a KYC profile. Direct-ID operations first resolve an accessible profile and cannot expose another profile's artifacts.
+- `AuthUserScopeAssignment` remains the independent source of truth for where a login is authorized to operate. It must not be inferred merely from person membership.
+- Workflow task, instance, subject lookup, action, and history queries now include the current scope in database predicates. Workflow starts validate and persist a permitted scope.
+- License decisions validate their requested tenant/business context. Client, privilege, layout, and license-plan administration remain global system configuration and continue to require system-level privileges reserved for `system_admin`; they are not tenant-owned records.
+
+The reusable `DataScopeService` builds hierarchical JPA specifications for multiple scope assignments and rejects writes that attempt to widen an assignment. Missing scope context fails closed with `403 DATA_SCOPE_NOT_ALLOWED`.
+
+Migration `kyc/V4__normalize_person_organization_and_profiles.sql` converts trusted legacy person ownership into profiles and memberships, moves details/documents under profiles, and removes organizational columns from the global person. Legacy people without trusted ownership receive no inferred profile and remain inaccessible until an explicit, reviewed backfill is performed.
+
+`AuthUser.personId` is unique and mandatory: every user is exactly one person, while a person may have no user. Because Auth and KYC use separate databases, person existence is validated through `PersonModuleGateway` and operational reconciliation rather than a physical cross-database foreign key.
 
 Do not fetch cross-tenant data and filter it in memory.
 

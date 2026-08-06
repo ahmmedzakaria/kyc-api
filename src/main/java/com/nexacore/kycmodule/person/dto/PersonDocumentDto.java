@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class PersonDocumentDto {
     private Long id;
     private Long personId;
+    private Long profileId;
     private PersonDocumentType documentType;
     private String originalFilename;
     private String contentType;

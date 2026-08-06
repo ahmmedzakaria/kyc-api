@@ -49,7 +49,7 @@ public class PersonController {
     @PostMapping("/search")
     @PrivilegeApi(value = "01010200102", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<Page<PersonDto>>> search(@RequestBody SearchDto dto) {
-        Pageable pageable = PageRequest.of(dto.page(), dto.size(), Sort.by("firstName"));
+        Pageable pageable = PageRequest.of(dto.page(), dto.size(), Sort.by("person.firstName"));
         String searchText = dto.searchText() == null ? "" : dto.searchText();
         return ResponseEntity.ok(ApiResponse.success(service.search(searchText, pageable),""));
     }

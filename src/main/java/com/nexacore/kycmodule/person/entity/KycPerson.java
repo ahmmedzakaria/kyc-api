@@ -43,5 +43,6 @@ public class KycPerson {
     private Boolean user = false;
 
     @OneToMany(mappedBy = "person", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<KycPersonDocument> documents = new ArrayList<>();
 }

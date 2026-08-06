@@ -10,6 +10,10 @@ import java.util.UUID;
 @Builder
 public class PersonDto {
     private Long id;
+    private Long personId;
+    private Long tenantId;
+    private Long businessId;
+    private Long branchId;
     private String username;
     private String mobileNumber;
     private String email;

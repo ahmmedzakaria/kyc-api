@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
+import com.nexacore.systemmodule.accesscontrol.security.AccessControlError;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +24,15 @@ import java.util.Map;
 public class HttpExceptionHandler {
 
     private final MessageLocalizationService localizationService;
+
+    @ExceptionHandler(DataScopeAccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseEntity<ApiResponse<?>> handleDataScopeDenied(DataScopeAccessDeniedException ex) {
+        AccessControlError error = AccessControlError.DATA_SCOPE_NOT_ALLOWED;
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.errorCode(
+                error.getStatus(), error.name(), error.getMessage()
+        ));
+    }
 
     // Handle validation errors (400 Bad Request)
     @ExceptionHandler(MethodArgumentNotValidException.class)

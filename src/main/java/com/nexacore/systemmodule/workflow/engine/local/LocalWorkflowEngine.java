@@ -31,10 +31,13 @@ import com.nexacore.systemmodule.workflow.execution.enums.WorkflowTaskStatus;
 import com.nexacore.systemmodule.workflow.execution.repository.WorkflowHistoryRepository;
 import com.nexacore.systemmodule.workflow.execution.repository.WorkflowInstanceRepository;
 import com.nexacore.systemmodule.workflow.execution.repository.WorkflowTaskRepository;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -57,11 +60,15 @@ public class LocalWorkflowEngine implements WorkflowEngine {
     private final WorkflowTaskRepository taskRepository;
     private final WorkflowHistoryRepository historyRepository;
     private final PrivilegeModuleGateway privilegeModuleGateway;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public WorkflowInstanceDto start(WorkflowStartRequestDto request) {
-        SysWorkflowDefinition definition = findDefinition(request.workflowCode(), request.subjectType(), request.tenantId(), request.businessId());
+        UserScopeAssignment scope = dataScopeService.requireWritableScope(
+                request.tenantId(), request.businessId(), request.branchId());
+        SysWorkflowDefinition definition = findDefinition(
+                request.workflowCode(), request.subjectType(), scope.tenantId(), scope.businessId());
         SysWorkflowVersion version = versionRepository.findFirstByWorkflowDefinitionAndStatusAndActiveTrueOrderByVersionNumberDesc(
                 definition,
                 WorkflowDefinitionStatus.PUBLISHED
@@ -76,9 +83,9 @@ public class LocalWorkflowEngine implements WorkflowEngine {
                 .workflowCode(definition.getWorkflowCode())
                 .subjectType(request.subjectType())
                 .subjectId(required(request.subjectId(), "subjectId"))
-                .tenantId(request.tenantId())
-                .businessId(request.businessId())
-                .branchId(request.branchId())
+                .tenantId(scope.tenantId())
+                .businessId(scope.businessId())
+                .branchId(scope.branchId())
                 .requesterUserId(request.requesterUserId())
                 .currentStep(firstStep)
                 .status(firstStep.isTerminal() ? WorkflowInstanceStatus.COMPLETED : WorkflowInstanceStatus.RUNNING)
@@ -149,8 +156,12 @@ public class LocalWorkflowEngine implements WorkflowEngine {
         Collection<WorkflowTaskStatus> statuses = request.statuses() == null || request.statuses().isEmpty()
                 ? ACTIVE_TASK_STATUSES
                 : request.statuses();
-        return taskRepository.findByStatusInOrderByCreatedAtDesc(statuses).stream()
-                .filter(task -> matchesScope(task, request.tenantId(), request.businessId(), request.branchId()))
+        Specification<SysWorkflowTask> activeStatus = (root, query, cb) -> root.get("status").in(statuses);
+        return taskRepository.findAll(
+                        dataScopeService.<SysWorkflowTask>restrictToCurrentScopes("tenantId", "businessId", "branchId")
+                                .and(activeStatus),
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))
+                .stream()
                 .filter(task -> isTaskVisibleToActor(task, request.userId(), request.roleIds(), request.privilegeCodes()))
                 .map(this::toTaskSummaryDto)
                 .toList();
@@ -159,8 +170,7 @@ public class LocalWorkflowEngine implements WorkflowEngine {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public WorkflowTaskDto getTask(WorkflowTaskDetailRequestDto request) {
-        SysWorkflowTask task = taskRepository.findById(request.workflowTaskId())
-                .orElseThrow(() -> new IllegalArgumentException("Workflow task not found: " + request.workflowTaskId()));
+        SysWorkflowTask task = findScopedTask(request.workflowTaskId());
         return toTaskDto(task);
     }
 
@@ -168,9 +178,8 @@ public class LocalWorkflowEngine implements WorkflowEngine {
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public WorkflowInstanceDto getInstance(WorkflowInstanceRequestDto request) {
         SysWorkflowInstance instance = request.workflowInstanceId() != null
-                ? instanceRepository.findById(request.workflowInstanceId()).orElseThrow(() -> new IllegalArgumentException("Workflow instance not found: " + request.workflowInstanceId()))
-                : instanceRepository.findFirstBySubjectTypeAndSubjectIdOrderByIdDesc(required(request.subjectType(), "subjectType"), required(request.subjectId(), "subjectId"))
-                .orElseThrow(() -> new IllegalArgumentException("Workflow instance not found for subject"));
+                ? findScopedInstance(request.workflowInstanceId())
+                : findScopedInstanceBySubject(required(request.subjectType(), "subjectType"), required(request.subjectId(), "subjectId"));
         return toInstanceDto(instance);
     }
 
@@ -204,15 +213,13 @@ public class LocalWorkflowEngine implements WorkflowEngine {
 
     private SysWorkflowTask findTask(WorkflowActionRequestDto request) {
         if (request.workflowTaskId() != null) {
-            SysWorkflowTask task = taskRepository.findById(request.workflowTaskId())
-                    .orElseThrow(() -> new IllegalArgumentException("Workflow task not found: " + request.workflowTaskId()));
+            SysWorkflowTask task = findScopedTask(request.workflowTaskId());
             if (!ACTIVE_TASK_STATUSES.contains(task.getStatus())) {
                 throw new IllegalStateException("Workflow task is not active");
             }
             return task;
         }
-        SysWorkflowInstance instance = instanceRepository.findById(request.workflowInstanceId())
-                .orElseThrow(() -> new IllegalArgumentException("Workflow instance not found: " + request.workflowInstanceId()));
+        SysWorkflowInstance instance = findScopedInstance(request.workflowInstanceId());
         return taskRepository.findFirstByWorkflowInstanceAndStatusInOrderByIdDesc(instance, ACTIVE_TASK_STATUSES)
                 .orElseThrow(() -> new IllegalStateException("Workflow instance has no active task"));
     }
@@ -253,10 +260,28 @@ public class LocalWorkflowEngine implements WorkflowEngine {
         return task.getAssignedPrivilegeCode() != null && privilegeCodes != null && privilegeCodes.contains(task.getAssignedPrivilegeCode());
     }
 
-    private boolean matchesScope(SysWorkflowTask task, Long tenantId, Long businessId, Long branchId) {
-        return (tenantId == null || tenantId.equals(task.getTenantId()))
-                && (businessId == null || businessId.equals(task.getBusinessId()))
-                && (branchId == null || branchId.equals(task.getBranchId()));
+    private SysWorkflowTask findScopedTask(Long taskId) {
+        Specification<SysWorkflowTask> id = (root, query, cb) -> cb.equal(root.get("id"), taskId);
+        return taskRepository.findOne(
+                        dataScopeService.<SysWorkflowTask>restrictToCurrentScopes("tenantId", "businessId", "branchId").and(id))
+                .orElseThrow(() -> new IllegalArgumentException("Workflow task not found: " + taskId));
+    }
+
+    private SysWorkflowInstance findScopedInstance(Long instanceId) {
+        Specification<SysWorkflowInstance> id = (root, query, cb) -> cb.equal(root.get("id"), instanceId);
+        return instanceRepository.findOne(
+                        dataScopeService.<SysWorkflowInstance>restrictToCurrentScopes("tenantId", "businessId", "branchId").and(id))
+                .orElseThrow(() -> new IllegalArgumentException("Workflow instance not found: " + instanceId));
+    }
+
+    private SysWorkflowInstance findScopedInstanceBySubject(String subjectType, String subjectId) {
+        Specification<SysWorkflowInstance> subject = (root, query, cb) -> cb.and(
+                cb.equal(root.get("subjectType"), subjectType), cb.equal(root.get("subjectId"), subjectId));
+        return instanceRepository.findAll(
+                        dataScopeService.<SysWorkflowInstance>restrictToCurrentScopes("tenantId", "businessId", "branchId").and(subject),
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))
+                .stream().findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Workflow instance not found for subject"));
     }
 
     private List<String> availableActions(SysWorkflowTask task) {

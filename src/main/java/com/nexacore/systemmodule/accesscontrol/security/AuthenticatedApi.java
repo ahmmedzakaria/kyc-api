@@ -1,5 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
+import org.springframework.core.annotation.AliasFor;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -9,6 +11,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @ClientSecuredApi(userAuthorization = UserAuthorizationRequirement.NONE)
 public @interface AuthenticatedApi {
+    @AliasFor(annotation = ClientSecuredApi.class, attribute = "dataScope")
+    ApiDataScope dataScope() default ApiDataScope.NONE;
   /*
   @AuthenticatedApi marks an endpoint that requires a valid authenticated user but does not require a specific privilege code.
             Conceptually, it represents:

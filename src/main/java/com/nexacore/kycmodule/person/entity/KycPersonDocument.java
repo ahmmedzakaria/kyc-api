@@ -22,6 +22,10 @@ public class KycPersonDocument {
     @JoinColumn(name = "person_id", nullable = false)
     private KycPerson person;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private KycPersonProfile profile;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private PersonDocumentType documentType;

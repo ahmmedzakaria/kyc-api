@@ -14,6 +14,7 @@ import com.nexacore.systemmodule.license.repository.LicensePlanEntitlementReposi
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
 import com.nexacore.systemmodule.license.repository.LicenseUsageSnapshotRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
@@ -41,6 +42,7 @@ class LicenseDecisionServiceImplTest {
     private final FeatureRepository featureRepository = mock(FeatureRepository.class);
     private final PrivilegeRepository privilegeRepository = mock(PrivilegeRepository.class);
     private final ApiRegistryRepository apiRegistryRepository = mock(ApiRegistryRepository.class);
+    private final DataScopeService dataScopeService = mock(DataScopeService.class);
     private final LicenseDecisionServiceImpl service = new LicenseDecisionServiceImpl(
             subscriptionRepository,
             entitlementRepository,
@@ -49,7 +51,8 @@ class LicenseDecisionServiceImplTest {
             moduleRepository,
             featureRepository,
             privilegeRepository,
-            apiRegistryRepository
+            apiRegistryRepository,
+            dataScopeService
     );
 
     @Test

@@ -19,6 +19,8 @@ The module is the source of truth for:
 - Every `AuthUser` is a `KycPerson`.
 - Not every `KycPerson` is an `AuthUser`.
 - A `KycPerson` can later become an `AuthUser` after approval/business verification.
+- `KycPerson` is a global identity. Multi-organization relationships belong to `KycPersonOrganizationMembership`; tenant-owned KYC data belongs to `KycPersonProfile`.
+- Organizational membership never grants login authorization. Auth owns that independently through `AuthUserScopeAssignment`.
 - `kyc_person.is_user` identifies whether the person currently has an application user account.
 - `kyc_person.username` is assigned only when the person becomes a user.
 - KYC person creation must not generate usernames for ordinary non-user persons.
