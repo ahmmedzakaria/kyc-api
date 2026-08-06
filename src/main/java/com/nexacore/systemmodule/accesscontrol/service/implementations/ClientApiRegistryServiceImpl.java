@@ -7,18 +7,17 @@ import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.accesscontrol.security.ClientSecuredApi;
+import com.nexacore.systemmodule.accesscontrol.security.ApiRouteMatcher;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import java.util.Comparator;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,7 +37,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     private final ApiRegistryRepository apiRegistryRepository;
     private final AuthModuleGateway authModuleGateway;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+    private final ApiRouteMatcher apiRouteMatcher;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -52,7 +51,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
 
         api.setApiCode(requireText(requestDto.getApiCode(), "apiCode"));
         api.setHttpMethod(requireText(requestDto.getHttpMethod(), "httpMethod").toUpperCase());
-        api.setPathPattern(requireText(requestDto.getPathPattern(), "pathPattern"));
+        api.setPathPattern(normalizePath(requireText(requestDto.getPathPattern(), "pathPattern")));
         api.setModuleCode(requestDto.getModuleCode());
         api.setModuleName(requestDto.getModuleName());
         api.setSubmoduleCode(requestDto.getSubmoduleCode());
@@ -76,6 +75,8 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         }
         api.setUpdatedBy(actorId);
 
+        validateNoAmbiguousActiveRoute(api);
+
         return ApiRegistryDto.fromEntity(apiRegistryRepository.save(api));
     }
 
@@ -93,6 +94,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         Long actorId = authModuleGateway.getUserId(username);
         Map<String, AnnotationMapping> discovered = new LinkedHashMap<>();
         List<String> conflicts = new ArrayList<>();
+        Set<String> conflictedCodes = new java.util.HashSet<>();
         requestMappingHandlerMapping.getHandlerMethods().forEach((mappingInfo, handlerMethod) -> {
             ClientSecuredApi annotation = findClientSecuredApi(handlerMethod);
             if (annotation == null) {
@@ -111,26 +113,30 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
                 AnnotationMapping previous = discovered.putIfAbsent(apiCode, new AnnotationMapping(path, method, annotation));
                 if (previous != null) {
                     conflicts.add("Duplicate mapping " + apiCode);
+                    conflictedCodes.add(apiCode);
                 }
             }));
         });
 
-        Map<String, String> patternOwner = new java.util.HashMap<>();
-        discovered.forEach((apiCode, mapping) -> {
-            String shapeKey = mapping.method() + ":" + mapping.path()
-                    .replaceAll("\\{[^/]+}", "{}")
-                    .replaceAll("\\*+", "*");
-            String previous = patternOwner.putIfAbsent(shapeKey, apiCode);
-            if (previous != null && !previous.equals(apiCode)) {
-                conflicts.add("Overlapping mappings " + previous + " and " + apiCode);
+        List<Map.Entry<String, AnnotationMapping>> mappings = new ArrayList<>(discovered.entrySet());
+        for (int leftIndex = 0; leftIndex < mappings.size(); leftIndex++) {
+            for (int rightIndex = leftIndex + 1; rightIndex < mappings.size(); rightIndex++) {
+                var left = mappings.get(leftIndex);
+                var right = mappings.get(rightIndex);
+                if (apiRouteMatcher.hasUnresolvedOverlap(asRegistry(left), asRegistry(right))) {
+                    conflicts.add("Ambiguous overlapping mappings " + left.getKey() + " and " + right.getKey());
+                    conflictedCodes.add(left.getKey());
+                    conflictedCodes.add(right.getKey());
+                }
             }
-        });
+        }
 
         int added = 0;
         int changed = 0;
         int unchanged = 0;
         Set<String> synchronizedCodes = new java.util.HashSet<>();
         for (Map.Entry<String, AnnotationMapping> entry : discovered.entrySet()) {
+            if (conflictedCodes.contains(entry.getKey())) continue;
             try {
                 SyncOutcome outcome = saveAnnotationMapping(entry.getValue(), actorId);
                 synchronizedCodes.add(entry.getKey());
@@ -164,13 +170,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     public Optional<SysPrivApiRegistry> resolve(HttpServletRequest request) {
         String method = request.getMethod().toUpperCase();
         String path = request.getRequestURI();
-        return apiRegistryRepository.findByHttpMethodAndActiveTrue(method).stream()
-                .filter(api -> pathMatcher.match(api.getPathPattern(), path))
-                .max(Comparator.comparingInt(api -> specificity(api.getPathPattern())));
-    }
-
-    private int specificity(String pattern) {
-        return pattern == null ? 0 : pattern.replace("*", "").length();
+        return apiRouteMatcher.resolve(apiRegistryRepository.findByHttpMethodAndActiveTrue(method), path);
     }
 
     private ClientSecuredApi findClientSecuredApi(HandlerMethod handlerMethod) {
@@ -208,13 +208,14 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         api.setUserAuthorizationRequirement(annotation.userAuthorization().name());
         api.setDataScope(annotation.dataScope().name());
         api.setSource(SOURCE_ANNOTATION);
-        api.setPriority(0);
+        api.setPriority(annotation.priority());
         api.setLastSynchronizedAt(LocalDateTime.now());
         api.setActive(true);
         if (api.getId() == null) {
             api.setCreatedBy(actorId);
         }
         api.setUpdatedBy(actorId);
+        validateNoAmbiguousActiveRoute(api);
         apiRegistryRepository.save(api);
         return added ? SyncOutcome.ADDED : Objects.equals(before, fingerprint(api)) ? SyncOutcome.UNCHANGED : SyncOutcome.CHANGED;
     }
@@ -242,6 +243,26 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         if (!normalized.startsWith("/")) normalized = "/" + normalized;
         if (normalized.length() > 1 && normalized.endsWith("/")) normalized = normalized.substring(0, normalized.length() - 1);
         return normalized;
+    }
+
+    private void validateNoAmbiguousActiveRoute(SysPrivApiRegistry candidate) {
+        if (!candidate.isActive()) return;
+        for (SysPrivApiRegistry existing : apiRegistryRepository.findByHttpMethodAndActiveTrue(candidate.getHttpMethod())) {
+            if (Objects.equals(existing.getId(), candidate.getId())) continue;
+            if (existing.getPathPattern().equals(candidate.getPathPattern())) {
+                throw new IllegalArgumentException("An active registry entry already exists for method and path");
+            }
+            if (apiRouteMatcher.hasUnresolvedOverlap(existing, candidate)) {
+                throw new IllegalArgumentException("Route has unresolved precedence overlap with " + existing.getApiCode());
+            }
+        }
+    }
+
+    private SysPrivApiRegistry asRegistry(Map.Entry<String, AnnotationMapping> entry) {
+        AnnotationMapping mapping = entry.getValue();
+        return SysPrivApiRegistry.builder()
+                .apiCode(entry.getKey()).httpMethod(mapping.method()).pathPattern(mapping.path())
+                .priority(mapping.annotation().priority()).active(true).build();
     }
 
     private String fingerprint(SysPrivApiRegistry api) {

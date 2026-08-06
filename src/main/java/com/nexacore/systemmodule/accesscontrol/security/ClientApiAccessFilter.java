@@ -43,7 +43,14 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        Optional<SysPrivApiRegistry> api = clientApiRegistryService.resolve(request);
+        Optional<SysPrivApiRegistry> api;
+        try {
+            api = clientApiRegistryService.resolve(request);
+        } catch (ApiRouteAmbiguityException exception) {
+            AccessControlError error = AccessControlError.API_REGISTRY_AMBIGUOUS;
+            responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
+            return;
+        }
         if (api.isEmpty()) {
             updateUnresolvedContext();
             if (isApplicationApi(request)

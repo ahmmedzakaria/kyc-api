@@ -13,6 +13,9 @@ import java.lang.annotation.Target;
 public @interface AuthenticatedApi {
     @AliasFor(annotation = ClientSecuredApi.class, attribute = "dataScope")
     ApiDataScope dataScope() default ApiDataScope.NONE;
+
+    @AliasFor(annotation = ClientSecuredApi.class, attribute = "priority")
+    int priority() default 0;
   /*
   @AuthenticatedApi marks an endpoint that requires a valid authenticated user but does not require a specific privilege code.
             Conceptually, it represents:

@@ -16,4 +16,7 @@ public @interface PrivilegeApi {
 
     @AliasFor(annotation = ClientSecuredApi.class, attribute = "dataScope")
     ApiDataScope dataScope() default ApiDataScope.NONE;
+
+    @AliasFor(annotation = ClientSecuredApi.class, attribute = "priority")
+    int priority() default 0;
 }

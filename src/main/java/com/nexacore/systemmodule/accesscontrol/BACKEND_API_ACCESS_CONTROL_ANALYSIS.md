@@ -743,6 +743,8 @@ Do not rely on an in-memory counter in a multi-instance deployment.
 
 #### Step 9.1: Make route precedence explicit
 
+**Status: implemented.**
+
 Add deterministic matching rules:
 
 1. Exact method and exact path.
@@ -751,6 +753,14 @@ Add deterministic matching rules:
 4. Reject unresolved ties.
 
 Add a unique constraint where possible and synchronization-time overlap validation.
+
+- `ApiRouteMatcher` is the single route-selection implementation. It evaluates only active records for the request method and orders matches by exact path, Spring-compatible template specificity, and then descending explicit priority.
+- Path-variable names are canonicalized for specificity comparison, so `{id}` and `{personId}` do not gain accidental precedence from variable-name length.
+- `ClientSecuredApi`, `AuthenticatedApi`, and `PrivilegeApi` expose `priority`; annotation synchronization persists it instead of forcing zero.
+- If the leading candidates remain tied, resolution throws `ApiRouteAmbiguityException` and the access filter fails closed with `403 API_REGISTRY_AMBIGUOUS` rather than relying on repository iteration order.
+- Manual saves reject duplicate active method/path records and unresolved equal-priority overlaps. Annotation synchronization detects ambiguous overlaps, reports both API codes as conflicts, skips them, and deactivates stale annotation records.
+- Migration `system/V23__enforce_api_registry_route_uniqueness.sql` refuses to proceed when duplicate active routes need review, then creates a partial unique index on normalized HTTP method plus path pattern.
+- Tests cover exact-over-template precedence, template specificity, priority tie-breaking, order-independent ambiguity rejection, and unmatched routes.
 
 #### Step 9.2: Cache safe authorization data
 

@@ -17,7 +17,8 @@ public enum AccessControlError {
     CLIENT_FEATURE_NOT_ALLOWED(403, "The client is not allowed to access this feature"),
     USER_PRIVILEGE_NOT_ALLOWED(403, "The user does not have the required privilege"),
     DATA_SCOPE_NOT_ALLOWED(403, "The requested data is outside the allowed scope"),
-    API_NOT_REGISTERED(403, "The protected API has no registry metadata");
+    API_NOT_REGISTERED(403, "The protected API has no registry metadata"),
+    API_REGISTRY_AMBIGUOUS(403, "The protected API matches ambiguous registry routes");
 
     private final int status;
     private final String message;

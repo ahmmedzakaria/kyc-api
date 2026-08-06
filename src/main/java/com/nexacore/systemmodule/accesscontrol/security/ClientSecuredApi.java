@@ -24,5 +24,6 @@ public @interface ClientSecuredApi {
     ClientAuthenticationRequirement clientAuthentication() default ClientAuthenticationRequirement.REQUIRED;
     UserAuthorizationRequirement userAuthorization() default UserAuthorizationRequirement.PRIVILEGE;
     ApiDataScope dataScope() default ApiDataScope.NONE;
+    int priority() default 0;
     boolean publicApi() default false;
 }
