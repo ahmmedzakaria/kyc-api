@@ -10,6 +10,7 @@ public enum AccessControlError {
     INVALID_TOKEN_TYPE(401, "The supplied token type cannot access this resource"),
     INVALID_CLIENT_CREDENTIALS(401, "Valid confidential-client credentials are required"),
     CLIENT_ORIGIN_NOT_ALLOWED(403, "The request origin is not allowed for this client"),
+    CLIENT_IP_NOT_ALLOWED(403, "The request IP address is not allowed for this client"),
     CLIENT_API_NOT_ALLOWED(403, "The client is not allowed to access this API"),
     CLIENT_FEATURE_NOT_ALLOWED(403, "The client is not allowed to access this feature"),
     USER_PRIVILEGE_NOT_ALLOWED(403, "The user does not have the required privilege"),

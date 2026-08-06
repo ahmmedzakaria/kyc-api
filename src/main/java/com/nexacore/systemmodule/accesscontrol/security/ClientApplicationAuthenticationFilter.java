@@ -26,6 +26,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
 
     private final ClientCredentialService clientCredentialService;
     private final ClientOriginPolicy clientOriginPolicy;
+    private final ClientIpPolicy clientIpPolicy;
     private final PublicRoutePolicy publicRoutePolicy;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
@@ -70,6 +71,10 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                 }
                 if (!clientOriginPolicy.isAllowed(candidate, request.getHeader("Origin"))) {
                     deny(response, traceId, AccessControlError.CLIENT_ORIGIN_NOT_ALLOWED);
+                    return;
+                }
+                if (!clientIpPolicy.isAllowed(candidate, request)) {
+                    deny(response, traceId, AccessControlError.CLIENT_IP_NOT_ALLOWED);
                     return;
                 }
                 application = candidate;

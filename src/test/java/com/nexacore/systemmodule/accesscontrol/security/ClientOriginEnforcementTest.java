@@ -33,7 +33,7 @@ class ClientOriginEnforcementTest {
     };
     private final AccessControlProperties properties = properties();
     private final ClientApplicationAuthenticationFilter filter = new ClientApplicationAuthenticationFilter(
-            credentials, new ClientOriginPolicy(), new PublicRoutePolicy(),
+            credentials, new ClientOriginPolicy(), new ClientIpPolicy(properties), new PublicRoutePolicy(),
             new ApiResponseJsonWriter(new ObjectMapper()), properties);
 
     @Test
@@ -79,6 +79,22 @@ class ClientOriginEnforcementTest {
     void delegatesPreflightToCentralCorsConfiguration() {
         MockHttpServletRequest request = request("OPTIONS", "https://portal.example.com");
         assertThat(filter.shouldNotFilter(request)).isTrue();
+    }
+
+    @Test
+    void rejectsResolvedClientOutsideItsIpAllowlist() throws Exception {
+        resolvedClient = webClient("https://portal.example.com");
+        resolvedClient.setAllowedIps("10.0.0.0/8");
+        MockHttpServletRequest request = request("POST", "https://portal.example.com");
+        request.setRemoteAddr("203.0.113.44");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> continued.set(true));
+
+        assertThat(continued).isFalse();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getContentAsString()).contains("CLIENT_IP_NOT_ALLOWED");
     }
 
     private MockHttpServletRequest request(String method, String origin) {

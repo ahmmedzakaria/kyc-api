@@ -712,7 +712,17 @@ Parse and normalize configured origins. Reject mismatched origins for browser tr
 
 #### Step 8.2: Allowed IP addresses
 
+**Status: implemented.**
+
 Support explicit IP/CIDR rules. Trust forwarded headers only when the application is behind a configured trusted proxy; otherwise use the remote address.
+
+- Client application writes validate, network-normalize, and deduplicate comma-separated IPv4/IPv6 addresses and CIDRs before persistence.
+- A resolved client with an IP allowlist must match an exact address or CIDR; mismatch and malformed trusted-forwarding chains fail with `403 CLIENT_IP_NOT_ALLOWED`.
+- A client without an IP policy remains unrestricted by source address.
+- The socket peer from `HttpServletRequest.getRemoteAddr()` is authoritative by default. `X-Forwarded-For` is ignored when that peer is not in `access-control.trusted-proxy-cidrs` (`ACCESS_CONTROL_TRUSTED_PROXY_CIDRS`).
+- Behind a trusted proxy, the chain is evaluated from right to left and the first untrusted address is treated as the client, preventing caller-supplied leftmost entries from bypassing policy.
+- Hostnames, invalid prefixes, zone-qualified IPv6 values, and malformed addresses are rejected; policy parsing never performs hostname-based authorization.
+- Tests cover exact and CIDR matching, IPv4/IPv6 normalization, spoofed forwarding headers, trusted multi-proxy chains, empty policies, and the stable denial response.
 
 #### Step 8.3: Rate limiting
 

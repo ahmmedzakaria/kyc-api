@@ -11,6 +11,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepos
 import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialRepository;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.accesscontrol.security.ClientOriginPolicy;
+import com.nexacore.systemmodule.accesscontrol.security.ClientIpPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
     private final AuthModuleGateway authModuleGateway;
     private final PasswordEncoder passwordEncoder;
     private final ClientOriginPolicy clientOriginPolicy;
+    private final ClientIpPolicy clientIpPolicy;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -46,7 +48,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
         application.setClientType(requestDto.getClientType());
         application.setStatus(requestDto.getStatus() == null ? ClientApplicationStatus.ACTIVE : requestDto.getStatus());
         application.setAllowedOrigins(clientOriginPolicy.normalizeConfiguredOrigins(requestDto.getAllowedOrigins()));
-        application.setAllowedIps(requestDto.getAllowedIps());
+        application.setAllowedIps(clientIpPolicy.normalizeConfiguredIps(requestDto.getAllowedIps()));
         application.setRateLimitPerMinute(requestDto.getRateLimitPerMinute());
         application.setDescription(requestDto.getDescription());
         if (application.getId() == null) {

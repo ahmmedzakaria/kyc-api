@@ -24,6 +24,7 @@ public class AccessControlProperties {
     private boolean requireClientForBrowser;
     private boolean requireClientForConfidential = true;
     private boolean registryCoverageEnabled = true;
+    private String trustedProxyCidrs;
 
     public AccessControlProperties(Environment environment) {
         this.environment = environment;
