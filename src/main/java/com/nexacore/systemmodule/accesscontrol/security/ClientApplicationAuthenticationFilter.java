@@ -27,6 +27,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     private final ClientCredentialService clientCredentialService;
     private final ClientOriginPolicy clientOriginPolicy;
     private final ClientIpPolicy clientIpPolicy;
+    private final ClientRateLimiter clientRateLimiter;
     private final PublicRoutePolicy publicRoutePolicy;
     private final ApiResponseJsonWriter responseWriter;
     private final AccessControlProperties accessControlProperties;
@@ -77,6 +78,17 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                     deny(response, traceId, AccessControlError.CLIENT_IP_NOT_ALLOWED);
                     return;
                 }
+                try {
+                    ClientRateLimitDecision rateLimit = clientRateLimiter.check(candidate, request);
+                    applyRateLimitHeaders(response, rateLimit);
+                    if (!rateLimit.allowed()) {
+                        deny(response, traceId, AccessControlError.RATE_LIMIT_EXCEEDED);
+                        return;
+                    }
+                } catch (RateLimitBackendUnavailableException ex) {
+                    deny(response, traceId, AccessControlError.RATE_LIMIT_UNAVAILABLE);
+                    return;
+                }
                 application = candidate;
             }
 
@@ -101,6 +113,14 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                 .clientDecision(decision)
                 .clientDenyReason(denyReason)
                 .build());
+    }
+
+    private void applyRateLimitHeaders(HttpServletResponse response, ClientRateLimitDecision decision) {
+        if (decision.limit() <= 0) return;
+        response.setHeader("RateLimit-Limit", Long.toString(decision.limit()));
+        response.setHeader("RateLimit-Remaining", Long.toString(decision.remaining()));
+        response.setHeader("RateLimit-Reset", Long.toString(decision.retryAfterSeconds()));
+        if (!decision.allowed()) response.setHeader("Retry-After", Long.toString(decision.retryAfterSeconds()));
     }
 
     private String resolveTraceId(HttpServletRequest request) {

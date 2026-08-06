@@ -1,10 +1,13 @@
 package com.nexacore.servicesmodule.cacheservice.service.interfaces;
 
+import com.nexacore.servicesmodule.cacheservice.dto.AtomicCounterResult;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;
 
 public interface CacheService {
+    AtomicCounterResult increment(String key, Duration initialTtl);
+
     void put(String key, Object value);
 
     void put(String key, Object value, Duration ttl);

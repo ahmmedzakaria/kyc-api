@@ -49,6 +49,9 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
         application.setStatus(requestDto.getStatus() == null ? ClientApplicationStatus.ACTIVE : requestDto.getStatus());
         application.setAllowedOrigins(clientOriginPolicy.normalizeConfiguredOrigins(requestDto.getAllowedOrigins()));
         application.setAllowedIps(clientIpPolicy.normalizeConfiguredIps(requestDto.getAllowedIps()));
+        if (requestDto.getRateLimitPerMinute() != null && requestDto.getRateLimitPerMinute() <= 0) {
+            throw new IllegalArgumentException("rateLimitPerMinute must be positive when configured");
+        }
         application.setRateLimitPerMinute(requestDto.getRateLimitPerMinute());
         application.setDescription(requestDto.getDescription());
         if (application.getId() == null) {

@@ -2,11 +2,14 @@ package com.nexacore.servicesmodule.cacheservice.service.implementations;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
+import com.nexacore.servicesmodule.cacheservice.dto.AtomicCounterResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
@@ -21,11 +24,36 @@ import java.util.Optional;
 @ConditionalOnProperty(name = "cache.type", havingValue = "redis", matchIfMissing = true)
 public class RedisCacheService implements CacheService {
 
+    private static final DefaultRedisScript<List> ATOMIC_INCREMENT_SCRIPT = new DefaultRedisScript<>("""
+            local current = redis.call('INCR', KEYS[1])
+            if current == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+            local ttl = redis.call('TTL', KEYS[1])
+            return {current, ttl}
+            """, List.class);
+
     private final RedisTemplate<String, Object> redisCacheTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
     @Value("${cache.redis.key-prefix:nexacore}")
     private String keyPrefix;
+
+    @Override
+    public AtomicCounterResult increment(String key, Duration initialTtl) {
+        if (initialTtl == null || initialTtl.isZero() || initialTtl.isNegative()) {
+            throw new IllegalArgumentException("Atomic counter TTL must be positive");
+        }
+        List<?> result = stringRedisTemplate.execute(
+                ATOMIC_INCREMENT_SCRIPT,
+                List.of(cacheKey(key)),
+                Long.toString(Math.max(1, initialTtl.toSeconds())));
+        if (result == null || result.size() < 2) {
+            throw new IllegalStateException("Invalid Redis atomic counter response");
+        }
+        long value = ((Number) result.get(0)).longValue();
+        long ttl = Math.max(1, ((Number) result.get(1)).longValue());
+        return new AtomicCounterResult(value, Duration.ofSeconds(ttl));
+    }
 
     @Override
     public void put(String key, Object value) {

@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ClientOriginEnforcementTest {
 
     private SysPrivClientApplication resolvedClient;
+    private ClientRateLimitDecision rateLimitDecision = ClientRateLimitDecision.notLimited();
+    private boolean rateLimitUnavailable;
     private final ClientCredentialService credentials = new ClientCredentialService() {
         @Override
         public Optional<SysPrivClientApplication> resolveActiveClient(String clientCode) {
@@ -32,8 +34,14 @@ class ClientOriginEnforcementTest {
         }
     };
     private final AccessControlProperties properties = properties();
+    private final ClientRateLimiter rateLimiter = (application, request) -> {
+        if (rateLimitUnavailable) {
+            throw new RateLimitBackendUnavailableException("unavailable", new IllegalStateException());
+        }
+        return rateLimitDecision;
+    };
     private final ClientApplicationAuthenticationFilter filter = new ClientApplicationAuthenticationFilter(
-            credentials, new ClientOriginPolicy(), new ClientIpPolicy(properties), new PublicRoutePolicy(),
+            credentials, new ClientOriginPolicy(), new ClientIpPolicy(properties), rateLimiter, new PublicRoutePolicy(),
             new ApiResponseJsonWriter(new ObjectMapper()), properties);
 
     @Test
@@ -95,6 +103,37 @@ class ClientOriginEnforcementTest {
         assertThat(continued).isFalse();
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(response.getContentAsString()).contains("CLIENT_IP_NOT_ALLOWED");
+    }
+
+    @Test
+    void returns429WithSafeRetryMetadataWhenLimitIsExceeded() throws Exception {
+        resolvedClient = webClient("https://portal.example.com");
+        rateLimitDecision = new ClientRateLimitDecision(false, 2, 0, 37);
+        MockHttpServletRequest request = request("POST", "https://portal.example.com");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> continued.set(true));
+
+        assertThat(continued).isFalse();
+        assertThat(response.getStatus()).isEqualTo(429);
+        assertThat(response.getHeader("RateLimit-Limit")).isEqualTo("2");
+        assertThat(response.getHeader("RateLimit-Remaining")).isEqualTo("0");
+        assertThat(response.getHeader("Retry-After")).isEqualTo("37");
+        assertThat(response.getContentAsString()).contains("RATE_LIMIT_EXCEEDED");
+    }
+
+    @Test
+    void failsClosedWith503WhenDistributedLimiterIsUnavailable() throws Exception {
+        resolvedClient = webClient("https://portal.example.com");
+        rateLimitUnavailable = true;
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request("POST", "https://portal.example.com"), response,
+                (ignoredRequest, ignoredResponse) -> { });
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        assertThat(response.getContentAsString()).contains("RATE_LIMIT_UNAVAILABLE");
     }
 
     private MockHttpServletRequest request(String method, String origin) {

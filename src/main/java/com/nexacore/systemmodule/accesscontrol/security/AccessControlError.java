@@ -11,6 +11,8 @@ public enum AccessControlError {
     INVALID_CLIENT_CREDENTIALS(401, "Valid confidential-client credentials are required"),
     CLIENT_ORIGIN_NOT_ALLOWED(403, "The request origin is not allowed for this client"),
     CLIENT_IP_NOT_ALLOWED(403, "The request IP address is not allowed for this client"),
+    RATE_LIMIT_EXCEEDED(429, "The client request rate limit has been exceeded"),
+    RATE_LIMIT_UNAVAILABLE(503, "The distributed rate-limit service is unavailable"),
     CLIENT_API_NOT_ALLOWED(403, "The client is not allowed to access this API"),
     CLIENT_FEATURE_NOT_ALLOWED(403, "The client is not allowed to access this feature"),
     USER_PRIVILEGE_NOT_ALLOWED(403, "The user does not have the required privilege"),

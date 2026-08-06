@@ -726,9 +726,18 @@ Support explicit IP/CIDR rules. Trust forwarded headers only when the applicatio
 
 #### Step 8.3: Rate limiting
 
+**Status: implemented for resolved-client protected routes.**
+
 Implement per-client and, where needed, per-route limits using Redis or the gateway layer. Return `429` with a stable error code and safe retry metadata.
 
 Do not rely on an in-memory counter in a multi-instance deployment.
+
+- `rateLimitPerMinute` is validated as a positive value when configured; `null` disables limiting for that client.
+- `RedisClientRateLimiter` depends on the cache-service `CacheService` abstraction rather than accessing a Redis template directly. `RedisCacheService.increment` provides one atomic Redis Lua operation (`INCR`, first-use `EXPIRE`, and `TTL`) for a distributed 60-second window shared by every backend instance.
+- Buckets are isolated by client and HTTP method/path. Route text is SHA-256 hashed before use in the Redis key, and the existing cache key prefix is respected.
+- Exceeded requests return `429 RATE_LIMIT_EXCEEDED` with `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`, and integer-seconds `Retry-After` headers. No internal Redis key or infrastructure detail is exposed.
+- Redis/backend failures fail closed with `503 RATE_LIMIT_UNAVAILABLE` by default. Emergency fail-open behavior must be explicitly enabled with `ACCESS_CONTROL_RATE_LIMIT_FAIL_OPEN=true`; global limiting can be disabled with `ACCESS_CONTROL_RATE_LIMIT_ENABLED=false`.
+- Tests cover within-limit and exceeded decisions, remaining/reset calculations, per-route keying, disabled/unconfigured limits, fail-closed and explicit fail-open backend behavior, and HTTP response metadata.
 
 ### Phase 9: Improve registry matching and performance
 
