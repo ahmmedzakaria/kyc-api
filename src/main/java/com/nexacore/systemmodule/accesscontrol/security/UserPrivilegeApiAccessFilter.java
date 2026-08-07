@@ -37,6 +37,7 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        System.out.println("UserPrivilegeApiAccessFilter -> doFilterInternal");
         ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
         SysPrivApiRegistry api = context == null ? null : context.apiRegistry();
         if (api == null

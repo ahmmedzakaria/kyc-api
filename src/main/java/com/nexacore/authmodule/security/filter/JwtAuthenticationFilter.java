@@ -37,7 +37,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // [DIAG] temporary — tracing a bug where /person/search 401s immediately
+        // after a successful /person/create. Prints on every request so we can
+        // see whether SecurityContextHolder already has a (stale/leaked)
+        // Authentication BEFORE this filter's own logic runs, and which pooled
+        // thread is handling the request (to catch cross-request ThreadLocal leakage).
+        System.out.println("[DIAG] >>> " + request.getMethod() + " " + request.getRequestURI()
+                + " thread=" + Thread.currentThread().getName()
+                + " authHeaderPresent=" + (authHeader != null)
+                + " preExistingAuth=" + SecurityContextHolder.getContext().getAuthentication());
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            System.out.println(" JwtAuthenticationFilter");
+
             try {
                 String jwt = authHeader.substring(7);
                 jwtUtil.requireTokenType(jwt, JwtTokenType.ACCESS);
@@ -45,9 +57,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 List<String> roles = jwtUtil.extractRoles(jwt);
                 Instant issuedAt = jwtUtil.extractIssuedAt(jwt).toInstant();
 
-                if (!logoutSessionService.isSessionActive(username, issuedAt)) {
+                boolean sessionActive = logoutSessionService.isSessionActive(username, issuedAt);
+                System.out.println("[DIAG]     username=" + username + " issuedAt=" + issuedAt
+                        + " sessionActive=" + sessionActive);
+
+                if (!sessionActive) {
                     throw new JwtException("User session is not active");
                 }
+
+                boolean alreadyAuthenticated = SecurityContextHolder.getContext().getAuthentication() != null;
+                System.out.println("[DIAG]     alreadyAuthenticatedBeforeSet=" + alreadyAuthenticated);
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     var authorities = roles.stream()
@@ -60,17 +79,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    System.out.println("[DIAG]     SET Authentication for username=" + username);
                 }
             } catch (InvalidTokenTypeException ex) {
+                System.out.println("[DIAG]     INVALID_TOKEN_TYPE: " + ex.getMessage());
                 SecurityContextHolder.clearContext();
                 request.setAttribute("jwt_error_code", "INVALID_TOKEN_TYPE");
             } catch (JwtException | IllegalArgumentException ex) {
+                System.out.println("[DIAG]     AUTHENTICATION_REQUIRED (" + ex.getClass().getSimpleName()
+                        + "): " + ex.getMessage());
                 SecurityContextHolder.clearContext();
                 request.setAttribute("jwt_error_code", "AUTHENTICATION_REQUIRED");
             }
         }
 
         filterChain.doFilter(request, response); // continue the chain
+
+        // [DIAG] temporary — confirms whether the context was cleared before this
+        // pooled thread is returned; a non-null Authentication surviving here is
+        // exactly what would leak into the next request handled by this thread.
+        System.out.println("[DIAG] <<< " + request.getMethod() + " " + request.getRequestURI()
+                + " thread=" + Thread.currentThread().getName()
+                + " authAfterChain=" + SecurityContextHolder.getContext().getAuthentication());
     }
 
 //    @Override

@@ -47,7 +47,7 @@ public class DataScopeService {
         }
         return new UserScopeAssignment(tenantId, businessId, branchId);
     }
-
+//@Todo need to simply it person can have the tenantId
     public <T> Specification<T> restrictToCurrentScopes(String tenantAttribute,
                                                          String businessAttribute,
                                                          String branchAttribute) {

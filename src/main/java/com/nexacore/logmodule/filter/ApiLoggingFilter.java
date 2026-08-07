@@ -145,12 +145,18 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
 
     private String getRequestBody(ContentCachingRequestWrapper request) {
         byte[] buf = request.getContentAsByteArray();
-        return buf.length > 0 ? new String(buf, StandardCharsets.UTF_8) : "";
+        return buf.length > 0 ? stripNulBytes(new String(buf, StandardCharsets.UTF_8)) : "";
     }
 
     private String getResponseBody(ContentCachingResponseWrapper response) {
         byte[] buf = response.getContentAsByteArray();
-        return buf.length > 0 ? new String(buf, StandardCharsets.UTF_8) : "";
+        return buf.length > 0 ? stripNulBytes(new String(buf, StandardCharsets.UTF_8)) : "";
+    }
+
+    // Postgres TEXT columns reject 0x00, which can appear when the captured
+    // body is binary content (e.g. photo/document bytes) rather than text.
+    private String stripNulBytes(String body) {
+        return body.indexOf('\u0000') < 0 ? body : body.replace("\u0000", "");
     }
 
 }

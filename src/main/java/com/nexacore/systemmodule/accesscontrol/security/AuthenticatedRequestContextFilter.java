@@ -28,6 +28,8 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
+            System.out.println("AuthenticatedRequestContextFilter -> doFilterInternal");
+
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated()) {
                 String username = authentication.getName();

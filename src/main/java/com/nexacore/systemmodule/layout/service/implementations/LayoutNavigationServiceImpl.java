@@ -46,6 +46,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<NavNodeDto> getNavigationTree(String clientCode, String username, Set<String> privilegeCodes) {
+       //@Todo need remove multiple looping
         List<NavNodeDto> groups = new ArrayList<>();
         for (SysLayoutModuleGroup group : moduleGroupRepository.findByActiveTrueOrderByDisplayOrderAscGroupNameAsc()) {
             NavNodeDto groupNode = node(group.getGroupCode(), null, group.getGroupName(), "group", group.getIcon(), null, null);

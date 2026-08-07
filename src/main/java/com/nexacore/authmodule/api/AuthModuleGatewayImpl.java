@@ -27,7 +27,7 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
     public AuthUserAccessDto getUserAccess(String username) {
         AuthUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
-
+        System.out.println("AuthModuleGatewayImpl -> getUserAccess");
         return AuthUserAccessDto.builder()
                 .userId(user.getId())
                 .personId(user.getPersonId())

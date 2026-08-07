@@ -90,12 +90,12 @@ public class PersonService {
         return toDto(profile);
     }
 
+    @Transactional(transactionManager = "kycTransactionManager", readOnly = true)
     public Page<PersonDto> search(String q, Pageable pageable) {
         String searchText = q == null ? "" : q.trim().toLowerCase();
         Specification<KycPersonProfile> textSearch = (root, query, cb) -> {
             String pattern = "%" + searchText + "%";
             var person = root.get("person");
-            query.distinct(true);
             return cb.or(
                     cb.like(cb.lower(cb.coalesce(person.get("firstName"), "")), pattern),
                     cb.like(cb.lower(cb.coalesce(person.get("lastName"), "")), pattern),

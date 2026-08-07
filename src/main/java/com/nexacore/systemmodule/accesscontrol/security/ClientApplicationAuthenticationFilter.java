@@ -51,6 +51,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String traceId = resolveTraceId(request);
+        System.out.println(traceId + " ClientApplicationAuthenticationFilter");
         long startedAt = System.nanoTime();
         response.setHeader(TRACE_ID_HEADER, traceId);
         SysPrivClientApplication application = null;
