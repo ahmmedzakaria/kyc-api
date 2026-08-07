@@ -843,6 +843,8 @@ Use MockMvc or Spring Boot integration tests to verify the complete filter order
 
 #### Step 11.3: Database migration tests
 
+Implementation status: **implemented**. PostgreSQL Testcontainers coverage now migrates an empty System database to the latest version, upgrades a populated pre-`sys_priv_` V12 snapshot through the table-prefix migration, and upgrades a database held at V13 through all current migrations. The tests verify Flyway history, retained data and audit actors, renamed tables, foreign-key/index integrity, new API-registry metadata, and current seed records. The suite skips only when Docker is unavailable.
+
 Run Flyway against:
 
 - An empty system database.
@@ -861,6 +863,112 @@ Add explicit regressions for:
 - Direct-ID cross-tenant document access.
 - Disabled client with otherwise valid credentials.
 - Removed privilege while a session is active.
+
+### Phase 11.5: Decouple Auth from System and add client-scoped navigation
+
+**Status: planned.**
+
+The current implementation violates the intended module boundary in two related ways:
+
+- `authmodule` imports System access-control filters, request context classes, endpoint annotations, privilege catalog types, layout services, and System repositories/entities. `SecurityConfig`, `JwtAuthEntryPoint`, `AuthPrivilegeProvider`, auth DTOs/controllers, and `DataSeeder` are the main coupling points.
+- The layout navigation endpoint accepts `clientCode` from the request, but `LayoutNavigationServiceImpl.getNavigationTree(...)` does not use it when selecting features. The returned tree is filtered by user privilege only, so it is not a client entitlement boundary.
+
+Navigation visibility must be computed as an intersection, not as a substitute for API authorization:
+
+```text
+visible navigation feature
+    = active layout/profile assignment
+    AND active client feature entitlement
+    AND effective user privilege
+    AND active route/catalog metadata
+```
+
+Hiding a navigation item is a user-experience projection only. The access-control filter must continue to authorize direct API calls independently.
+
+#### Step 11.5.1: Establish gateway-owned contracts
+
+Create narrow contracts under `gatewaymodule`; contract DTOs must be immutable, must not expose JPA entities, and must not return `Object`.
+
+- Add an access-control gateway that returns the server-established request/client identity and the client's effective feature entitlements. The contract should expose stable IDs/codes only, for example `ClientAccessContext(clientId, clientCode, featureKeys)`.
+- Define one canonical `ClientFeatureKey` from the existing physical module, submodule, feature-type, and feature codes. Both client grants and layout features must resolve to this key.
+- Extend the layout gateway with typed public-layout and authenticated-layout results instead of exposing System layout DTOs to Auth.
+- Move privilege-catalog contribution contracts (`ModulePrivilegeProvider` and its command/value DTOs) to the gateway boundary so Auth, KYC, Services, and System can contribute metadata without importing System catalog classes.
+- Move cross-module security annotations such as `PublicApi`, `AuthenticatedApi`, and `PrivilegeApi` to a gateway-owned API contract package; System access control remains their consumer.
+
+The gateway must remain task-oriented. It must not expose System repositories, entities, filter implementations, thread-local holders, or a generic bean/service lookup API.
+
+#### Step 11.5.2: Move application composition out of Auth
+
+Move the Spring Security filter-chain assembly from `authmodule` to `appconfigmodule` as the application composition root. It may wire Auth JWT components and System access-control components, while neither business module imports the other.
+
+- Keep token parsing/authentication implementation owned by Auth.
+- Keep client/API/feature/data-scope policy and filters owned by System access control.
+- Replace `JwtAuthEntryPoint` access to System request-context holders with a narrow gateway operation or gateway-owned authentication-failure event.
+- Preserve the current filter order and JSON error contract with the Step 11.2 integration suite.
+
+#### Step 11.5.3: Remove catalog and bootstrap leakage from Auth
+
+- Replace System entities and enums in Auth DTOs and `AuthPrivilegeProvider` with gateway-owned values.
+- Split `authmodule.startup.DataSeeder` into module-owned seed contributors. Auth seeds users/roles; System seeds privilege, client, access-control, and layout data.
+- Coordinate contributors from `appconfigmodule` through gateway commands or application events. Do not let the orchestrator access module repositories.
+- Make seeding retryable and transactionally local to each owning datasource. Cross-database completion must be reconciled rather than represented as one transaction.
+
+#### Step 11.5.4: Make navigation client-scoped and fail closed
+
+For authenticated navigation, remove `username` and `clientCode` as caller-authoritative inputs. Resolve the user from `Authentication` and the client from the access-control context established after credential validation. If a compatibility request still supplies either field during migration, reject a mismatch and never use it to widen access.
+
+- Resolve the active client and its effective feature grants through the access-control gateway.
+- Resolve the client's active layout assignment/profile; an absent, ambiguous, inactive, or unauthorized assignment returns no protected navigation and a defined denial/error response.
+- Filter features by canonical `ClientFeatureKey` before applying user privilege `ANY`/`ALL` matching.
+- Require an explicit client grant for protected features. Missing or unresolved feature mappings fail closed; public navigation requires explicit public metadata and a separate public flow.
+- Prune empty feature groups, categories, modules, and module groups after leaf filtering.
+- Apply license entitlements as another intersection when the license gateway is available; do not infer them from layout assignment.
+- Do not query Auth or System privilege repositories directly from layout composition. Obtain effective user privileges and client entitlements through typed gateway contracts.
+
+If existing client permissions are stored only as privilege codes, add a versioned migration that maps them to canonical feature keys through trusted catalog metadata. Ambiguous or unmapped rows must remain inaccessible and be reported for administrative repair; do not infer grants from names, routes, or caller input.
+
+#### Step 11.5.5: Cache and invalidate the scoped projection
+
+Cache the final tree only with all authorization dimensions represented in the key, for example client ID, user ID or effective-privilege fingerprint, layout-profile version, client-grant version, and license version.
+
+Invalidate after client feature changes, client enable/disable, layout assignment/profile changes, feature mapping changes, user/role privilege changes, and license changes. A cache miss or invalidation failure must not reuse a tree from another client or user.
+
+#### Step 11.5.6: Enforce the boundary with automated tests
+
+Add an ArchUnit or equivalent dependency rule with this minimum invariant:
+
+```text
+authmodule -> gatewaymodule/commonmodule
+authmodule -X-> systemmodule
+```
+
+Move modules away from `ApplicationModule.Type.OPEN` where practical, expose only intentional named interfaces, and keep `NexaCoreModulithTest.verify()` passing.
+
+Add navigation tests covering:
+
+- The same user receives different trees for clients with different feature grants.
+- A forged request `clientCode` cannot select another client's tree.
+- Disabled, unknown, unassigned, and origin/IP-ineligible clients fail closed.
+- Client allowed/user denied, user allowed/client denied, both allowed, and neither allowed.
+- A protected feature without a canonical client mapping is excluded.
+- `ANY` and `ALL` privilege matching occurs only after client filtering.
+- Empty ancestors are pruned and T-code search cannot reach a hidden feature.
+- Cache entries do not cross client/user boundaries and are invalidated after grant changes.
+- Direct API access remains denied even if stale or manually constructed navigation contains the route.
+
+#### Step 11.5.7: Migration order and completion gates
+
+Implement in this order to keep the application deployable between changes:
+
+1. Add gateway contracts and adapters while retaining compatibility methods.
+2. Move security composition and shared annotations, then rerun the existing filter-chain tests.
+3. Migrate Auth DTOs, privilege provider, entry point, and seed orchestration.
+4. Add canonical feature mapping and backfill/report migration.
+5. Switch navigation to server-resolved client context and intersection filtering in report mode.
+6. Review unmapped features and client assignments, enable enforcement, and remove compatibility methods.
+7. Enable the architecture rule preventing new Auth-to-System imports.
+
+Completion requires zero production imports from `authmodule` to `systemmodule`, typed gateway APIs without entity leakage, 100% protected navigation-feature mapping, client-isolation tests passing, and unchanged direct-API enforcement behavior.
 
 ### Phase 12: Production readiness and operating procedure
 
