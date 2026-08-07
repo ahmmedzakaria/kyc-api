@@ -855,6 +855,8 @@ Verify data, foreign keys, indexes, and audit records after migration.
 
 #### Step 11.4: Security regression tests
 
+Implementation status: **implemented**. Explicit regression coverage now verifies refresh tokens cannot enter the bearer access path, unregistered protected routes fail closed, ordinary users cannot invoke client-key rotation, tenant-scoped direct-ID document operations cannot cross tenant boundaries, disabled clients cannot reuse previously valid credentials, and privilege removal is enforced on the next request without requiring the login session to end.
+
 Add explicit regressions for:
 
 - Refresh token used as access token.

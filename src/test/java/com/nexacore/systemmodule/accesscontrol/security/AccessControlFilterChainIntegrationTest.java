@@ -19,13 +19,16 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.gatewaymodule.privilege.service.interfaces.PrivilegeModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.config.EnforcementMode;
+import com.nexacore.systemmodule.accesscontrol.controller.ClientApplicationController;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
+import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredentialService;
+import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.security.PrivilegeAuthorizer;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import io.jsonwebtoken.JwtException;
@@ -66,9 +69,12 @@ import java.util.Set;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -93,6 +99,8 @@ class AccessControlFilterChainIntegrationTest {
     @Autowired private AuthModuleGateway authModuleGateway;
     @Autowired private PrivilegeService privilegeService;
     @Autowired private PrivilegeModuleGateway privilegeModuleGateway;
+    @Autowired private ClientApplicationService clientApplicationService;
+    @Autowired private ClientPermissionService clientPermissionService;
 
     private MockMvc mvc;
     private SysPrivClientApplication client;
@@ -100,7 +108,8 @@ class AccessControlFilterChainIntegrationTest {
     @BeforeEach
     void setUp() {
         Mockito.reset(credentials, registryService, decisionService, jwtUtil, logoutSessionService,
-                authModuleGateway, privilegeService, privilegeModuleGateway);
+                authModuleGateway, privilegeService, privilegeModuleGateway,
+                clientApplicationService, clientPermissionService);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         client = SysPrivClientApplication.builder().id(3L).clientCode("client")
                 .clientType(ClientApplicationType.INTERNAL_SERVICE).build();
@@ -108,6 +117,7 @@ class AccessControlFilterChainIntegrationTest {
         when(credentials.resolveActiveClient("client")).thenReturn(Optional.of(client));
         when(credentials.validateApiKey("client", "key")).thenReturn(Optional.of(client));
         when(credentials.resolveActiveClient("bad")).thenReturn(Optional.empty());
+        when(credentials.resolveActiveClient("disabled")).thenReturn(Optional.empty());
         when(registryService.resolve(any())).thenAnswer(invocation -> {
             HttpServletRequest request = invocation.getArgument(0);
             if (request.getRequestURI().contains("unregistered")) return Optional.empty();
@@ -151,6 +161,15 @@ class AccessControlFilterChainIntegrationTest {
     @Test void invalidClientCredentialIsRejected() throws Exception {
         mvc.perform(get("/api/test/private").header("X-Client-Code", "bad").header("X-API-Key", "wrong"))
                 .andExpect(error(401, "INVALID_CLIENT_CREDENTIALS"));
+    }
+
+    @Test void disabledClientWithOtherwiseValidCredentialsIsRejected() throws Exception {
+        mvc.perform(get("/api/test/private")
+                        .header("X-Client-Code", "disabled")
+                        .header("X-API-Key", "previously-valid-key"))
+                .andExpect(error(401, "INVALID_CLIENT_CREDENTIALS"));
+
+        verify(credentials, never()).validateApiKey("disabled", "previously-valid-key");
     }
 
     @Test void missingClientApiGrantIsRejected() throws Exception {
@@ -203,6 +222,29 @@ class AccessControlFilterChainIntegrationTest {
                 .andExpect(error(403, "USER_PRIVILEGE_NOT_ALLOWED"));
     }
 
+    @Test void ordinaryUserCannotRotateAClientApiKey() throws Exception {
+        mvc.perform(post("/api/v1/system/client-app/rotate-api-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header("X-Client-Code", "client")
+                        .header("X-API-Key", "key")
+                        .header("Authorization", "Bearer access")
+                        .content("{\"clientApplicationId\":3}"))
+                .andExpect(error(403, "USER_PRIVILEGE_NOT_ALLOWED"));
+
+        verify(clientApplicationService, never()).rotateApiKey(any(), any(), anyString());
+    }
+
+    @Test void removedPrivilegeTakesEffectWhileTheLoginSessionRemainsActive() throws Exception {
+        mvc.perform(authenticated("/api/test/private")).andExpect(status().isOk());
+
+        when(privilegeService.getUserPrivilegeCodes("alice")).thenReturn(Set.of());
+
+        mvc.perform(authenticated("/api/test/private"))
+                .andExpect(error(403, "USER_PRIVILEGE_NOT_ALLOWED"));
+        verify(logoutSessionService, org.mockito.Mockito.atLeast(2)).isSessionActive(anyString(), any());
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder clientRequest(String path) {
         return get(path).accept(MediaType.APPLICATION_JSON)
                 .header("X-Client-Code", "client").header("X-API-Key", "key");
@@ -229,7 +271,7 @@ class AccessControlFilterChainIntegrationTest {
     @Configuration
     @EnableWebMvc
     @EnableWebSecurity
-    @Import({SecurityConfig.class, HarnessController.class, HttpExceptionHandler.class})
+    @Import({SecurityConfig.class, HarnessController.class, ClientApplicationController.class, HttpExceptionHandler.class})
     static class TestConfiguration {
         @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }
         @Bean ApiResponseJsonWriter responseWriter(ObjectMapper mapper) { return new ApiResponseJsonWriter(mapper); }
@@ -248,6 +290,8 @@ class AccessControlFilterChainIntegrationTest {
         @Bean AuthModuleGateway authModuleGateway() { return Mockito.mock(AuthModuleGateway.class); }
         @Bean PrivilegeService privilegeService() { return Mockito.mock(PrivilegeService.class); }
         @Bean PrivilegeModuleGateway privilegeModuleGateway() { return Mockito.mock(PrivilegeModuleGateway.class); }
+        @Bean ClientApplicationService clientApplicationService() { return Mockito.mock(ClientApplicationService.class); }
+        @Bean ClientPermissionService clientPermissionService() { return Mockito.mock(ClientPermissionService.class); }
         @Bean MessageLocalizationService localizationService() { return Mockito.mock(MessageLocalizationService.class); }
         @Bean AuthenticationProviderConfig authenticationProviderConfig() {
             AuthenticationProviderConfig config = Mockito.mock(AuthenticationProviderConfig.class);
