@@ -5,6 +5,12 @@ is the implementation plan for the findings that are still open (items already m
 "already fixed" in that report are not repeated here). Not yet implemented; this is the
 plan to review before starting any of it.
 
+**Relationship to [MULTI_TENANT_SAAS_PLAN.md](./MULTI_TENANT_SAAS_PLAN.md)**: that plan
+is a separate, larger initiative (net-new architecture, not a fix), but it explicitly
+depends on Phase 1 below landing first, and it touches two things this plan also
+touches — flagged inline at §1.1 (migration numbering), §3.1 (`SysPrivClientApplicationTenant`),
+and §4.2 (`DataScopeService`) below.
+
 ## Guiding principles
 
 - **Migrations stay idempotent** (`WHERE NOT EXISTS` / `ON CONFLICT DO NOTHING`),
@@ -28,6 +34,11 @@ plan to review before starting any of it.
 
 ## Phase 1 — Bootstrapping gaps (P0: blocks any new client from working at all)
 
+This phase is also a hard prerequisite for [MULTI_TENANT_SAAS_PLAN.md](./MULTI_TENANT_SAAS_PLAN.md)
+— its own Phasing section explicitly refuses to start Foundation work until this phase
+ships, since tenant-scoped clients still need working client/permission bootstrapping
+underneath them.
+
 ### 1.1 Seed client API/feature permissions
 
 **Problem**: Findings §2.1. No migration grants any client the rows in
@@ -44,7 +55,11 @@ call its own backend.
 2. Write `V30__grant_system_admin_web_permissions.sql`: idempotent inserts into both
    permission tables for `SYSTEM_ADMIN_WEB`, scoped to that endpoint list plus the
    matching `requiredPrivilegeCode`s (drawn from `BootstrapAdministrationPrivileges`,
-   not invented).
+   not invented). `V30` is the next free number in `db/migration/system/` as of this
+   writing — `MULTI_TENANT_SAAS_PLAN.md`'s Foundation/backfill migrations (`sys_tenant`,
+   `sys_tenant_domain`, `tenant_id` backfills) draw from this same sequence and must
+   sequence after whatever this phase actually lands as, so don't let both efforts
+   claim the same `V<n>` concurrently.
 3. Separately confirm whether `WEB` (kyc-frontend) has an equivalent migration anywhere
    in the history, or whether its current working state depends on manually-applied
    grants outside of migrations. If the latter, write the matching migration for `WEB`
@@ -164,6 +179,14 @@ implementing). Add matching `client-app/api-permissions`, `client-app/feature-pe
 `client-app/tenant-assignments` read endpoints, gated by the same `CLIENT_APPLICATION_VIEW`
 code the rest of that detail page already uses.
 
+**Note for whoever builds `getTenantAssignments`**: `SysPrivClientApplicationTenant.tenantId`
+is currently a bare `Long` with no FK to any tenant table — no `Tenant` entity exists yet
+(confirmed in `MULTI_TENANT_SAAS_PLAN.md`'s "Current state" section). This getter will
+correctly return whatever IDs were written, but those IDs are only meaningful once
+`MULTI_TENANT_SAAS_PLAN.md`'s `sys_tenant` table (its §1, "Tenant identity") exists —
+until then, treat this as a plain ID list, not a real foreign-key relationship, and
+don't build UI that assumes a resolvable tenant name/label behind each ID.
+
 **Blast radius**: Purely additive (new endpoints, no changes to existing ones).
 `client-application-detail.component.ts` in `system-frontend-21` should switch from
 whatever local/blind state it currently tracks for these three lists to loading them
@@ -210,12 +233,20 @@ someone needs — in which case (a) is the correct investment.
 
 ### 4.2 `DataScopeService`'s tenant-scoping `@Todo`
 
-Needs the original author's context on what "simplify" was meant to cover before
-anyone else touches it — flagging for triage, not assigning a fix here.
+**Problem**: Findings §4.1. Needs the original author's context on what "simplify" was
+meant to cover before anyone else touches it — flagging for triage, not assigning a fix
+here.
+
+**Read before triaging**: `MULTI_TENANT_SAAS_PLAN.md`'s Enforcement section (§3, Layer 2)
+already has concrete, planned changes to this exact class — switching its `tenantId`
+source from caller-supplied request fields to the new `TenantContextHolder`-resolved
+value, once that plan's Foundation phase lands. Get the original author's context first,
+but design the actual fix together with that section rather than resolving this `@Todo`
+independently and then having the multi-tenant work redo it.
 
 ### 4.3 DTO field-name renames (`profileCode`/`name` vs `code`/`name`, `name` vs `label`)
 
-Not worth fixing in isolation — renaming a response field is a breaking API change for
+**Problem**: Findings §3.4 (third bullet). Not worth fixing in isolation — renaming a response field is a breaking API change for
 any consumer, and the only consumer today (`system-frontend-21`) already maps around
 both inconsistencies cleanly in `layout.model.ts`. Revisit only if/when a broader
 Layout API v2 pass happens for unrelated reasons; until then, this finding exists so

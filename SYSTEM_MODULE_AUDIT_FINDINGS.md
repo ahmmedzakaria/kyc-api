@@ -14,6 +14,18 @@ This is a read-only audit — nothing here has been changed as part of writing i
 where a finding is explicitly marked **(already fixed)** because the frontend work that
 triggered its discovery included a backend fix at the time.
 
+**Scope boundary relevant to [MULTI_TENANT_SAAS_PLAN.md](./MULTI_TENANT_SAAS_PLAN.md)**:
+this audit evaluated the system as it actually runs today — a single-tenant deployment.
+Two things that plan treats as real gaps are deliberately absent here because they're
+harmless under that assumption and only become risks once multiple tenants share the
+schema: License endpoints trusting a caller-supplied `tenantId`/`businessId` rather than
+a server-resolved one (see that plan's Enforcement §3, Layer 2), and
+`SysPrivClientApplicationTenant.tenantId` having no backing table to be a real foreign
+key against (see that plan's §1, "Tenant identity," and
+[SYSTEM_MODULE_RESOLUTION_PLAN.md](./SYSTEM_MODULE_RESOLUTION_PLAN.md) §3.1). Neither is
+a finding here because neither is a defect against the system this audit actually
+covers — flagged so their absence doesn't read as an oversight.
+
 ---
 
 ## 1. Data-loss / duplication risk
@@ -136,15 +148,20 @@ unresolved rather than stale.
 
 ## 4. Minor
 
-- `DataScopeService.java` has an unresolved `@Todo` about simplifying tenant scoping —
-  no context in the surrounding code about what "simplifying" means; needs the original
-  author's input.
-- `LicensePlanResponseDto`/`LicenseSubscriptionResponseDto` use primitive `boolean` for
-  `active`/`autoRenew` while their request counterparts use boxed `Boolean` — harmless,
-  purely stylistic.
-- Test coverage is thin for `license` (2 test files) and `workflow` (1) relative to
-  `accesscontrol` (17), `privilege` (4), `layout` (3) — proportionate to how recently
-  each was built, not necessarily a problem, but worth knowing before extending either.
+### 4.1 `DataScopeService`'s tenant-scoping `@Todo`
+`DataScopeService.java` has an unresolved `@Todo` about simplifying tenant scoping — no
+context in the surrounding code about what "simplifying" means; needs the original
+author's input.
+
+### 4.2 Primitive vs boxed `Boolean` inconsistency
+`LicensePlanResponseDto`/`LicenseSubscriptionResponseDto` use primitive `boolean` for
+`active`/`autoRenew` while their request counterparts use boxed `Boolean` — harmless,
+purely stylistic.
+
+### 4.3 Thin test coverage for `license`/`workflow`
+Test coverage is thin for `license` (2 test files) and `workflow` (1) relative to
+`accesscontrol` (17), `privilege` (4), `layout` (3) — proportionate to how recently
+each was built, not necessarily a problem, but worth knowing before extending either.
 
 ---
 
