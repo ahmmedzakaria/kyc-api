@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface LayoutFeatureGroupRepository extends JpaRepository<SysLayoutFeatureGroup, Long> {
     List<SysLayoutFeatureGroup> findByNavigationCategoryIdAndActiveTrueOrderByDisplayOrderAscFeatureGroupNameAsc(Long navigationCategoryId);
+
+    List<SysLayoutFeatureGroup> findByActiveTrueOrderByDisplayOrderAscFeatureGroupNameAsc();
 }

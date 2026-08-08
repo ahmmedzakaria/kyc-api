@@ -9,6 +9,7 @@ import java.util.Set;
 
 public interface LayoutNavigationService {
     List<NavNodeDto> getNavigationTree(String clientCode, String username, Set<String> privilegeCodes);
+    List<NavNodeDto> getFullNavigationTree();
     NavNodeDto saveGroup(LayoutNavigationNodeRequestDto request, String actor);
     NavNodeDto saveModule(LayoutNavigationNodeRequestDto request, String actor);
     NavNodeDto saveCategory(LayoutNavigationNodeRequestDto request, String actor);

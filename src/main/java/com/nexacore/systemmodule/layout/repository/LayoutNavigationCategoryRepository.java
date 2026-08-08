@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface LayoutNavigationCategoryRepository extends JpaRepository<SysLayoutNavigationCategory, Long> {
     List<SysLayoutNavigationCategory> findByNavigationModuleIdAndActiveTrueOrderByDisplayOrderAscCategoryNameAsc(Long navigationModuleId);
+
+    List<SysLayoutNavigationCategory> findByActiveTrueOrderByDisplayOrderAscCategoryNameAsc();
 }

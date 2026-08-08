@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class NavNodeDto {
+    private Long id;
+    private Long parentId;
     private String code;
     private String tCode;
     private String label;
@@ -22,6 +24,8 @@ public class NavNodeDto {
     private String moduleIconName;
     private String description;
     private String route;
+    private Boolean active;
+    private Integer displayOrder;
 
     @Builder.Default
     private List<String> privilegeCodes = new ArrayList<>();

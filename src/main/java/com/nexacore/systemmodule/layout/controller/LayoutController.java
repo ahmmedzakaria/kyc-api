@@ -193,6 +193,17 @@ public class LayoutController {
         ));
     }
 
+    // @Todo Need to Validate with "/navigation/tree"
+    @PostMapping("/navigation/tree/admin")
+    @PrivilegeApi("11040100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<List<NavNodeDto>>> navigationTreeAdmin() {
+        return ResponseEntity.ok(ApiResponse.success(
+                layoutNavigationService.getFullNavigationTree(),
+                "Layout navigation tree (admin) loaded"
+        ));
+    }
+
     @Data
     public static class LayoutProfileDetailRequest {
         private String profileCode;
