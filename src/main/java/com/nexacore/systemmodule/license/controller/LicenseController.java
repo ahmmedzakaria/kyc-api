@@ -5,7 +5,9 @@ import com.nexacore.gatewaymodule.license.dto.LicenseDecisionRequestDto;
 import com.nexacore.gatewaymodule.license.dto.LicenseDecisionResponseDto;
 import com.nexacore.systemmodule.license.dto.GeneratedLicenseKeyDto;
 import com.nexacore.systemmodule.license.dto.LicenseEntitlementRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseEntitlementResponseDto;
 import com.nexacore.systemmodule.license.dto.LicenseKeyRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseKeySummaryDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanRequestDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanResponseDto;
 import com.nexacore.systemmodule.license.dto.LicenseSubscriptionRequestDto;
@@ -64,6 +66,17 @@ public class LicenseController {
     public ApiResponse<Void> savePlanEntitlement(@RequestBody LicenseEntitlementRequestDto request) {
         licensePlanService.savePlanEntitlement(request);
         return ApiResponse.successCode("system.license.plan.entitlement.saved", "License plan entitlement saved");
+    }
+
+    @PostMapping("/plan/entitlement/list")
+    @PrivilegeApi("11030199901")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
+    public ApiResponse<List<LicenseEntitlementResponseDto>> listPlanEntitlements(@RequestBody PlanCodeRequest request) {
+        return ApiResponse.successCode(
+                licensePlanService.listPlanEntitlements(request.planCode()),
+                "system.license.plan.entitlement.listed",
+                "License plan entitlements listed"
+        );
     }
 
     @PostMapping("/subscription/assign")
@@ -129,6 +142,17 @@ public class LicenseController {
         return ApiResponse.successCode("system.license.subscription.entitlement.saved", "License subscription entitlement saved");
     }
 
+    @PostMapping("/subscription/entitlement/list")
+    @PrivilegeApi("11030199901")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
+    public ApiResponse<List<LicenseEntitlementResponseDto>> listSubscriptionEntitlements(@RequestBody SubscriptionCodeRequest request) {
+        return ApiResponse.successCode(
+                licenseSubscriptionService.listSubscriptionEntitlements(request.subscriptionCode()),
+                "system.license.subscription.entitlement.listed",
+                "License subscription entitlements listed"
+        );
+    }
+
     @PostMapping("/key/generate")
     @PrivilegeApi("11030199987")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
@@ -161,6 +185,17 @@ public class LicenseController {
         );
     }
 
+    @PostMapping("/key/list")
+    @PrivilegeApi("11030199901")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
+    public ApiResponse<List<LicenseKeySummaryDto>> listKeys(@RequestBody SubscriptionCodeRequest request) {
+        return ApiResponse.successCode(
+                licenseKeyService.listKeys(request.subscriptionCode()),
+                "system.license.key.listed",
+                "License keys listed"
+        );
+    }
+
     @PostMapping("/decision/check")
     @AuthenticatedApi(dataScope = ApiDataScope.TENANT)
     public ApiResponse<LicenseDecisionResponseDto> checkDecision(@RequestBody LicenseDecisionRequestDto request) {
@@ -172,5 +207,11 @@ public class LicenseController {
     }
 
     public record SubscriptionStatusRequest(String subscriptionCode, String reason) {
+    }
+
+    public record PlanCodeRequest(String planCode) {
+    }
+
+    public record SubscriptionCodeRequest(String subscriptionCode) {
     }
 }

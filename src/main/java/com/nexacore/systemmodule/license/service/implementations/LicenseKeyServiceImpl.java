@@ -2,6 +2,7 @@ package com.nexacore.systemmodule.license.service.implementations;
 
 import com.nexacore.systemmodule.license.dto.GeneratedLicenseKeyDto;
 import com.nexacore.systemmodule.license.dto.LicenseKeyRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseKeySummaryDto;
 import com.nexacore.systemmodule.license.entity.SysLicenseKey;
 import com.nexacore.systemmodule.license.entity.SysLicenseSubscription;
 import com.nexacore.systemmodule.license.repository.LicenseKeyRepository;
@@ -17,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -77,6 +79,28 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
                     return true;
                 })
                 .orElse(false);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public List<LicenseKeySummaryDto> listKeys(String subscriptionCode) {
+        return licenseKeyRepository.findByLicenseSubscription_SubscriptionCodeOrderByIssuedAtDesc(subscriptionCode).stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    private LicenseKeySummaryDto toSummary(SysLicenseKey key) {
+        return LicenseKeySummaryDto.builder()
+                .id(key.getId())
+                .subscriptionCode(key.getLicenseSubscription().getSubscriptionCode())
+                .keyPrefix(key.getKeyPrefix())
+                .issuedAt(key.getIssuedAt())
+                .activatedAt(key.getActivatedAt())
+                .lastValidatedAt(key.getLastValidatedAt())
+                .expiresAt(key.getExpiresAt())
+                .revokedAt(key.getRevokedAt())
+                .active(key.isActive())
+                .build();
     }
 
     private boolean isUsable(SysLicenseKey key) {

@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.license.service.interfaces;
 
 import com.nexacore.systemmodule.license.dto.LicenseEntitlementRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseEntitlementResponseDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanRequestDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanResponseDto;
 
@@ -10,6 +11,8 @@ public interface LicensePlanService {
     LicensePlanResponseDto savePlan(LicensePlanRequestDto request);
 
     void savePlanEntitlement(LicenseEntitlementRequestDto request);
+
+    List<LicenseEntitlementResponseDto> listPlanEntitlements(String planCode);
 
     List<LicensePlanResponseDto> listPlans();
 }

@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.license.service.implementations;
 
 import com.nexacore.systemmodule.license.dto.LicenseEntitlementRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseEntitlementResponseDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanRequestDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanResponseDto;
 import com.nexacore.systemmodule.license.entity.SysLicensePlan;
@@ -64,6 +65,30 @@ public class LicensePlanServiceImpl implements LicensePlanService {
                 .limitValue(request.limitValue())
                 .active(request.active() == null || request.active())
                 .build());
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public List<LicenseEntitlementResponseDto> listPlanEntitlements(String planCode) {
+        return entitlementRepository.findByLicensePlan_PlanCodeAndActiveTrue(planCode).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private LicenseEntitlementResponseDto toResponse(SysLicensePlanEntitlement entitlement) {
+        return LicenseEntitlementResponseDto.builder()
+                .id(entitlement.getId())
+                .ownerCode(entitlement.getLicensePlan().getPlanCode())
+                .entitlementType(entitlement.getEntitlementType())
+                .moduleId(entitlement.getModule() == null ? null : entitlement.getModule().getId())
+                .submoduleId(entitlement.getSubmodule() == null ? null : entitlement.getSubmodule().getId())
+                .featureId(entitlement.getFeature() == null ? null : entitlement.getFeature().getId())
+                .privilegeId(entitlement.getPrivilege() == null ? null : entitlement.getPrivilege().getId())
+                .apiRegistryId(entitlement.getApiRegistry() == null ? null : entitlement.getApiRegistry().getId())
+                .limitCode(entitlement.getLimitCode())
+                .limitValue(entitlement.getLimitValue())
+                .active(entitlement.isActive())
+                .build();
     }
 
     @Override

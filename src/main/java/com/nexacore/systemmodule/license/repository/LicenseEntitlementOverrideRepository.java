@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface LicenseEntitlementOverrideRepository extends JpaRepository<SysLicenseEntitlementOverride, Long> {
     List<SysLicenseEntitlementOverride> findByLicenseSubscriptionIdAndActiveTrue(Long licenseSubscriptionId);
+
+    List<SysLicenseEntitlementOverride> findByLicenseSubscription_SubscriptionCodeAndActiveTrue(String subscriptionCode);
 }

@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.license.service.implementations;
 
 import com.nexacore.systemmodule.license.dto.LicenseEntitlementRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseEntitlementResponseDto;
 import com.nexacore.systemmodule.license.dto.LicenseSubscriptionRequestDto;
 import com.nexacore.systemmodule.license.dto.LicenseSubscriptionResponseDto;
 import com.nexacore.systemmodule.license.entity.SysLicenseEntitlementOverride;
@@ -107,6 +108,31 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
                 .overrideMode(request.overrideMode() == null ? LicenseOverrideMode.ALLOW : request.overrideMode())
                 .active(request.active() == null || request.active())
                 .build());
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public List<LicenseEntitlementResponseDto> listSubscriptionEntitlements(String subscriptionCode) {
+        return overrideRepository.findByLicenseSubscription_SubscriptionCodeAndActiveTrue(subscriptionCode).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private LicenseEntitlementResponseDto toResponse(SysLicenseEntitlementOverride override) {
+        return LicenseEntitlementResponseDto.builder()
+                .id(override.getId())
+                .ownerCode(override.getLicenseSubscription().getSubscriptionCode())
+                .entitlementType(override.getEntitlementType())
+                .moduleId(override.getModule() == null ? null : override.getModule().getId())
+                .submoduleId(override.getSubmodule() == null ? null : override.getSubmodule().getId())
+                .featureId(override.getFeature() == null ? null : override.getFeature().getId())
+                .privilegeId(override.getPrivilege() == null ? null : override.getPrivilege().getId())
+                .apiRegistryId(override.getApiRegistry() == null ? null : override.getApiRegistry().getId())
+                .limitCode(override.getLimitCode())
+                .limitValue(override.getLimitValue())
+                .overrideMode(override.getOverrideMode())
+                .active(override.isActive())
+                .build();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.license.service.interfaces;
 
 import com.nexacore.systemmodule.license.dto.LicenseEntitlementRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseEntitlementResponseDto;
 import com.nexacore.systemmodule.license.dto.LicenseSubscriptionRequestDto;
 import com.nexacore.systemmodule.license.dto.LicenseSubscriptionResponseDto;
 
@@ -16,6 +17,8 @@ public interface LicenseSubscriptionService {
     LicenseSubscriptionResponseDto cancel(String subscriptionCode);
 
     void saveEntitlementOverride(LicenseEntitlementRequestDto request);
+
+    List<LicenseEntitlementResponseDto> listSubscriptionEntitlements(String subscriptionCode);
 
     List<LicenseSubscriptionResponseDto> listSubscriptions();
 }
