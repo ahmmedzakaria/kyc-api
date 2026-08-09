@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.accesscontrol.service.implementations;
 
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApiPermissionRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissionRepository;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
@@ -32,7 +32,7 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void allowsPublicApiWithoutClient() {
-        SysPrivApiRegistry api = SysPrivApiRegistry.builder()
+        SysAccApiRegistry api = SysAccApiRegistry.builder()
                 .id(1L)
                 .publicApi(true)
                 .active(true)
@@ -45,7 +45,7 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void deniesRegisteredPrivateApiWithoutClient() {
-        SysPrivApiRegistry api = SysPrivApiRegistry.builder()
+        SysAccApiRegistry api = SysAccApiRegistry.builder()
                 .id(1L)
                 .publicApi(false)
                 .active(true)
@@ -59,8 +59,8 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void deniesWhenClientHasApiButMissingFeaturePermission() {
-        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
-        SysPrivApiRegistry api = SysPrivApiRegistry.builder()
+        SysAccClientApplication client = SysAccClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysAccApiRegistry api = SysAccApiRegistry.builder()
                 .id(20L)
                 .requiredPrivilegeCode("01010200101")
                 .publicApi(false)
@@ -78,8 +78,8 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void deniesWhenClientDoesNotHaveApiGrant() {
-        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
-        SysPrivApiRegistry api = SysPrivApiRegistry.builder().id(20L).publicApi(false).active(true).build();
+        SysAccClientApplication client = SysAccClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysAccApiRegistry api = SysAccApiRegistry.builder().id(20L).publicApi(false).active(true).build();
         when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of());
         when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L)).thenReturn(Set.of());
 
@@ -91,8 +91,8 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void allowsClientWithApiAndRequiredFeatureGrants() {
-        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
-        SysPrivApiRegistry api = SysPrivApiRegistry.builder().id(20L)
+        SysAccClientApplication client = SysAccClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysAccApiRegistry api = SysAccApiRegistry.builder().id(20L)
                 .requiredPrivilegeCode("01010200101").publicApi(false).active(true).build();
         when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of(20L));
         when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L))
@@ -103,7 +103,7 @@ class ClientAccessDecisionServiceImplTest {
 
     @Test
     void filtersUserPrivilegeCodesByClientFeaturePermissions() {
-        SysPrivClientApplication client = SysPrivClientApplication.builder().id(10L).clientCode("WEB").build();
+        SysAccClientApplication client = SysAccClientApplication.builder().id(10L).clientCode("WEB").build();
         Set<String> userPrivilegeCodes = Set.of("01010200101", "01010200201");
 
         when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L))

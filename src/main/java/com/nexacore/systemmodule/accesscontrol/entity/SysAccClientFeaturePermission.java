@@ -1,5 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.entity;
 
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -19,12 +20,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sys_priv_client_api_permissions")
+@Table(name = "sys_acc_client_feature_permissions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysPrivClientApiPermission {
+public class SysAccClientFeaturePermission {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,12 +33,12 @@ public class SysPrivClientApiPermission {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_application_id", nullable = false)
     @EqualsAndHashCode.Exclude
-    private SysPrivClientApplication clientApplication;
+    private SysAccClientApplication clientApplication;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "api_registry_id", nullable = false)
+    @JoinColumn(name = "privilege_id", nullable = false)
     @EqualsAndHashCode.Exclude
-    private SysPrivApiRegistry apiRegistry;
+    private SysPrivPrivilege privilege;
 
     private boolean active;
     private Long createdBy;

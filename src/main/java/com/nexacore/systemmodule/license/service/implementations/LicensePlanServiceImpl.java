@@ -11,7 +11,7 @@ import com.nexacore.systemmodule.license.enums.LicensePlanType;
 import com.nexacore.systemmodule.license.repository.LicensePlanEntitlementRepository;
 import com.nexacore.systemmodule.license.repository.LicensePlanRepository;
 import com.nexacore.systemmodule.license.service.interfaces.LicensePlanService;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
@@ -128,8 +128,8 @@ public class LicensePlanServiceImpl implements LicensePlanService {
         return id == null ? null : SysPrivPrivilege.builder().id(id).build();
     }
 
-    private SysPrivApiRegistry referenceApi(Long id) {
-        return id == null ? null : SysPrivApiRegistry.builder().id(id).build();
+    private SysAccApiRegistry referenceApi(Long id) {
+        return id == null ? null : SysAccApiRegistry.builder().id(id).build();
     }
 
     private String normalizeCode(String value) {

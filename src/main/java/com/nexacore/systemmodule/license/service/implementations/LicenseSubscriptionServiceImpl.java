@@ -13,8 +13,8 @@ import com.nexacore.systemmodule.license.repository.LicenseEntitlementOverrideRe
 import com.nexacore.systemmodule.license.repository.LicensePlanRepository;
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
 import com.nexacore.systemmodule.license.service.interfaces.LicenseSubscriptionService;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
@@ -164,8 +164,8 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
                 .build();
     }
 
-    private SysPrivClientApplication referenceClientApplication(Long id) {
-        return id == null ? null : SysPrivClientApplication.builder().id(id).build();
+    private SysAccClientApplication referenceClientApplication(Long id) {
+        return id == null ? null : SysAccClientApplication.builder().id(id).build();
     }
 
     private SysPrivModule referenceModule(Long id) {
@@ -184,8 +184,8 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
         return id == null ? null : SysPrivPrivilege.builder().id(id).build();
     }
 
-    private SysPrivApiRegistry referenceApi(Long id) {
-        return id == null ? null : SysPrivApiRegistry.builder().id(id).build();
+    private SysAccApiRegistry referenceApi(Long id) {
+        return id == null ? null : SysAccApiRegistry.builder().id(id).build();
     }
 
     private String normalizeCode(String value) {

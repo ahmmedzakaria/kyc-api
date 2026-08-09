@@ -1,14 +1,14 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import lombok.Builder;
 
 @Builder
 public record ClientApplicationContext(
         String traceId,
-        SysPrivClientApplication clientApplication,
-        SysPrivApiRegistry apiRegistry,
+        SysAccClientApplication clientApplication,
+        SysAccApiRegistry apiRegistry,
         String requiredPrivilegeCode,
         String clientDecision,
         String clientDenyReason,

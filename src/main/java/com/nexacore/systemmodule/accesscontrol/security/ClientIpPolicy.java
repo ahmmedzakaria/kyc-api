@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -19,7 +19,7 @@ import java.util.Set;
 public class ClientIpPolicy {
     private final AccessControlProperties properties;
 
-    public boolean isAllowed(SysPrivClientApplication application, HttpServletRequest request) {
+    public boolean isAllowed(SysAccClientApplication application, HttpServletRequest request) {
         if (application == null || !StringUtils.hasText(application.getAllowedIps())) {
             return true;
         }

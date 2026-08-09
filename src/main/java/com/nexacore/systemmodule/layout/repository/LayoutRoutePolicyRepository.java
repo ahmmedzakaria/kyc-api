@@ -14,7 +14,7 @@ public interface LayoutRoutePolicyRepository extends JpaRepository<SysLayoutRout
     @Query(value = """
             SELECT policy.*
             FROM sys_layout_route_policies policy
-            LEFT JOIN sys_priv_client_applications client
+            LEFT JOIN sys_acc_client_applications client
               ON client.id = policy.client_application_id
             WHERE policy.active = true
               AND (policy.client_application_id IS NULL OR upper(client.client_code) = upper(:clientCode))

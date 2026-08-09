@@ -8,8 +8,8 @@ import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryRequestDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import org.junit.jupiter.api.AfterEach;
@@ -98,7 +98,7 @@ class ClientApiAccessFilterReportModeTest {
         return filter(properties, protectedApi());
     }
 
-    private ClientApiAccessFilter filter(AccessControlProperties properties, SysPrivApiRegistry api) {
+    private ClientApiAccessFilter filter(AccessControlProperties properties, SysAccApiRegistry api) {
         ClientApiRegistryService registryService = new StubRegistryService(api);
         ClientAccessDecisionService decisionService = new StubDecisionService(api);
         return new ClientApiAccessFilter(
@@ -122,8 +122,8 @@ class ClientApiAccessFilterReportModeTest {
         return request;
     }
 
-    private SysPrivApiRegistry protectedApi() {
-        return SysPrivApiRegistry.builder()
+    private SysAccApiRegistry protectedApi() {
+        return SysAccApiRegistry.builder()
                 .id(1L)
                 .apiCode("GET:/api/v1/person/view/all")
                 .requiredPrivilegeCode("01010200101")
@@ -131,21 +131,21 @@ class ClientApiAccessFilterReportModeTest {
                 .build();
     }
 
-    private record StubRegistryService(SysPrivApiRegistry api) implements ClientApiRegistryService {
-        @Override public Optional<SysPrivApiRegistry> resolve(jakarta.servlet.http.HttpServletRequest request) { return Optional.ofNullable(api); }
+    private record StubRegistryService(SysAccApiRegistry api) implements ClientApiRegistryService {
+        @Override public Optional<SysAccApiRegistry> resolve(jakarta.servlet.http.HttpServletRequest request) { return Optional.ofNullable(api); }
         @Override public ApiRegistryDto save(ApiRegistryRequestDto requestDto, String username) { throw new UnsupportedOperationException(); }
         @Override public List<ApiRegistryDto> list() { return List.of(); }
         @Override public ApiRegistrySyncReportDto syncFromAnnotations(String username) { throw new UnsupportedOperationException(); }
     }
 
-    private record StubDecisionService(SysPrivApiRegistry api) implements ClientAccessDecisionService {
+    private record StubDecisionService(SysAccApiRegistry api) implements ClientAccessDecisionService {
         @Override
-        public ClientAccessDecisionDto decide(SysPrivClientApplication clientApplication, SysPrivApiRegistry ignored) {
+        public ClientAccessDecisionDto decide(SysAccClientApplication clientApplication, SysAccApiRegistry ignored) {
             return ClientAccessDecisionDto.denied("CLIENT_API_NOT_ALLOWED", clientApplication, api);
         }
 
         @Override
-        public Set<String> filterPrivilegeCodesForClient(SysPrivClientApplication clientApplication,
+        public Set<String> filterPrivilegeCodesForClient(SysAccClientApplication clientApplication,
                                                          Set<String> userPrivilegeCodes) {
             return Set.of();
         }

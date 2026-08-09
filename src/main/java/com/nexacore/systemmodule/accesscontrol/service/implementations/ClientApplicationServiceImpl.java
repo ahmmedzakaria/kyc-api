@@ -4,8 +4,8 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationRequestDto;
 import com.nexacore.systemmodule.accesscontrol.dto.GeneratedClientCredentialDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientCredential;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientCredential;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialRepository;
@@ -40,8 +40,8 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
     @Transactional(transactionManager = "systemTransactionManager")
     public ClientApplicationDto save(ClientApplicationRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
-        SysPrivClientApplication application = requestDto.getId() == null
-                ? clientApplicationRepository.findByClientCode(requestDto.getClientCode()).orElseGet(SysPrivClientApplication::new)
+        SysAccClientApplication application = requestDto.getId() == null
+                ? clientApplicationRepository.findByClientCode(requestDto.getClientCode()).orElseGet(SysAccClientApplication::new)
                 : clientApplicationRepository.findById(requestDto.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + requestDto.getId()));
 
@@ -76,7 +76,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public SysPrivClientApplication requireClientApplication(Long clientApplicationId, String clientCode) {
+    public SysAccClientApplication requireClientApplication(Long clientApplicationId, String clientCode) {
         if (clientApplicationId != null) {
             return clientApplicationRepository.findById(clientApplicationId)
                     .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientApplicationId));
@@ -89,7 +89,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
     @Transactional(transactionManager = "systemTransactionManager")
     public GeneratedClientCredentialDto rotateApiKey(Long clientApplicationId, String clientCode, String username) {
         Long actorId = authModuleGateway.getUserId(username);
-        SysPrivClientApplication application = requireClientApplication(clientApplicationId, clientCode);
+        SysAccClientApplication application = requireClientApplication(clientApplicationId, clientCode);
         clientCredentialRepository.findByClientApplicationIdAndActiveTrue(application.getId())
                 .forEach(credential -> {
                     credential.setActive(false);
@@ -99,7 +99,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
 
         String apiKey = generateSecret();
         String clientId = application.getClientCode() + "-" + generateToken(9);
-        SysPrivClientCredential credential = SysPrivClientCredential.builder()
+        SysAccClientCredential credential = SysAccClientCredential.builder()
                 .clientApplication(application)
                 .clientId(clientId)
                 .apiKeyHash(passwordEncoder.encode(apiKey))

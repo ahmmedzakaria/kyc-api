@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -25,7 +25,7 @@ class ClientIpPolicyTest {
 
     @Test
     void matchesExactAddressesAndCidrs() {
-        SysPrivClientApplication client = client("10.20.0.0/16,2001:db8::/32");
+        SysAccClientApplication client = client("10.20.0.0/16,2001:db8::/32");
 
         assertThat(policy.isAllowed(client, request("10.20.4.8", null))).isTrue();
         assertThat(policy.isAllowed(client, request("10.21.4.8", null))).isFalse();
@@ -35,7 +35,7 @@ class ClientIpPolicyTest {
     @Test
     void ignoresSpoofedForwardedHeaderFromUntrustedPeer() {
         properties.setTrustedProxyCidrs("10.0.0.0/8");
-        SysPrivClientApplication client = client("198.51.100.8");
+        SysAccClientApplication client = client("198.51.100.8");
 
         assertThat(policy.isAllowed(client, request("203.0.113.9", "198.51.100.8"))).isFalse();
     }
@@ -43,7 +43,7 @@ class ClientIpPolicyTest {
     @Test
     void resolvesFirstUntrustedAddressBehindTrustedProxyChain() {
         properties.setTrustedProxyCidrs("10.0.0.0/8,192.168.0.0/16");
-        SysPrivClientApplication client = client("198.51.100.0/24");
+        SysAccClientApplication client = client("198.51.100.0/24");
         MockHttpServletRequest request = request(
                 "10.0.0.5", "1.2.3.4, 198.51.100.22, 192.168.1.4");
 
@@ -56,8 +56,8 @@ class ClientIpPolicyTest {
         assertThat(policy.isAllowed(client(null), request("203.0.113.9", "malformed"))).isTrue();
     }
 
-    private SysPrivClientApplication client(String allowedIps) {
-        return SysPrivClientApplication.builder().allowedIps(allowedIps).build();
+    private SysAccClientApplication client(String allowedIps) {
+        return SysAccClientApplication.builder().allowedIps(allowedIps).build();
     }
 
     private MockHttpServletRequest request(String remoteAddress, String forwardedFor) {

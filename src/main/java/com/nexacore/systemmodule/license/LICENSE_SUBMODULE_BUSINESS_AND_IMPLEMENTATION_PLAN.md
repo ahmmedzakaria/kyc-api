@@ -352,7 +352,7 @@ LIMIT
 ADD_ON
 ```
 
-When the entitlement maps to an API, use `sys_priv_api_registry.id`. When it maps to module, submodule, feature, or action access, use the normalized privilege catalog IDs instead of copying code/name values into license tables.
+When the entitlement maps to an API, use `sys_acc_api_registry.id`. When it maps to module, submodule, feature, or action access, use the normalized privilege catalog IDs instead of copying code/name values into license tables.
 
 Use the normalized privilege catalog instead of duplicating module, submodule, and feature names:
 
@@ -362,7 +362,7 @@ Use the normalized privilege catalog instead of duplicating module, submodule, a
 | `SUBMODULE` | `sys_priv_submodules.id` |
 | `FEATURE` | `sys_priv_features.id` |
 | `ACTION` | `sys_priv_privileges.id` |
-| `API` | `sys_priv_api_registry.id` |
+| `API` | `sys_acc_api_registry.id` |
 | `LIMIT` | `limit_code` and `limit_value` |
 
 ### `sys_license_subscriptions`
@@ -395,7 +395,7 @@ Rules:
 
 - At least one of `tenant_id`, `business_id`, or `client_application_id` must be present.
 - A business-level license can override or extend tenant-level entitlements.
-- `client_application_id` should reference `sys_priv_client_applications.id` when licensing a specific frontend or integration client.
+- `client_application_id` should reference `sys_acc_client_applications.id` when licensing a specific frontend or integration client.
 
 ### `sys_license_keys`
 
@@ -717,7 +717,7 @@ Migration responsibilities:
 - Create all `sys_license_*` tables.
 - Add indexes for subscription lookup by `tenant_id`, `business_id`, `client_application_id`, `status`, and `expires_at`.
 - Add uniqueness constraints for plan code and subscription code.
-- Add foreign keys to `sys_priv_client_applications`, `sys_priv_api_registry`, and `sys_priv_privileges` where applicable.
+- Add foreign keys to `sys_acc_client_applications`, `sys_acc_api_registry`, and `sys_priv_privileges` where applicable.
 - Seed default Trial, Starter, Professional, and Enterprise plans only if the business wants bootstrap data in migration.
 
 Do not rely on `spring.jpa.hibernate.ddl-auto=update` for production schema evolution.

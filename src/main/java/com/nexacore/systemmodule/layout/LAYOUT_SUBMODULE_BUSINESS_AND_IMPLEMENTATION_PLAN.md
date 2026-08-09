@@ -356,7 +356,7 @@ RPT101
 
 ## Relationship With Client Applications
 
-Layout configuration is assigned to `sys_priv_client_applications`.
+Layout configuration is assigned to `sys_acc_client_applications`.
 
 ```text
 WEB -> default authenticated sidebar layout
@@ -718,7 +718,7 @@ Assigns layout profiles to client applications.
 | Column | Notes |
 | --- | --- |
 | `id` | Primary key |
-| `client_application_id` | FK to `sys_priv_client_applications` |
+| `client_application_id` | FK to `sys_acc_client_applications` |
 | `layout_profile_id` | FK to `sys_layout_profiles` |
 | `default_profile` | Boolean |
 | `selectable` | Boolean |

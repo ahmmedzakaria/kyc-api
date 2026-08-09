@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
@@ -39,7 +39,7 @@ public class UserPrivilegeApiAccessFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         System.out.println("UserPrivilegeApiAccessFilter -> doFilterInternal");
         ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
-        SysPrivApiRegistry api = context == null ? null : context.apiRegistry();
+        SysAccApiRegistry api = context == null ? null : context.apiRegistry();
         if (api == null
                 || api.isPublicApi()
                 || context.requiredPrivilegeCode() == null

@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredentialService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
@@ -54,7 +54,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         System.out.println(traceId + " ClientApplicationAuthenticationFilter");
         long startedAt = System.nanoTime();
         response.setHeader(TRACE_ID_HEADER, traceId);
-        SysPrivClientApplication application = null;
+        SysAccClientApplication application = null;
 
         try {
             String clientCode = request.getHeader(CLIENT_CODE_HEADER);
@@ -64,12 +64,12 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
                 return;
             }
             if (hasText(clientCode)) {
-                Optional<SysPrivClientApplication> resolvedClient = clientCredentialService.resolveActiveClient(clientCode);
+                Optional<SysAccClientApplication> resolvedClient = clientCredentialService.resolveActiveClient(clientCode);
                 if (resolvedClient.isEmpty()) {
                     deny(response, traceId, AccessControlError.INVALID_CLIENT_CREDENTIALS);
                     return;
                 }
-                SysPrivClientApplication candidate = resolvedClient.get();
+                SysAccClientApplication candidate = resolvedClient.get();
                 if (candidate.getClientType() == null || candidate.getClientType().isConfidential()) {
                     resolvedClient = clientCredentialService.validateApiKey(clientCode, apiKey);
                     if (resolvedClient.isEmpty()) {
@@ -117,13 +117,13 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
 
     private void deny(HttpServletResponse response,
                       String traceId,
-                      SysPrivClientApplication application,
+                      SysAccClientApplication application,
                       AccessControlError error) throws IOException {
         setContext(traceId, application, "DENIED", error.name());
         responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
     }
 
-    private void setContext(String traceId, SysPrivClientApplication application, String decision, String denyReason) {
+    private void setContext(String traceId, SysAccClientApplication application, String decision, String denyReason) {
         ClientApplicationContextHolder.set(ClientApplicationContext.builder()
                 .traceId(traceId)
                 .clientApplication(application)

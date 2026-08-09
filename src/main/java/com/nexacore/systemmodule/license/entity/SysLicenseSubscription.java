@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.license.entity;
 
 import com.nexacore.systemmodule.license.enums.LicenseStatus;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -49,7 +49,7 @@ public class SysLicenseSubscription {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_application_id")
     @EqualsAndHashCode.Exclude
-    private SysPrivClientApplication clientApplication;
+    private SysAccClientApplication clientApplication;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +32,7 @@ class ClientClassificationPolicyTest {
 
     @Test
     void acceptsOnlyNormalizedConfiguredClientOrigins() {
-        SysPrivClientApplication client = SysPrivClientApplication.builder()
+        SysAccClientApplication client = SysAccClientApplication.builder()
                 .allowedOrigins("https://portal.example.com, http://localhost:4200")
                 .build();
 

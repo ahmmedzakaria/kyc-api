@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 
@@ -13,8 +13,8 @@ import java.util.Optional;
 public class ApiRouteMatcher {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    public Optional<SysPrivApiRegistry> resolve(List<SysPrivApiRegistry> candidates, String requestPath) {
-        List<SysPrivApiRegistry> matches = candidates.stream()
+    public Optional<SysAccApiRegistry> resolve(List<SysAccApiRegistry> candidates, String requestPath) {
+        List<SysAccApiRegistry> matches = candidates.stream()
                 .filter(api -> pathMatcher.match(api.getPathPattern(), requestPath))
                 .sorted(precedence(requestPath))
                 .toList();
@@ -26,7 +26,7 @@ public class ApiRouteMatcher {
         return Optional.of(matches.getFirst());
     }
 
-    public boolean hasUnresolvedOverlap(SysPrivApiRegistry left, SysPrivApiRegistry right) {
+    public boolean hasUnresolvedOverlap(SysAccApiRegistry left, SysAccApiRegistry right) {
         if (!left.getHttpMethod().equalsIgnoreCase(right.getHttpMethod())
                 || left.getPriority() != right.getPriority()) return false;
         for (String witness : overlapWitnesses(left.getPathPattern(), right.getPathPattern())) {
@@ -37,7 +37,7 @@ public class ApiRouteMatcher {
         return false;
     }
 
-    private Comparator<SysPrivApiRegistry> precedence(String path) {
+    private Comparator<SysAccApiRegistry> precedence(String path) {
         Comparator<String> patternComparator = pathMatcher.getPatternComparator(path);
         return (left, right) -> {
             int exact = Boolean.compare(isExact(right.getPathPattern(), path), isExact(left.getPathPattern(), path));
@@ -49,7 +49,7 @@ public class ApiRouteMatcher {
         };
     }
 
-    private boolean samePrecedence(SysPrivApiRegistry left, SysPrivApiRegistry right, String path) {
+    private boolean samePrecedence(SysAccApiRegistry left, SysAccApiRegistry right, String path) {
         return precedence(path).compare(left, right) == 0;
     }
 

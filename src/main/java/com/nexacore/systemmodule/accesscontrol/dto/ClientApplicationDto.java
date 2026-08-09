@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.dto;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
 import lombok.Builder;
@@ -19,7 +19,7 @@ public class ClientApplicationDto {
     private Integer rateLimitPerMinute;
     private String description;
 
-    public static ClientApplicationDto fromEntity(SysPrivClientApplication application) {
+    public static ClientApplicationDto fromEntity(SysAccClientApplication application) {
         return ClientApplicationDto.builder()
                 .id(application.getId())
                 .clientCode(application.getClientCode())

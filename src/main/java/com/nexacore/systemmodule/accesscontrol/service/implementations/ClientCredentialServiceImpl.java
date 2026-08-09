@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.service.implementations;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialRepository;
@@ -28,7 +28,7 @@ public class ClientCredentialServiceImpl implements ClientCredentialService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysPrivClientApplication> resolveActiveClient(String clientCode) {
+    public Optional<SysAccClientApplication> resolveActiveClient(String clientCode) {
         if (clientCode == null || clientCode.isBlank()) {
             return Optional.empty();
         }
@@ -38,12 +38,12 @@ public class ClientCredentialServiceImpl implements ClientCredentialService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
-    public Optional<SysPrivClientApplication> validateApiKey(String clientCode, String apiKey) {
+    public Optional<SysAccClientApplication> validateApiKey(String clientCode, String apiKey) {
         if (clientCode == null || clientCode.isBlank() || apiKey == null || apiKey.isBlank()) {
             return Optional.empty();
         }
 
-        Optional<SysPrivClientApplication> application = resolveActiveClient(clientCode);
+        Optional<SysAccClientApplication> application = resolveActiveClient(clientCode);
         if (application.isEmpty()) {
             return Optional.empty();
         }

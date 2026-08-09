@@ -10,7 +10,7 @@ import com.nexacore.systemmodule.layout.enums.DeviceTarget;
 import com.nexacore.systemmodule.layout.repository.ClientLayoutProfileRepository;
 import com.nexacore.systemmodule.layout.repository.LayoutProfileRepository;
 import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmentService;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     @Transactional(transactionManager = "systemTransactionManager")
     public ClientLayoutAssignmentDto assign(ClientLayoutAssignmentRequestDto request, String actor) {
         Long userId = authModuleGateway.getUserId(actor);
-        SysPrivClientApplication client = resolveClient(request);
+        SysAccClientApplication client = resolveClient(request);
         SysLayoutProfile profile = resolveProfile(request);
         Long currentId = request.getId() == null ? -1L : request.getId();
 
@@ -66,14 +66,14 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<ClientLayoutAssignmentDto> list(String clientCode) {
-        SysPrivClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
+        SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientCode));
         return clientLayoutProfileRepository.findByClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(client.getId()).stream()
                 .map(this::toDto)
                 .toList();
     }
 
-    private SysPrivClientApplication resolveClient(ClientLayoutAssignmentRequestDto request) {
+    private SysAccClientApplication resolveClient(ClientLayoutAssignmentRequestDto request) {
         if (request.getClientApplicationId() != null) {
             return clientApplicationRepository.findById(request.getClientApplicationId())
                     .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + request.getClientApplicationId()));

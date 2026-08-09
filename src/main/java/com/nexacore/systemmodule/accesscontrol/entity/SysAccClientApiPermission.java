@@ -19,12 +19,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sys_priv_client_application_tenants")
+@Table(name = "sys_acc_client_api_permissions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysPrivClientApplicationTenant {
+public class SysAccClientApiPermission {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,10 +32,13 @@ public class SysPrivClientApplicationTenant {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_application_id", nullable = false)
     @EqualsAndHashCode.Exclude
-    private SysPrivClientApplication clientApplication;
+    private SysAccClientApplication clientApplication;
 
-    private Long tenantId;
-    private Long businessId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "api_registry_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    private SysAccApiRegistry apiRegistry;
+
     private boolean active;
     private Long createdBy;
     private Long updatedBy;

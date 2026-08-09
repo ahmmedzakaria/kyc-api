@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -18,8 +18,8 @@ class AuthorizationEventEmitterTest {
         AuthorizationEventEmitter emitter = new AuthorizationEventEmitter(published::add, new ObjectMapper());
         ClientApplicationContext context = ClientApplicationContext.builder()
                 .traceId("trace-1")
-                .clientApplication(SysPrivClientApplication.builder().clientCode("PARTNER").build())
-                .apiRegistry(SysPrivApiRegistry.builder().apiCode("GET:/people/{id}")
+                .clientApplication(SysAccClientApplication.builder().clientCode("PARTNER").build())
+                .apiRegistry(SysAccApiRegistry.builder().apiCode("GET:/people/{id}")
                         .pathPattern("/people/{id}").build())
                 .requiredPrivilegeCode("01010200101")
                 .clientDecision("ALLOWED").userDecision("DENIED")

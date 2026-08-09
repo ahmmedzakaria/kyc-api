@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The backend has a sound multi-layer access-control design, but enforcement is incomplete and currently fail-open for APIs that are not registered in `sys_priv_api_registry`.
+The backend has a sound multi-layer access-control design, but enforcement is incomplete and currently fail-open for APIs that are not registered in `sys_acc_api_registry`.
 
 Authentication is required for most endpoints. Fine-grained client and user authorization, however, is only applied when a request matches an active API-registry record. No controller currently uses `@ClientSecuredApi`, `@PreAuthorize`, `@Secured`, or `@RolesAllowed`. As a result, sensitive business and platform-administration operations may be called by any authenticated user unless matching registry records were created manually.
 
@@ -40,7 +40,7 @@ AND user JWT valid
 AND user owns required privilege
 ```
 
-This model is appropriate, but it activates only when the request resolves to an active `SysPrivApiRegistry` entry.
+This model is appropriate, but it activates only when the request resolves to an active `SysAccApiRegistry` entry.
 
 ## Critical Findings
 
@@ -145,13 +145,13 @@ For browser clients:
 
 ### Tenant, business, and branch restrictions are not enforced
 
-The schema includes `sys_priv_client_application_tenants`, but request filters do not apply these assignments. Tenant, business, and branch constraints must be enforced in service and repository queries before returning or mutating data.
+The schema includes `sys_acc_client_application_tenants`, but request filters do not apply these assignments. Tenant, business, and branch constraints must be enforced in service and repository queries before returning or mutating data.
 
 Menu filtering alone is not an authorization boundary.
 
 ### Configured client restrictions are unused
 
-`SysPrivClientApplication` stores:
+`SysAccClientApplication` stores:
 
 - `allowedOrigins`
 - `allowedIps`
@@ -652,7 +652,7 @@ Values must come from validated token/client state and server-side assignments, 
 
 #### Step 7.2: Validate client scope
 
-Use `sys_priv_client_application_tenants` to verify that the resolved client can access the requested tenant/business context.
+Use `sys_acc_client_application_tenants` to verify that the resolved client can access the requested tenant/business context.
 
 #### Step 7.3: Apply data scope in services and repositories
 

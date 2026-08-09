@@ -2,7 +2,7 @@ package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,7 +35,7 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                 String username = authentication.getName();
                 AuthUserAccessDto user = authModuleGateway.getUserAccess(username);
                 ClientApplicationContext accessContext = ClientApplicationContextHolder.get().orElse(null);
-                SysPrivClientApplication client = accessContext == null ? null : accessContext.clientApplication();
+                SysAccClientApplication client = accessContext == null ? null : accessContext.clientApplication();
                 Set<String> privileges = privilegeService.getUserPrivilegeCodes(username);
 
                 AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(

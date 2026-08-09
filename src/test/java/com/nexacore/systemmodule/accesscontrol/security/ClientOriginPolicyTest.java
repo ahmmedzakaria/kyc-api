@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,7 +32,7 @@ class ClientOriginPolicyTest {
 
     @Test
     void comparesNormalizedRequestOriginAndFailsClosedForMalformedOrigin() {
-        SysPrivClientApplication client = SysPrivClientApplication.builder()
+        SysAccClientApplication client = SysAccClientApplication.builder()
                 .allowedOrigins("https://example.com").build();
 
         assertThat(policy.isAllowed(client, "HTTPS://EXAMPLE.COM:443/")).isTrue();

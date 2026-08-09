@@ -2,7 +2,7 @@ package com.nexacore.systemmodule.layout.entity;
 
 import com.nexacore.systemmodule.layout.enums.AssignmentScope;
 import com.nexacore.systemmodule.layout.enums.DeviceTarget;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -34,7 +34,7 @@ public class SysClientLayoutProfile extends LayoutAuditInfo {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_application_id", nullable = false)
-    private SysPrivClientApplication clientApplication;
+    private SysAccClientApplication clientApplication;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "layout_profile_id", nullable = false)

@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -12,7 +12,7 @@ import java.util.Set;
 
 @Component
 public class ClientOriginPolicy {
-    public boolean isAllowed(SysPrivClientApplication application, String requestOrigin) {
+    public boolean isAllowed(SysAccClientApplication application, String requestOrigin) {
         if (!StringUtils.hasText(requestOrigin)) {
             return true;
         }

@@ -2,7 +2,7 @@ package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,7 +20,7 @@ public class AuthorizationEventEmitter {
 
     public void emit(String httpMethod, ClientApplicationContext context, long durationNanos) {
         if (context == null) return;
-        SysPrivApiRegistry api = context.apiRegistry();
+        SysAccApiRegistry api = context.apiRegistry();
         Set<UserScopeAssignment> scopes = context.scopeAssignments() == null ? Set.of() : context.scopeAssignments();
         AuthorizationDecisionEvent event = new AuthorizationDecisionEvent(
                 null, context.traceId(), httpMethod,

@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -40,9 +40,9 @@ class AuthorizationDataCacheTest {
         when(cacheService.get(anyString(), eq(AuthorizationDataCache.RegistrySnapshot.class)))
                 .thenThrow(new IllegalStateException("redis unavailable"));
         AtomicInteger loads = new AtomicInteger();
-        List<SysPrivApiRegistry> result = cache.registryMappings("GET", () -> {
+        List<SysAccApiRegistry> result = cache.registryMappings("GET", () -> {
             loads.incrementAndGet();
-            return List.of(SysPrivApiRegistry.builder().id(1L).httpMethod("GET").pathPattern("/x").active(true).build());
+            return List.of(SysAccApiRegistry.builder().id(1L).httpMethod("GET").pathPattern("/x").active(true).build());
         });
         assertThat(loads).hasValue(1);
         assertThat(result).hasSize(1);

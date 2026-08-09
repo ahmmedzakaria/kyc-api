@@ -5,7 +5,7 @@ import com.nexacore.appconfigmodule.HttpExceptionHandler;
 import com.nexacore.authmodule.core.service.implementations.LogoutSessionService;
 import com.nexacore.authmodule.security.config.AuthenticationProviderConfig;
 import com.nexacore.authmodule.security.config.CorsProperties;
-import com.nexacore.authmodule.security.config.SecurityConfig;
+import com.nexacore.appconfigmodule.security.SecurityConfig;
 import com.nexacore.authmodule.security.filter.JwtAuthenticationFilter;
 import com.nexacore.authmodule.security.jwt.InvalidTokenTypeException;
 import com.nexacore.authmodule.security.jwt.JwtAuthEntryPoint;
@@ -21,8 +21,8 @@ import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.config.EnforcementMode;
 import com.nexacore.systemmodule.accesscontrol.controller.ClientApplicationController;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
@@ -103,7 +103,7 @@ class AccessControlFilterChainIntegrationTest {
     @Autowired private ClientPermissionService clientPermissionService;
 
     private MockMvc mvc;
-    private SysPrivClientApplication client;
+    private SysAccClientApplication client;
 
     @BeforeEach
     void setUp() {
@@ -111,7 +111,7 @@ class AccessControlFilterChainIntegrationTest {
                 authModuleGateway, privilegeService, privilegeModuleGateway,
                 clientApplicationService, clientPermissionService);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-        client = SysPrivClientApplication.builder().id(3L).clientCode("client")
+        client = SysAccClientApplication.builder().id(3L).clientCode("client")
                 .clientType(ClientApplicationType.INTERNAL_SERVICE).build();
 
         when(credentials.resolveActiveClient("client")).thenReturn(Optional.of(client));
@@ -124,8 +124,8 @@ class AccessControlFilterChainIntegrationTest {
             return Optional.of(api(request.getRequestURI()));
         });
         when(decisionService.decide(any(), any())).thenAnswer(invocation -> {
-            SysPrivClientApplication application = invocation.getArgument(0);
-            SysPrivApiRegistry api = invocation.getArgument(1);
+            SysAccClientApplication application = invocation.getArgument(0);
+            SysAccApiRegistry api = invocation.getArgument(1);
             if (application == null) return ClientAccessDecisionDto.denied("CLIENT_REQUIRED", null, api);
             if (api.getPathPattern().contains("no-api-grant"))
                 return ClientAccessDecisionDto.denied("CLIENT_API_NOT_ALLOWED", application, api);
@@ -263,8 +263,8 @@ class AccessControlFilterChainIntegrationTest {
         };
     }
 
-    private SysPrivApiRegistry api(String path) {
-        return SysPrivApiRegistry.builder().id(20L).apiCode("GET:" + path).httpMethod("GET")
+    private SysAccApiRegistry api(String path) {
+        return SysAccApiRegistry.builder().id(20L).apiCode("GET:" + path).httpMethod("GET")
                 .pathPattern(path).requiredPrivilegeCode(REQUIRED).active(true).build();
     }
 

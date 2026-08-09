@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.config.EnforcementMode;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
@@ -75,7 +75,7 @@ class UserPrivilegeApiAccessFilterTest {
         AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
                 7L, "operator", 3L, "WEB", Set.of(new UserScopeAssignment(11L, null, null)),
                 "trace-1", privileges));
-        SysPrivApiRegistry api = SysPrivApiRegistry.builder().id(2L).apiCode("ADMIN_USERS")
+        SysAccApiRegistry api = SysAccApiRegistry.builder().id(2L).apiCode("ADMIN_USERS")
                 .pathPattern("/api/v1/admin/users").requiredPrivilegeCode(REQUIRED).active(true).build();
         ClientApplicationContextHolder.set(ClientApplicationContext.builder()
                 .traceId("trace-1").apiRegistry(api).requiredPrivilegeCode(REQUIRED)

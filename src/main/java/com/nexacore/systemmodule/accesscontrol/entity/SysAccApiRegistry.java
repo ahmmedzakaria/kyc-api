@@ -16,12 +16,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sys_priv_api_registry")
+@Table(name = "sys_acc_api_registry")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysPrivApiRegistry {
+public class SysAccApiRegistry {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

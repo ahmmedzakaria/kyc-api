@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import jakarta.servlet.http.HttpServletRequest;
 
 public interface ClientRateLimiter {
-    ClientRateLimitDecision check(SysPrivClientApplication application, HttpServletRequest request);
+    ClientRateLimitDecision check(SysAccClientApplication application, HttpServletRequest request);
 }

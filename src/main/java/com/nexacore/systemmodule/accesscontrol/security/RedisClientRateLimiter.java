@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.servicesmodule.cacheservice.dto.AtomicCounterResult;
 import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,7 +23,7 @@ public class RedisClientRateLimiter implements ClientRateLimiter {
     private final AccessControlProperties properties;
 
     @Override
-    public ClientRateLimitDecision check(SysPrivClientApplication application, HttpServletRequest request) {
+    public ClientRateLimitDecision check(SysAccClientApplication application, HttpServletRequest request) {
         Integer configuredLimit = application == null ? null : application.getRateLimitPerMinute();
         if (!properties.isRateLimitEnabled() || configuredLimit == null) {
             return ClientRateLimitDecision.notLimited();
@@ -47,7 +47,7 @@ public class RedisClientRateLimiter implements ClientRateLimiter {
         }
     }
 
-    private String cacheKey(SysPrivClientApplication application, HttpServletRequest request) {
+    private String cacheKey(SysAccClientApplication application, HttpServletRequest request) {
         String client = application.getId() == null ? application.getClientCode() : application.getId().toString();
         String route = request.getMethod() + ":" + request.getServletPath();
         return "rate-limit:client:" + client + ":route:" + sha256(route);

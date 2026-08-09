@@ -1,8 +1,8 @@
 package com.nexacore.systemmodule.accesscontrol.service.implementations;
 
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApiPermissionRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissionRepository;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
@@ -31,7 +31,7 @@ public class ClientAccessDecisionServiceImpl implements ClientAccessDecisionServ
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public ClientAccessDecisionDto decide(SysPrivClientApplication clientApplication, SysPrivApiRegistry apiRegistry) {
+    public ClientAccessDecisionDto decide(SysAccClientApplication clientApplication, SysAccApiRegistry apiRegistry) {
         if (apiRegistry == null || apiRegistry.isPublicApi()) {
             return ClientAccessDecisionDto.allowed(clientApplication, apiRegistry);
         }
@@ -54,7 +54,7 @@ public class ClientAccessDecisionServiceImpl implements ClientAccessDecisionServ
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Set<String> filterPrivilegeCodesForClient(SysPrivClientApplication clientApplication, Set<String> userPrivilegeCodes) {
+    public Set<String> filterPrivilegeCodesForClient(SysAccClientApplication clientApplication, Set<String> userPrivilegeCodes) {
         if (clientApplication == null || userPrivilegeCodes == null || userPrivilegeCodes.isEmpty()) {
             return userPrivilegeCodes == null ? Set.of() : userPrivilegeCodes;
         }

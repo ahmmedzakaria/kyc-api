@@ -1,17 +1,17 @@
 package com.nexacore.systemmodule.accesscontrol.dto;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import lombok.Builder;
 
 @Builder
 public record ClientAccessDecisionDto(
         boolean allowed,
         String denyReason,
-        SysPrivClientApplication clientApplication,
-        SysPrivApiRegistry apiRegistry
+        SysAccClientApplication clientApplication,
+        SysAccApiRegistry apiRegistry
 ) {
-    public static ClientAccessDecisionDto allowed(SysPrivClientApplication clientApplication, SysPrivApiRegistry apiRegistry) {
+    public static ClientAccessDecisionDto allowed(SysAccClientApplication clientApplication, SysAccApiRegistry apiRegistry) {
         return ClientAccessDecisionDto.builder()
                 .allowed(true)
                 .clientApplication(clientApplication)
@@ -20,8 +20,8 @@ public record ClientAccessDecisionDto(
     }
 
     public static ClientAccessDecisionDto denied(String denyReason,
-                                                 SysPrivClientApplication clientApplication,
-                                                 SysPrivApiRegistry apiRegistry) {
+                                                 SysAccClientApplication clientApplication,
+                                                 SysAccApiRegistry apiRegistry) {
         return ClientAccessDecisionDto.builder()
                 .allowed(false)
                 .denyReason(denyReason)

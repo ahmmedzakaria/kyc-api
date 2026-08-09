@@ -4,7 +4,7 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryRequestDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.accesscontrol.security.ClientSecuredApi;
 import com.nexacore.systemmodule.accesscontrol.security.ApiRouteMatcher;
@@ -47,9 +47,9 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     @Transactional(transactionManager = "systemTransactionManager")
     public ApiRegistryDto save(ApiRegistryRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
-        SysPrivApiRegistry api = requestDto.getId() == null
+        SysAccApiRegistry api = requestDto.getId() == null
                 ? apiRegistryRepository.findByApiCode(requireText(requestDto.getApiCode(), "apiCode"))
-                .orElseGet(SysPrivApiRegistry::new)
+                .orElseGet(SysAccApiRegistry::new)
                 : apiRegistryRepository.findById(requestDto.getId())
                 .orElseThrow(() -> new IllegalArgumentException("API registry not found: " + requestDto.getId()));
 
@@ -155,7 +155,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         }
 
         int deactivated = 0;
-        for (SysPrivApiRegistry existing : apiRegistryRepository.findBySource(SOURCE_ANNOTATION)) {
+        for (SysAccApiRegistry existing : apiRegistryRepository.findBySource(SOURCE_ANNOTATION)) {
             if (existing.isActive() && !synchronizedCodes.contains(existing.getApiCode())) {
                 existing.setActive(false);
                 existing.setUpdatedBy(actorId);
@@ -174,12 +174,12 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysPrivApiRegistry> resolve(HttpServletRequest request) {
+    public Optional<SysAccApiRegistry> resolve(HttpServletRequest request) {
         long startedAt = System.nanoTime();
         String method = request.getMethod().toUpperCase();
         String path = request.getRequestURI();
         try {
-            Optional<SysPrivApiRegistry> resolved = apiRouteMatcher.resolve(authorizationDataCache.registryMappings(method,
+            Optional<SysAccApiRegistry> resolved = apiRouteMatcher.resolve(authorizationDataCache.registryMappings(method,
                     () -> apiRegistryRepository.findByHttpMethodAndActiveTrue(method)), path);
             accessControlMetrics.recordRegistryResolution(System.nanoTime() - startedAt,
                     resolved.isPresent() ? "matched" : "unregistered");
@@ -203,7 +203,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         ClientSecuredApi annotation = mapping.annotation();
         String requiredPrivilegeCode = requiredPrivilegeCode(annotation);
         String apiCode = method + ":" + path;
-        SysPrivApiRegistry api = apiRegistryRepository.findByApiCode(apiCode).orElseGet(SysPrivApiRegistry::new);
+        SysAccApiRegistry api = apiRegistryRepository.findByApiCode(apiCode).orElseGet(SysAccApiRegistry::new);
         boolean added = api.getId() == null;
         String before = fingerprint(api);
         api.setApiCode(apiCode);
@@ -262,9 +262,9 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         return normalized;
     }
 
-    private void validateNoAmbiguousActiveRoute(SysPrivApiRegistry candidate) {
+    private void validateNoAmbiguousActiveRoute(SysAccApiRegistry candidate) {
         if (!candidate.isActive()) return;
-        for (SysPrivApiRegistry existing : apiRegistryRepository.findByHttpMethodAndActiveTrue(candidate.getHttpMethod())) {
+        for (SysAccApiRegistry existing : apiRegistryRepository.findByHttpMethodAndActiveTrue(candidate.getHttpMethod())) {
             if (Objects.equals(existing.getId(), candidate.getId())) continue;
             if (existing.getPathPattern().equals(candidate.getPathPattern())) {
                 throw new IllegalArgumentException("An active registry entry already exists for method and path");
@@ -275,14 +275,14 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         }
     }
 
-    private SysPrivApiRegistry asRegistry(Map.Entry<String, AnnotationMapping> entry) {
+    private SysAccApiRegistry asRegistry(Map.Entry<String, AnnotationMapping> entry) {
         AnnotationMapping mapping = entry.getValue();
-        return SysPrivApiRegistry.builder()
+        return SysAccApiRegistry.builder()
                 .apiCode(entry.getKey()).httpMethod(mapping.method()).pathPattern(mapping.path())
                 .priority(mapping.annotation().priority()).active(true).build();
     }
 
-    private String fingerprint(SysPrivApiRegistry api) {
+    private String fingerprint(SysAccApiRegistry api) {
         return String.join("|", nullSafe(api.getApiCode()), nullSafe(api.getHttpMethod()), nullSafe(api.getPathPattern()),
                 nullSafe(api.getModuleCode()), nullSafe(api.getModuleName()),
                 nullSafe(api.getSubmoduleCode()), nullSafe(api.getSubmoduleName()),

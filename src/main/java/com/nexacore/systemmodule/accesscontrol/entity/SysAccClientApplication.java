@@ -1,49 +1,61 @@
 package com.nexacore.systemmodule.accesscontrol.entity;
 
+import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
+import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "sys_priv_client_credentials")
+@Table(name = "sys_acc_client_applications")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SysPrivClientCredential {
+public class SysAccClientApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "client_application_id", nullable = false)
-    @EqualsAndHashCode.Exclude
-    private SysPrivClientApplication clientApplication;
+    @Column(nullable = false, unique = true, length = 50)
+    private String clientCode;
 
-    @Column(unique = true, length = 100)
-    private String clientId;
+    @Column(nullable = false)
+    private String clientName;
 
-    private String apiKeyHash;
-    private String clientSecretHash;
-    private LocalDateTime expiresAt;
-    private LocalDateTime lastUsedAt;
-    private boolean active;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private ClientApplicationType clientType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private ClientApplicationStatus status;
+
+    @Column(columnDefinition = "TEXT")
+    private String allowedOrigins;
+
+    @Column(columnDefinition = "TEXT")
+    private String allowedIps;
+
+    private Integer rateLimitPerMinute;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     private Long createdBy;
     private Long updatedBy;
     private LocalDateTime createdAt;
@@ -54,6 +66,7 @@ public class SysPrivClientCredential {
         LocalDateTime now = LocalDateTime.now();
         createdAt = createdAt == null ? now : createdAt;
         updatedAt = updatedAt == null ? now : updatedAt;
+        status = status == null ? ClientApplicationStatus.ACTIVE : status;
     }
 
     @PreUpdate

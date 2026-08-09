@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class AuthorizationDataCache {
     @Value("${access-control.authorization-cache.ttl:PT30S}")
     private Duration ttl;
 
-    public List<SysPrivApiRegistry> registryMappings(String method, Supplier<List<SysPrivApiRegistry>> loader) {
+    public List<SysAccApiRegistry> registryMappings(String method, Supplier<List<SysAccApiRegistry>> loader) {
         String key = REGISTRY + method.toUpperCase();
         RegistrySnapshot snapshot = get(key, RegistrySnapshot.class);
         if (snapshot != null) {
@@ -38,7 +38,7 @@ public class AuthorizationDataCache {
             return Arrays.stream(snapshot.getMappings()).map(ApiSnapshot::toEntity).toList();
         }
         metrics.recordCacheRequest("registry", "miss");
-        List<SysPrivApiRegistry> loaded = List.copyOf(loader.get());
+        List<SysAccApiRegistry> loaded = List.copyOf(loader.get());
         put(key, new RegistrySnapshot(loaded.stream().map(ApiSnapshot::from).toArray(ApiSnapshot[]::new)));
         return loaded;
     }
@@ -132,7 +132,7 @@ public class AuthorizationDataCache {
         private Long id; private String apiCode; private String httpMethod; private String pathPattern;
         private String requiredPrivilegeCode; private boolean publicApi; private String clientAuthenticationRequirement;
         private String userAuthorizationRequirement; private String dataScope; private int priority; private boolean active;
-        public static ApiSnapshot from(SysPrivApiRegistry api) {
+        public static ApiSnapshot from(SysAccApiRegistry api) {
             ApiSnapshot value = new ApiSnapshot();
             value.id=api.getId(); value.apiCode=api.getApiCode(); value.httpMethod=api.getHttpMethod();
             value.pathPattern=api.getPathPattern(); value.requiredPrivilegeCode=api.getRequiredPrivilegeCode();
@@ -140,8 +140,8 @@ public class AuthorizationDataCache {
             value.userAuthorizationRequirement=api.getUserAuthorizationRequirement(); value.dataScope=api.getDataScope();
             value.priority=api.getPriority(); value.active=api.isActive(); return value;
         }
-        public SysPrivApiRegistry toEntity() {
-            return SysPrivApiRegistry.builder().id(id).apiCode(apiCode).httpMethod(httpMethod).pathPattern(pathPattern)
+        public SysAccApiRegistry toEntity() {
+            return SysAccApiRegistry.builder().id(id).apiCode(apiCode).httpMethod(httpMethod).pathPattern(pathPattern)
                     .requiredPrivilegeCode(requiredPrivilegeCode).publicApi(publicApi)
                     .clientAuthenticationRequirement(clientAuthenticationRequirement)
                     .userAuthorizationRequirement(userAuthorizationRequirement).dataScope(dataScope)

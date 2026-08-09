@@ -1,15 +1,15 @@
 package com.nexacore.systemmodule.accesscontrol.repository;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface ApiRegistryRepository extends JpaRepository<SysPrivApiRegistry, Long> {
-    Optional<SysPrivApiRegistry> findByApiCode(String apiCode);
+public interface ApiRegistryRepository extends JpaRepository<SysAccApiRegistry, Long> {
+    Optional<SysAccApiRegistry> findByApiCode(String apiCode);
 
-    List<SysPrivApiRegistry> findByHttpMethodAndActiveTrue(String httpMethod);
+    List<SysAccApiRegistry> findByHttpMethodAndActiveTrue(String httpMethod);
 
-    List<SysPrivApiRegistry> findBySource(String source);
+    List<SysAccApiRegistry> findBySource(String source);
 }

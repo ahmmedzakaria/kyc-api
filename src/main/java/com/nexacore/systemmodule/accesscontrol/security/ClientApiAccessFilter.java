@@ -3,8 +3,8 @@ package com.nexacore.systemmodule.accesscontrol.security;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientAccessDecisionDto;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.config.EnforcementMode;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegistryService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
@@ -43,7 +43,7 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        Optional<SysPrivApiRegistry> api;
+        Optional<SysAccApiRegistry> api;
         try {
             api = clientApiRegistryService.resolve(request);
         } catch (ApiRouteAmbiguityException exception) {
@@ -68,7 +68,7 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
             return;
         }
 
-        SysPrivClientApplication application = ClientApplicationContextHolder.get()
+        SysAccClientApplication application = ClientApplicationContextHolder.get()
                 .map(ClientApplicationContext::clientApplication)
                 .orElse(null);
         ClientAccessDecisionDto decision = clientAccessDecisionService.decide(application, api.get());
@@ -157,8 +157,8 @@ public class ClientApiAccessFilter extends OncePerRequestFilter {
 
     private void logWouldDeny(ClientAccessDecisionDto decision) {
         ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
-        SysPrivApiRegistry api = decision.apiRegistry();
-        SysPrivClientApplication client = decision.clientApplication();
+        SysAccApiRegistry api = decision.apiRegistry();
+        SysAccClientApplication client = decision.clientApplication();
         log.warn("access-control would-deny traceId={} apiCode={} clientCode={} username={} "
                         + "requiredPrivilegeCode={} denialReason={}",
                 context == null ? null : context.traceId(),

@@ -2,7 +2,7 @@ package com.nexacore.systemmodule.license.entity;
 
 import com.nexacore.systemmodule.license.enums.LicenseEntitlementType;
 import com.nexacore.systemmodule.license.enums.LicenseOverrideMode;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
@@ -72,7 +72,7 @@ public class SysLicenseEntitlementOverride {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "api_registry_id")
     @EqualsAndHashCode.Exclude
-    private SysPrivApiRegistry apiRegistry;
+    private SysAccApiRegistry apiRegistry;
 
     @Column(length = 80)
     private String limitCode;

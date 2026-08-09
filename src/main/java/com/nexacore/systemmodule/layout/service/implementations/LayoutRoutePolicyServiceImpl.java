@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.layout.service.implementations;
 
 import com.nexacore.commonmodule.dto.RoutePrivilegePolicyDto;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.layout.entity.SysLayoutRoutePolicy;
@@ -96,7 +96,7 @@ public class LayoutRoutePolicyServiceImpl implements LayoutRoutePolicyService {
         if (clientCode == null || clientCode.isBlank()) {
             return null;
         }
-        SysPrivClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
+        SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientCode));
         if (client.getStatus() != ClientApplicationStatus.ACTIVE) {
             throw new IllegalArgumentException("Client application is not active: " + clientCode);

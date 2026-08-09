@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.service.implementations;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientCredential;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientCredential;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialRepository;
@@ -25,7 +25,7 @@ class ClientCredentialServiceImplTest {
     private ClientCredentialRepository credentials;
     private PasswordEncoder passwordEncoder;
     private ClientCredentialServiceImpl service;
-    private SysPrivClientApplication client;
+    private SysAccClientApplication client;
 
     @BeforeEach
     void setUp() {
@@ -34,7 +34,7 @@ class ClientCredentialServiceImplTest {
         passwordEncoder = mock(PasswordEncoder.class);
         service = new ClientCredentialServiceImpl(applications, credentials, passwordEncoder);
         ReflectionTestUtils.setField(service, "usageWriteInterval", Duration.ofMinutes(5));
-        client = SysPrivClientApplication.builder().id(10L).clientCode("PARTNER").status(ClientApplicationStatus.ACTIVE).build();
+        client = SysAccClientApplication.builder().id(10L).clientCode("PARTNER").status(ClientApplicationStatus.ACTIVE).build();
         when(applications.findByClientCode("PARTNER")).thenReturn(Optional.of(client));
         when(passwordEncoder.matches("secret", "hash")).thenReturn(true);
     }
@@ -71,7 +71,7 @@ class ClientCredentialServiceImplTest {
     }
 
     private void credential(LocalDateTime lastUsedAt) {
-        SysPrivClientCredential credential = SysPrivClientCredential.builder().id(20L).clientApplication(client)
+        SysAccClientCredential credential = SysAccClientCredential.builder().id(20L).clientApplication(client)
                 .apiKeyHash("hash").active(true).lastUsedAt(lastUsedAt).build();
         when(credentials.findByClientApplicationIdAndActiveTrue(10L)).thenReturn(List.of(credential));
     }

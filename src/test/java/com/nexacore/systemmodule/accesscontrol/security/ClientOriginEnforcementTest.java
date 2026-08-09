@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.config.EnforcementMode;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredentialService;
 import org.junit.jupiter.api.Test;
@@ -19,17 +19,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ClientOriginEnforcementTest {
 
-    private SysPrivClientApplication resolvedClient;
+    private SysAccClientApplication resolvedClient;
     private ClientRateLimitDecision rateLimitDecision = ClientRateLimitDecision.notLimited();
     private boolean rateLimitUnavailable;
     private final ClientCredentialService credentials = new ClientCredentialService() {
         @Override
-        public Optional<SysPrivClientApplication> resolveActiveClient(String clientCode) {
+        public Optional<SysAccClientApplication> resolveActiveClient(String clientCode) {
             return Optional.ofNullable(resolvedClient);
         }
 
         @Override
-        public Optional<SysPrivClientApplication> validateApiKey(String clientCode, String apiKey) {
+        public Optional<SysAccClientApplication> validateApiKey(String clientCode, String apiKey) {
             return Optional.ofNullable(resolvedClient);
         }
     };
@@ -145,8 +145,8 @@ class ClientOriginEnforcementTest {
         return request;
     }
 
-    private SysPrivClientApplication webClient(String origins) {
-        return SysPrivClientApplication.builder()
+    private SysAccClientApplication webClient(String origins) {
+        return SysAccClientApplication.builder()
                 .id(3L).clientCode("portal").clientType(ClientApplicationType.WEB)
                 .allowedOrigins(origins).build();
     }

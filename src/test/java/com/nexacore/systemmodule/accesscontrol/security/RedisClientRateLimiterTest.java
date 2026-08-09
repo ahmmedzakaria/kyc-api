@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.accesscontrol.security;
 
 import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivClientApplication;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.servicesmodule.cacheservice.dto.AtomicCounterResult;
 import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ class RedisClientRateLimiterTest {
 
     @Test
     void allowsWithinLimitAndDeniesAfterLimitUsingAtomicRedisResult() {
-        SysPrivClientApplication client = client(2);
+        SysAccClientApplication client = client(2);
         cache.result = new AtomicCounterResult(1L, Duration.ofSeconds(59));
         ClientRateLimitDecision first = limiter.check(client, request("POST", "/api/v1/person/search"));
         cache.result = new AtomicCounterResult(3L, Duration.ofSeconds(41));
@@ -56,8 +56,8 @@ class RedisClientRateLimiterTest {
         assertThat(limiter.check(client(2), request("GET", "/api/test")).allowed()).isTrue();
     }
 
-    private SysPrivClientApplication client(Integer limit) {
-        return SysPrivClientApplication.builder().id(9L).clientCode("portal")
+    private SysAccClientApplication client(Integer limit) {
+        return SysAccClientApplication.builder().id(9L).clientCode("portal")
                 .rateLimitPerMinute(limit).build();
     }
 

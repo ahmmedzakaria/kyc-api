@@ -1,6 +1,6 @@
 package com.nexacore.systemmodule.accesscontrol.dto;
 
-import com.nexacore.systemmodule.accesscontrol.entity.SysPrivApiRegistry;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import lombok.Builder;
 import lombok.Data;
 
@@ -31,7 +31,7 @@ public class ApiRegistryDto {
     private java.time.LocalDateTime lastSynchronizedAt;
     private boolean active;
 
-    public static ApiRegistryDto fromEntity(SysPrivApiRegistry api) {
+    public static ApiRegistryDto fromEntity(SysAccApiRegistry api) {
         return ApiRegistryDto.builder()
                 .id(api.getId())
                 .apiCode(api.getApiCode())
