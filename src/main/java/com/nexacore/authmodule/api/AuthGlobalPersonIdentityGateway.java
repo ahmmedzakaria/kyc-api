@@ -30,13 +30,17 @@ public class AuthGlobalPersonIdentityGateway implements GlobalPersonIdentityGate
         }
 
         long actor = actorId == null ? 0L : actorId;
-        boolean created = !repository.existsById(source.personId());
-        AuthPerson person = repository.findById(source.personId()).orElseGet(() -> {
-            AuthPerson value = new AuthPerson();
-            value.setId(source.personId());
-            value.setCreatedBy(actor);
-            return value;
-        });
+        AuthPerson person = repository.findById(source.personId()).orElse(null);
+        if (person == null) {
+            insertPreservingId(source, actor);
+            advanceIdentitySequence();
+            return toDto(repository.findById(source.personId()).orElseThrow());
+        }
+        apply(source, person, actor);
+        return toDto(repository.saveAndFlush(person));
+    }
+
+    private void apply(GlobalPersonIdentityDto source, AuthPerson person, long actor) {
         person.setFirstName(trimRequired(source.firstName()));
         person.setMiddleName(trimToNull(source.middleName()));
         person.setLastName(trimToNull(source.lastName()));
@@ -50,21 +54,52 @@ public class AuthGlobalPersonIdentityGateway implements GlobalPersonIdentityGate
         person.setStatus(source.active() ? AuthPersonStatus.ACTIVE : AuthPersonStatus.INACTIVE);
         person.setActive(source.active());
         person.setUpdatedBy(actor);
-        AuthPerson saved = repository.saveAndFlush(person);
+    }
 
-        if (created) {
-            entityManager.createNativeQuery("""
-                    SELECT setval(
-                        pg_get_serial_sequence('auth_persons', 'id'),
-                        GREATEST(
-                            (SELECT COALESCE(MAX(id), 1) FROM auth_persons),
-                            (SELECT last_value FROM auth_persons_id_seq)
-                        ),
-                        true
-                    )
-                    """).getSingleResult();
-        }
-        return toDto(saved);
+    private void insertPreservingId(GlobalPersonIdentityDto source, long actor) {
+        entityManager.createNativeQuery("""
+                INSERT INTO auth_persons (
+                    id, first_name, middle_name, last_name, date_of_birth, gender,
+                    blood_group, primary_email, primary_mobile, email_verified,
+                    mobile_verified, status, active, created_by, updated_by,
+                    created_at, updated_at
+                ) VALUES (
+                    :id, :firstName, :middleName, :lastName, :dateOfBirth, :gender,
+                    :bloodGroup, :primaryEmail, :primaryMobile, :emailVerified,
+                    :mobileVerified, :status, :active, :actor, :actor,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                """)
+                .setParameter("id", source.personId())
+                .setParameter("firstName", trimRequired(source.firstName()))
+                .setParameter("middleName", trimToNull(source.middleName()))
+                .setParameter("lastName", trimToNull(source.lastName()))
+                .setParameter("dateOfBirth", source.dateOfBirth())
+                .setParameter("gender", trimToNull(source.gender()))
+                .setParameter("bloodGroup", trimToNull(source.bloodGroup()))
+                .setParameter("primaryEmail", trimToNull(source.primaryEmail()))
+                .setParameter("primaryMobile", trimToNull(source.primaryMobile()))
+                .setParameter("emailVerified", source.emailVerified())
+                .setParameter("mobileVerified", source.mobileVerified())
+                .setParameter("status", source.active()
+                        ? AuthPersonStatus.ACTIVE.name() : AuthPersonStatus.INACTIVE.name())
+                .setParameter("active", source.active())
+                .setParameter("actor", actor)
+                .executeUpdate();
+        entityManager.clear();
+    }
+
+    private void advanceIdentitySequence() {
+        entityManager.createNativeQuery("""
+                SELECT setval(
+                    pg_get_serial_sequence('auth_persons', 'id'),
+                    GREATEST(
+                        (SELECT COALESCE(MAX(id), 1) FROM auth_persons),
+                        (SELECT last_value FROM auth_persons_id_seq)
+                    ),
+                    true
+                )
+                """).getSingleResult();
     }
 
     @Override

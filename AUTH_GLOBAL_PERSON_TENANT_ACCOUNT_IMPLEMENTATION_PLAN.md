@@ -236,6 +236,64 @@ Existing users are not assigned tenants in this phase. A platform administrator 
 trusted tenant scope cannot create a tenant account; Phase 3 must resolve or quarantine
 legacy scope ambiguity rather than accepting tenant ownership from an untrusted request.
 
+## Phase 3 execution record
+
+Phase 3 was implemented and executed locally on 2026-08-11. Auth migration `V14`
+performs the deterministic Auth-local account backfill and records unresolved accounts
+in `auth_user_backfill_quarantine`. A guarded, idempotent application runner copies and
+reconciles global people across the physical KYC/Auth database boundary.
+
+Delivered behavior:
+
+- normalized legacy usernames using PostgreSQL NFKC normalization, trim, and lowercase,
+  matching the server-side normalizer;
+- assigned an account tenant only when exactly one distinct active
+  `auth_user_scope_assignments.tenant_id` existed;
+- created auditable quarantine rows for no-scope, ambiguous-scope, invalid-username,
+  and normalized-username-conflict cases rather than guessing ownership;
+- retained unresolved accounts for explicit review; authentication behavior is not
+  switched until Phase 4;
+- classified all existing roles as global templates and backfilled stable role codes
+  from their existing names;
+- added a quarantine entity/repository and an unresolved-quarantine Micrometer gauge;
+- added `GlobalPersonBackfillService` and a fail-closed startup runner controlled by
+  `AUTH_PERSON_BACKFILL_ENABLED`, with bounded paging and a report of failed IDs;
+- corrected the preserved-ID Auth person insert path discovered during the live
+  backfill, and advanced the Auth identity sequence safely after explicit-ID inserts.
+
+Local execution and reconciliation result:
+
+```text
+Flyway auth version: 14 (success)
+KYC persons copied to Auth: 14/14; IDs preserved 1..14
+Auth users with normalized usernames: 7/7
+Auth users resolved to one trusted tenant: 2/7
+Auth users quarantined with NO_ACTIVE_SCOPE: 5/7
+Ambiguous multi-tenant users: 0
+Auth users referencing a missing Auth person: 0
+Existing roles classified as global templates with role codes: 6/6
+KYC profiles referencing a missing KYC person: 0
+KYC memberships referencing a missing KYC person: 0
+System privilege assignments: 70, referencing existing Auth role IDs 1..5
+auth_persons identity sequence: 14
+mvn test: 140 tests, 0 failures, 0 errors, 5 Docker-dependent tests skipped
+```
+
+No legacy account had multiple trusted tenant assignments, so account splitting and a
+credential/username migration policy were not required for this dataset. The five
+no-scope accounts require an explicit trusted scope assignment or a reviewed platform-
+account disposition before Phase 4/5 can make tenant ownership mandatory.
+
+For a later environment, run the person reconciliation during one controlled restart:
+
+```bash
+export AUTH_PERSON_BACKFILL_ENABLED=true
+export AUTH_PERSON_BACKFILL_PAGE_SIZE=250
+```
+
+After confirming the completion report, disable `AUTH_PERSON_BACKFILL_ENABLED`; normal
+Phase 2 dual-write continues to synchronize subsequent person changes.
+
 This plan changes the current identity rule from one global `AuthUser` per person to:
 
 ```text
@@ -832,16 +890,17 @@ never a caller-provided `tenantId: null` convention.
 - [x] Enforce custom-role tenant compatibility in service and database trigger.
 - [x] Add metrics for legacy rows missing tenant or normalized username.
 
-### Phase 3 — data backfill
+### Phase 3 — data backfill — completed 2026-08-11
 
-- Copy `kyc_person` rows to `auth_persons` while preserving IDs.
-- Backfill each existing account's tenant from trusted active scope assignments.
-- Quarantine accounts with zero or multiple ambiguous tenant assignments.
-- If a legacy account legitimately covers multiple tenants, create one account per
+- [x] Copy `kyc_person` rows to `auth_persons` while preserving IDs.
+- [x] Backfill each existing account's tenant from trusted active scope assignments.
+- [x] Quarantine accounts with zero or multiple ambiguous tenant assignments.
+- [x] If a legacy account legitimately covers multiple tenants, create one account per
   tenant with an explicit username/credential migration policy.
-- Backfill normalized usernames.
-- Classify existing roles as global templates by leaving `tenant_id` null.
-- Reconcile KYC profiles, memberships, users, roles, and privilege mappings.
+  No such account existed in the executed dataset, so no split was performed.
+- [x] Backfill normalized usernames.
+- [x] Classify existing roles as global templates by leaving `tenant_id` null.
+- [x] Reconcile KYC profiles, memberships, users, roles, and privilege mappings.
 
 Never infer an account tenant from caller-controlled headers or arbitrary profile
 selection.

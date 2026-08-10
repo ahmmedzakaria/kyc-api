@@ -43,13 +43,23 @@ class AuthDatabaseMigrationTest {
     void upgradesLegacyAuthSchemaToAdditiveTenantAccountFoundation() throws SQLException {
         migrateTo("10");
         execute("INSERT INTO auth_users (username, person_id, enabled) VALUES ('Legacy.User', 101, true)");
+        execute("INSERT INTO auth_users (username, person_id, enabled) VALUES "
+                + "('No.Scope', 102, true), ('Ambiguous.User', 103, true)");
+        execute("INSERT INTO auth_user_scope_assignments "
+                + "(user_id, tenant_id, active, created_by, updated_by) "
+                + "SELECT id, 10, true, 0, 0 FROM auth_users WHERE username='Legacy.User'");
+        execute("INSERT INTO auth_user_scope_assignments "
+                + "(user_id, tenant_id, active, created_by, updated_by) "
+                + "SELECT id, tenant_id, true, 0, 0 FROM auth_users "
+                + "CROSS JOIN (VALUES (20), (30)) candidates(tenant_id) "
+                + "WHERE username='Ambiguous.User'");
         execute("INSERT INTO auth_roles (name) VALUES ('ROLE_LEGACY')");
 
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success "
-                + "ORDER BY installed_rank DESC LIMIT 1")).isEqualTo("13");
-        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(13);
+                + "ORDER BY installed_rank DESC LIMIT 1")).isEqualTo("14");
+        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(14);
         assertThat(regclass("auth_persons")).isEqualTo("auth_persons");
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_schema='public' "
                 + "AND table_name='auth_users' AND column_name IN "
@@ -60,11 +70,20 @@ class AuthDatabaseMigrationTest {
                 + "('tenant_id','role_code','description','active','created_by','updated_by','created_at','updated_at')"))
                 .isEqualTo(8);
         assertThat(count("SELECT count(*) FROM auth_users WHERE username='Legacy.User' "
-                + "AND person_id=101 AND tenant_id IS NULL AND normalized_username IS NULL AND NOT locked"))
+                + "AND person_id=101 AND tenant_id=10 AND normalized_username='legacy.user' AND NOT locked"))
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM auth_roles WHERE name='ROLE_LEGACY' "
-                + "AND tenant_id IS NULL AND role_code IS NULL AND active"))
+                + "AND tenant_id IS NULL AND role_code='ROLE_LEGACY' AND active"))
                 .isEqualTo(1);
+        assertThat(regclass("auth_user_backfill_quarantine"))
+                .isEqualTo("auth_user_backfill_quarantine");
+        assertThat(count("SELECT count(*) FROM auth_user_backfill_quarantine "
+                + "WHERE reason='NO_ACTIVE_SCOPE' AND NOT resolved")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM auth_user_backfill_quarantine "
+                + "WHERE reason='AMBIGUOUS_ACTIVE_TENANT' "
+                + "AND candidate_tenant_ids=ARRAY[20,30]::bigint[] AND NOT resolved")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM auth_users "
+                + "WHERE normalized_username IS NULL")).isZero();
         assertThat(count("SELECT count(*) FROM pg_indexes WHERE schemaname='public' "
                 + "AND indexname IN ('ux_auth_users_person_id','ux_auth_users_username')"))
                 .isEqualTo(2);
@@ -75,8 +94,6 @@ class AuthDatabaseMigrationTest {
                 + "'ux_auth_roles_global_code_phase1','ux_auth_roles_tenant_code_phase1')"))
                 .isEqualTo(7);
 
-        execute("UPDATE auth_users SET tenant_id=10, normalized_username='legacy.user' "
-                + "WHERE username='Legacy.User'");
         execute("INSERT INTO auth_roles (name, tenant_id, role_code) VALUES "
                 + "('ROLE_GLOBAL_PHASE2', NULL, 'ROLE_GLOBAL_PHASE2'),"
                 + "('ROLE_TENANT_10', 10, 'ROLE_TENANT_10'),"

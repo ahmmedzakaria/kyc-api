@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AuthFoundationMetrics {
-    public AuthFoundationMetrics(MeterRegistry registry, UserRepository userRepository) {
+    public AuthFoundationMetrics(MeterRegistry registry,
+                                 UserRepository userRepository,
+                                 com.nexacore.authmodule.core.repository.AuthUserBackfillQuarantineRepository quarantineRepository) {
         Gauge.builder("nexacore.auth.legacy.users.missing_tenant", userRepository,
                         repository -> repository.countByTenantIdIsNull())
                 .description("Legacy Auth users without a tenant account owner")
@@ -15,6 +17,10 @@ public class AuthFoundationMetrics {
         Gauge.builder("nexacore.auth.legacy.users.missing_normalized_username", userRepository,
                         repository -> repository.countByNormalizedUsernameIsNull())
                 .description("Auth users without a normalized username")
+                .register(registry);
+        Gauge.builder("nexacore.auth.backfill.users.quarantined", quarantineRepository,
+                        repository -> repository.countByResolvedFalse())
+                .description("Unresolved Auth users quarantined during tenant backfill")
                 .register(registry);
     }
 }
