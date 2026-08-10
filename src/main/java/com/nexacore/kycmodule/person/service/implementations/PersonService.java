@@ -1,6 +1,7 @@
 package com.nexacore.kycmodule.person.service.implementations;
 
 import com.nexacore.kycmodule.person.api.PersonRegisteredEvent;
+import com.nexacore.kycmodule.person.api.KycGlobalPersonDualWriteService;
 import com.nexacore.kycmodule.person.dto.PersonDocumentDto;
 import com.nexacore.kycmodule.person.dto.PersonDto;
 import com.nexacore.kycmodule.person.entity.KycPerson;
@@ -43,6 +44,7 @@ public class PersonService {
     private final FileManagementService fileManagementService;
     private final ApplicationEventPublisher eventPublisher;
     private final DataScopeService dataScopeService;
+    private final KycGlobalPersonDualWriteService dualWriteService;
 
     @Transactional(transactionManager = "kycTransactionManager", rollbackFor = IOException.class)
     public PersonDto create(PersonDto dto, MultipartFile photo) throws IOException {
@@ -63,6 +65,7 @@ public class PersonService {
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(profile, PersonDocumentType.PROFILE_PHOTO, photo);
         }
+        dualWriteService.synchronize(savedPerson, actor);
         PersonDto result = toDto(profile);
         eventPublisher.publishEvent(new PersonRegisteredEvent(
                 savedPerson.getId(),
@@ -72,6 +75,7 @@ public class PersonService {
         return result;
     }
 
+    @Transactional(transactionManager = "kycTransactionManager", rollbackFor = IOException.class)
     public PersonDto update(PersonDto dto, MultipartFile photo) throws IOException {
         if (dto.getId() == null) {
             throw new IllegalArgumentException("Person id is required for update");
@@ -86,6 +90,8 @@ public class PersonService {
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(profile, PersonDocumentType.PROFILE_PHOTO, photo);
         }
+
+        dualWriteService.synchronize(existing, currentActor());
 
         return toDto(profile);
     }

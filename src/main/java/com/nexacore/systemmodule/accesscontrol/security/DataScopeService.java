@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class DataScopeService {
@@ -46,6 +47,25 @@ public class DataScopeService {
             throw new DataScopeAccessDeniedException("The requested organizational scope is not assigned to the authenticated user");
         }
         return new UserScopeAssignment(tenantId, businessId, branchId);
+    }
+
+    public Long requireEffectiveTenant(Long requestedTenantId) {
+        Set<Long> assignedTenantIds = currentAssignments().stream()
+                .map(UserScopeAssignment::tenantId)
+                .collect(Collectors.toUnmodifiableSet());
+        if (assignedTenantIds.isEmpty()) {
+            throw new DataScopeAccessDeniedException("No tenant scope is assigned to the authenticated user");
+        }
+        if (requestedTenantId != null) {
+            if (!assignedTenantIds.contains(requestedTenantId)) {
+                throw new DataScopeAccessDeniedException("The requested tenant is not assigned to the authenticated user");
+            }
+            return requestedTenantId;
+        }
+        if (assignedTenantIds.size() != 1) {
+            throw new DataScopeAccessDeniedException("An explicit tenant selection is required when the user has multiple tenants");
+        }
+        return assignedTenantIds.iterator().next();
     }
 //@Todo need to simply it person can have the tenantId
     public <T> Specification<T> restrictToCurrentScopes(String tenantAttribute,

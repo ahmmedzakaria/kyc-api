@@ -17,6 +17,7 @@ import java.util.Optional;
 public class KycPersonModuleGateway implements PersonModuleGateway {
 
     private final PersonRepository personRepository;
+    private final KycGlobalPersonDualWriteService dualWriteService;
 
     @Override
     public Optional<PersonSummaryDto> findSummaryById(Long personId) {
@@ -60,7 +61,9 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
         Optional<KycPerson> existingPerson = findExistingPerson(username, email, mobileNumber);
         KycPerson person = existingPerson.orElseGet(KycPerson::new);
         applyUserFields(person, username, email, mobileNumber, firstName, lastName);
-        return toSummary(personRepository.save(person));
+        KycPerson saved = personRepository.save(person);
+        dualWriteService.synchronize(saved, currentActor());
+        return toSummary(saved);
     }
 
     @Override
@@ -73,7 +76,9 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
         KycPerson person = personRepository.findById(personId)
                 .orElseThrow(() -> new IllegalArgumentException("Person not found: " + personId));
         applyUserFields(person, username, email, null, firstName, lastName);
-        return toSummary(personRepository.save(person));
+        KycPerson saved = personRepository.save(person);
+        dualWriteService.synchronize(saved, currentActor());
+        return toSummary(saved);
     }
 
     private void applyUserFields(KycPerson person,
@@ -161,5 +166,11 @@ public class KycPersonModuleGateway implements PersonModuleGateway {
                 .mobileVerified(person.getMobileVerified())
                 .user(person.getUser())
                 .build();
+    }
+
+    private long currentActor() {
+        return com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder.get()
+                .map(context -> context.userId() == null ? 0L : context.userId())
+                .orElse(0L);
     }
 }

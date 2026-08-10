@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class UserRequestDto {
     private Long id;
+    private Long tenantId;
     private String username;
     /** Required on create. On update, a blank/null password leaves the existing password unchanged. */
     private String password;

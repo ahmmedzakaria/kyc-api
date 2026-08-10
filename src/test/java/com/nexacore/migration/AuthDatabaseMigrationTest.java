@@ -48,8 +48,8 @@ class AuthDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success "
-                + "ORDER BY installed_rank DESC LIMIT 1")).isEqualTo("12");
-        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(12);
+                + "ORDER BY installed_rank DESC LIMIT 1")).isEqualTo("13");
+        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(13);
         assertThat(regclass("auth_persons")).isEqualTo("auth_persons");
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_schema='public' "
                 + "AND table_name='auth_users' AND column_name IN "
@@ -74,6 +74,26 @@ class AuthDatabaseMigrationTest {
                 + "'ux_auth_roles_global_name_phase1','ux_auth_roles_tenant_name_phase1',"
                 + "'ux_auth_roles_global_code_phase1','ux_auth_roles_tenant_code_phase1')"))
                 .isEqualTo(7);
+
+        execute("UPDATE auth_users SET tenant_id=10, normalized_username='legacy.user' "
+                + "WHERE username='Legacy.User'");
+        execute("INSERT INTO auth_roles (name, tenant_id, role_code) VALUES "
+                + "('ROLE_GLOBAL_PHASE2', NULL, 'ROLE_GLOBAL_PHASE2'),"
+                + "('ROLE_TENANT_10', 10, 'ROLE_TENANT_10'),"
+                + "('ROLE_TENANT_20', 20, 'ROLE_TENANT_20')");
+        execute("INSERT INTO auth_user_roles (user_id, role_id) "
+                + "SELECT u.id, r.id FROM auth_users u CROSS JOIN auth_roles r "
+                + "WHERE u.username='Legacy.User' AND r.name IN ('ROLE_GLOBAL_PHASE2','ROLE_TENANT_10')");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "INSERT INTO auth_user_roles (user_id, role_id) "
+                                + "SELECT u.id, r.id FROM auth_users u CROSS JOIN auth_roles r "
+                                + "WHERE u.username='Legacy.User' AND r.name='ROLE_TENANT_20'"))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Tenant role cannot be assigned");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "UPDATE auth_roles SET tenant_id=11 WHERE name='ROLE_TENANT_10'"))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Assigned role tenant ownership cannot be changed");
     }
 
     private void migrateTo(String target) {

@@ -196,6 +196,46 @@ No existing user was assigned a tenant or normalized username, no role was recla
 and no authentication/repository lookup was switched. Those changes remain Phase 2 and
 later work.
 
+## Phase 2 execution record
+
+Phase 2 was implemented on 2026-08-11 as a transitional dual-write. KYC remains the
+read authority until the later backfill and cutover phases; this phase does not remove
+legacy constraints or switch authentication lookups.
+
+Delivered application behavior:
+
+- added a module-neutral `GlobalPersonIdentityGateway` and an Auth implementation that
+  creates or updates `auth_persons` while preserving the KYC global person ID;
+- synchronized the Auth person projection after global KYC person creation, update,
+  user promotion, and user-driven person provisioning;
+- required a trusted effective tenant for every newly created Auth account and wrote
+  both `tenant_id` and the shared normalized username;
+- retained explicit legacy update paths for existing accounts whose tenant has not yet
+  been resolved by the Phase 3 backfill;
+- added tenant-qualified account and role repository methods alongside the legacy
+  methods, without changing login behavior prematurely;
+- rejected inactive roles and tenant-owned roles belonging to a different tenant when
+  assigning roles in the administration service;
+- added Auth migration `V13` with database triggers enforcing the same assignment rule
+  and preventing tenant ownership changes for an already-assigned role;
+- added Micrometer gauges for legacy users missing `tenant_id` or
+  `normalized_username`;
+- exposed `tenantId` and `normalizedUsername` in the user administration DTOs.
+
+Verification:
+
+```text
+mvn test: passed (140 tests, 0 failures, 0 errors, 5 skipped)
+V13 SQL parsed and created both triggers in local auth_db transaction: passed/rolled back
+Testcontainers migration suites: 4 tests skipped because Docker socket access is unavailable
+```
+
+Transitional constraints remain intentional. The deployed global username/person
+uniqueness constraints still prevent duplicate cross-tenant accounts until Phase 5.
+Existing users are not assigned tenants in this phase. A platform administrator with no
+trusted tenant scope cannot create a tenant account; Phase 3 must resolve or quarantine
+legacy scope ambiguity rather than accepting tenant ownership from an untrusted request.
+
 This plan changes the current identity rule from one global `AuthUser` per person to:
 
 ```text
@@ -784,13 +824,13 @@ never a caller-provided `tenantId: null` convention.
 - [x] Implement shared username normalization.
 - [x] Do not remove current constraints yet.
 
-### Phase 2 — application dual-write
+### Phase 2 — application dual-write — completed 2026-08-11
 
-- Copy/create the global Auth person when a global KYC person is created.
-- Write tenant and normalized username for all new accounts.
-- Add tenant-aware repositories and services alongside legacy methods.
-- Enforce custom-role tenant compatibility in service and database trigger.
-- Add metrics for legacy rows missing tenant or normalized username.
+- [x] Copy/create the global Auth person when a global KYC person is created.
+- [x] Write tenant and normalized username for all new accounts.
+- [x] Add tenant-aware repositories and services alongside legacy methods.
+- [x] Enforce custom-role tenant compatibility in service and database trigger.
+- [x] Add metrics for legacy rows missing tenant or normalized username.
 
 ### Phase 3 — data backfill
 
