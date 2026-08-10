@@ -6,11 +6,13 @@ import com.nexacore.systemmodule.backup.entity.SysBackupDatabaseResult;
 import com.nexacore.systemmodule.backup.entity.SysBackupJob;
 import com.nexacore.systemmodule.backup.enums.BackupJobStatus;
 import com.nexacore.systemmodule.backup.enums.BackupTrigger;
+import com.nexacore.systemmodule.backup.exception.BackupApiException;
 import com.nexacore.systemmodule.backup.repository.BackupJobRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +42,14 @@ public class BackupJobService {
     }
 
     public synchronized BackupJobDto enqueue(BackupTrigger trigger, String requestedBy) {
-        if (!properties.isEnabled()) throw new IllegalStateException("Database backup is disabled");
-        if (repository.existsByStatusIn(ACTIVE)) throw new IllegalStateException("A database backup is already queued or running");
+        if (!properties.isEnabled()) {
+            throw new BackupApiException(HttpStatus.SERVICE_UNAVAILABLE, "DATABASE_BACKUP_DISABLED",
+                    "Database backup is disabled by system configuration");
+        }
+        if (repository.existsByStatusIn(ACTIVE)) {
+            throw new BackupApiException(HttpStatus.CONFLICT, "DATABASE_BACKUP_ALREADY_RUNNING",
+                    "A database backup is already queued or running");
+        }
         SysBackupJob job = new SysBackupJob();
         job.setId(UUID.randomUUID());
         job.setTriggerType(trigger);
@@ -68,19 +76,27 @@ public class BackupJobService {
     public FileSystemResource artifact(UUID id) {
         SysBackupJob job = required(id);
         if (job.getStatus() != BackupJobStatus.COMPLETED && job.getStatus() != BackupJobStatus.PARTIAL) {
-            throw new IllegalStateException("Backup artifact is not available");
+            throw new BackupApiException(HttpStatus.CONFLICT, "DATABASE_BACKUP_ARTIFACT_NOT_READY",
+                    "Backup artifact is not available for this job state");
         }
-        if (job.getArtifactName() == null) throw new IllegalStateException("Backup artifact is missing");
+        if (job.getArtifactName() == null) {
+            throw new BackupApiException(HttpStatus.NOT_FOUND, "DATABASE_BACKUP_ARTIFACT_MISSING",
+                    "Backup artifact is missing");
+        }
         Path root = properties.getLocalRoot().toAbsolutePath().normalize();
         Path artifact = root.resolve(job.getArtifactName()).normalize();
-        if (!artifact.startsWith(root) || !Files.isRegularFile(artifact)) throw new IllegalStateException("Backup artifact is missing");
+        if (!artifact.startsWith(root) || !Files.isRegularFile(artifact)) {
+            throw new BackupApiException(HttpStatus.NOT_FOUND, "DATABASE_BACKUP_ARTIFACT_MISSING",
+                    "Backup artifact is missing");
+        }
         return new FileSystemResource(artifact);
     }
 
     public String downloadName(UUID id) { return "nexacore-backup-" + id + ".zip.aesgcm"; }
 
     private SysBackupJob required(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Backup job not found: " + id));
+        return repository.findById(id).orElseThrow(() -> new BackupApiException(
+                HttpStatus.NOT_FOUND, "DATABASE_BACKUP_JOB_NOT_FOUND", "Database backup job not found"));
     }
 
     private BackupJobDto toDto(SysBackupJob job) {
