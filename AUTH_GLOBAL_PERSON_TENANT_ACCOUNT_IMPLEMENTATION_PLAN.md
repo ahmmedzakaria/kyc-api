@@ -2,7 +2,163 @@
 
 ## Status
 
-Proposed architecture and phased implementation plan. Not yet implemented.
+Phase 0 completed on 2026-08-11. Architectural decisions and the current-state
+inventory are approved and recorded below. Phases 1-7 are not yet implemented.
+
+## Phase 0 execution record
+
+### Approved decisions
+
+| Decision | Approved rule | Consequence for implementation |
+|---|---|---|
+| Global-person ownership | Move canonical global human identity ownership to Auth as `auth_persons`. | KYC retains a transitional `kyc_person` representation during dual-write/stabilization, then becomes profile/evidence owned. |
+| Accounts per person and tenant | At most one `auth_users` account for a person in a tenant. The same person may have one separate account in each tenant. | Enforce unique `(tenant_id, person_id)`. Any future need for multiple same-tenant accounts requires a new decision and migration. |
+| Username uniqueness | Username is unique only inside a tenant after server-side normalization. | Enforce unique `(tenant_id, normalized_username)` and remove global uniqueness only during the constraint cutover. |
+| Canonical contacts | Canonical email/mobile belong to the global Auth person, but neither is globally unique. | Do not add unique constraints to canonical contacts. Use normalized contact rows if multiple contacts/history become necessary. |
+| Tenant contacts | Tenant-observed email/mobile remain profile-owned and may differ from canonical contacts. | Profile updates never silently overwrite canonical contacts. APIs must label canonical versus tenant-declared values. |
+| Global roles | A role with `tenant_id IS NULL` is a platform-managed reusable template. | Tenant administrators may assign visible templates but cannot create, rename, deactivate, or change their privileges. |
+| Tenant roles | A role with `tenant_id IS NOT NULL` is owned and managed by that tenant. | Assignment requires `role.tenant_id = user.tenant_id`; use service validation plus a PostgreSQL constraint trigger. |
+| Role identifiers | Add immutable `role_code`; display name and description may be edited. | Normalize codes using `trim -> Unicode NFKC -> uppercase Locale.ROOT`; permit only `A-Z`, `0-9`, and `_`; require uniqueness globally for templates and within each tenant for custom roles. Existing `ROLE_*` values become global template codes. |
+| Role ownership changes | Role ownership is immutable after creation and role codes are immutable after first assignment/use. | Moving a role between global and tenant ownership is prohibited; create a replacement role and explicitly migrate assignments. |
+| External identities | One external subject may produce one account per authorized tenant. | Enforce `(tenant_id, external_provider, external_subject)` and bind SSO provisioning to verified tenant context. |
+| Tenant resolution | Resolve tenant from a verified domain/client mapping before account lookup. | Headers and request DTO tenant IDs are not authority. Missing or ambiguous resolution fails closed. |
+| Cross-database integrity | Person/profile and role/privilege links remain application-level references. | Gateways validate synchronously; reconciliation reports missing/stale/mismatched references. No unavailable gateway may be treated as authorization success. |
+
+### Current schema and data snapshot
+
+Inventory was taken from the local development databases on 2026-08-11 using
+aggregate-only queries.
+
+| Area | Current result | Migration significance |
+|---|---:|---|
+| Auth users | 7 | All require tenant and normalized-username backfill. |
+| Auth roles | 6 | Existing roles will initially become global templates. |
+| User-role assignments | 9 | Must be validated before enabling the role-tenant trigger. |
+| User-scope assignments | 2 | Scope cannot provide an unambiguous tenant for every account. |
+| Users with no active tenant scope | 5 | Must be quarantined or assigned from another trusted source; never infer from a request header. |
+| Users with exactly one active scope tenant | 2 | Eligible for deterministic tenant backfill after validation. |
+| Users with multiple active scope tenants | 0 | No current account split is immediately required by scope data. |
+| Duplicate Auth person groups | 0 | Current global `person_id` uniqueness is intact. |
+| KYC persons | 14 | IDs must be preserved when copied to `auth_persons`. |
+| KYC profiles | 5 | Continue using profile ID as the scoped resource ID. |
+| Organization memberships | 5 | Membership remains independent from login authorization. |
+| Persons with no active profile | 9 | A global person remains valid without a tenant KYC profile. |
+| Persons represented in one tenant | 5 | Eligible for direct person/profile reconciliation. |
+| Persons represented in multiple tenants | 0 | Multi-tenant behavior still requires adversarial tests even though local seed data lacks this case. |
+
+The five users without an active scope tenant are a Phase 3 blocking data-quality
+category for constraint cutover, not a reason to infer ownership automatically.
+
+### Production-code dependency inventory
+
+#### Global `findByUsername`
+
+| File | Current dependency | Required replacement |
+|---|---|---|
+| `authmodule/core/repository/UserRepository.java` | Declares global username lookup. | Add tenant plus normalized-username lookup; retain global lookup only behind platform reconciliation during transition. |
+| `authmodule/security/service/MyUserDetailsService.java` | Loads authentication principal globally. | Accept resolved tenant/account identity and load within that tenant. |
+| `authmodule/core/service/implementations/UserAdminServiceImpl.java` | Checks username uniqueness globally. | Check normalized username inside effective tenant and scope direct-ID operations. |
+| `authmodule/sso/service/KeycloakSsoService.java` | Provisions and generates usernames globally. | Resolve tenant first and use tenant-aware external/person/username keys. |
+| `authmodule/api/AuthModuleGatewayImpl.java` | Resolves access globally by username. | Resolve by authenticated account ID or tenant-bound account key. |
+| `authmodule/startup/DataSeeder.java` | Finds seed accounts globally. | Seed explicit tenant accounts or use platform-only deterministic bootstrap rules. |
+| `kycmodule/person/repository/PersonRepository.java` | Finds global person by compatibility username. | Remove username authority from KYC person. |
+| `kycmodule/person/api/KycPersonModuleGateway.java` | Finds/promotes people using username. | Replace with Auth-owned global-person contract and canonical identifiers. |
+| `keycloak2/.../NexaCoreUserRepository.java` and `NexaCoreUserStorageProvider.java` | Federate users by global case-insensitive username. | Include verified tenant context and normalized username in SPI lookup. |
+
+#### Global `findByPersonId`
+
+| File | Current dependency | Required replacement |
+|---|---|---|
+| `authmodule/core/repository/UserRepository.java` | Declares one global account per person. | Replace authentication/admin usage with `(tenant_id, person_id)`. |
+| `authmodule/sso/service/KeycloakSsoService.java` | Maps SSO person to one global account. | Provision/select one account per authorized tenant. |
+| `keycloak2/.../NexaCoreUserRepository.java` | Email lookup maps KYC person to the first Auth account by person ID. | Resolve tenant and query the matching tenant account; never select an arbitrary account. |
+
+#### `AuthUser` consumers
+
+- `authmodule/core/entity/AuthUser.java`: currently globally unique `username` and
+  `person_id`; no account `tenant_id` or `normalized_username`.
+- `authmodule/core/entity/AuthUserScopeAssignment.java`: scope has tenant/business/
+  branch, but its tenant is not database-constrained to the user account.
+- `authmodule/core/repository/UserRepository.java`: global username, person, and
+  external-subject methods.
+- `authmodule/core/service/implementations/UserAdminServiceImpl.java`: account create,
+  update, list, and role replacement without tenant-account semantics.
+- `authmodule/security/service/MyUserDetailsService.java`: password authentication by
+  global username.
+- `authmodule/sso/service/KeycloakSsoService.java`: global SSO provisioning.
+- `authmodule/api/AuthModuleGatewayImpl.java`: username-based access projection used
+  by request authorization.
+- `authmodule/startup/DataSeeder.java`: globally named seed accounts and exact roles.
+- `systemmodule/accesscontrol/security/AuthenticatedRequestContextFilter.java` and
+  `systemmodule/privilege/service/implementations/PrivilegeServiceImpl.java`: consume
+  the username-keyed Auth gateway result and therefore inherit its ambiguity.
+
+#### `KycPerson` consumers
+
+- `kycmodule/person/entity/KycPerson.java`: currently stores canonical name, DOB,
+  gender, national ID, photo, contacts, verification flags, plus compatibility
+  `username` and `is_user` fields.
+- `kycmodule/person/entity/KycPersonProfile.java`: uses a physical relation to
+  `KycPerson`; target state requires an application-level Auth person ID.
+- `KycPersonDetails`, `KycPersonDocument`, and
+  `KycPersonOrganizationMembership`: still point to the KYC-owned global entity;
+  details/documents need explicit global-versus-profile ownership classification.
+- `kycmodule/person/repository/PersonRepository.java`: global username/email/mobile
+  lookups and uniqueness assumptions.
+- `kycmodule/person/service/implementations/PersonService.java`: creates/updates the
+  global person, creates profiles/memberships, composes DTOs, and owns document flows.
+- `kycmodule/person/api/KycPersonModuleGateway.java`: lets Auth find, create, promote,
+  and validate the KYC-owned global person.
+- `kycmodule/person/repository/PersonDocumentRepository.java`: profile-scoped document
+  access is already present and must remain profile-owned.
+
+#### Keycloak SPI SQL inventory
+
+`keycloak2/user-storage-spi/.../NexaCoreUserRepository.java` currently:
+
+- selects `auth_users` without tenant columns;
+- finds username with `LOWER(u.username) = LOWER(?)` globally;
+- lists, searches, and counts accounts across all tenants;
+- maps email through `kyc_db.kyc_person`, then selects Auth by `person_id`;
+- loads names, contacts, and verification flags directly from `kyc_person`;
+- loads roles without role-active or tenant-compatibility predicates.
+
+The SPI configuration currently requires both Auth and KYC JDBC connections. After
+person cutover it should obtain canonical person/account data from Auth and remove the
+KYC database dependency. Tenant resolution for Keycloak must be designed before its
+queries are changed; a global username-only Keycloak lookup is incompatible with
+duplicate usernames across tenants.
+
+#### Database migration inventory
+
+- Auth migrations `V5`, `V6`, `V9`, `V10`, and `V11` introduced the current person
+  reference, removed duplicated contacts, normalized scope assignments, and made
+  `person_id` mandatory/unique. These migrations are immutable; Phase 1 adds a new
+  Auth migration.
+- KYC migrations `V2`, `V3`, and `V4` introduced `is_user`, compatibility username,
+  organizational assignments, profiles, and memberships. They remain immutable;
+  transitional changes require new migrations.
+- `auth_roles` currently has only globally unique `name`; it lacks tenant ownership,
+  stable code, active state, description, and required audit columns.
+- `auth_user_roles` currently cannot enforce tenant compatibility.
+
+#### Frontend inventory
+
+`frontendApplications/system-frontend-21` currently administers users by global
+`username`, `personId`, and `roleIds`. Its user list/editor and `UserService` do not
+display an account tenant, normalized username, role ownership, or separate global
+template and tenant-role choices. This is deferred to Phase 7; no frontend contract is
+changed during Phase 0.
+
+### Phase 0 exit assessment
+
+- All Phase 0 architecture choices are resolved; no open decision blocks Phase 1.
+- Current code and schema remain unchanged, so runtime behavior still follows the
+  legacy KYC-owned global-person and globally unique Auth-user model.
+- Phase 1 may add schema and normalization components only. It must not switch reads,
+  remove constraints, split accounts, or transfer production authority.
+- Before Phase 3, each of the five locally observed unscoped users needs an explicit,
+  trusted tenant disposition or quarantine record.
 
 This plan changes the current identity rule from one global `AuthUser` per person to:
 
@@ -573,15 +729,15 @@ never a caller-provided `tenantId: null` convention.
 
 ## Migration phases
 
-### Phase 0 — decisions and inventory
+### Phase 0 — decisions and inventory — completed 2026-08-11
 
-- Approve global person ownership moving to Auth.
-- Confirm whether one person may have more than one account per tenant.
-- Confirm global versus tenant contact uniqueness.
-- Decide global-role immutability and tenant role-code conventions.
-- Inventory every use of global `findByUsername`, `findByPersonId`, `AuthUser`,
+- [x] Approve global person ownership moving to Auth.
+- [x] Confirm whether one person may have more than one account per tenant.
+- [x] Confirm global versus tenant contact uniqueness.
+- [x] Decide global-role immutability and tenant role-code conventions.
+- [x] Inventory every use of global `findByUsername`, `findByPersonId`, `AuthUser`,
   `KycPerson`, and Keycloak SPI SQL.
-- Update repository design documentation before code changes.
+- [x] Update repository design documentation before code changes.
 
 ### Phase 1 — additive Auth foundation
 
@@ -715,4 +871,3 @@ Implementation is complete only when:
 - login, refresh, SSO, Keycloak, and administration flows are tenant-aware;
 - adversarial two-tenant tests pass;
 - the old KYC-owned global-person write path is disabled.
-

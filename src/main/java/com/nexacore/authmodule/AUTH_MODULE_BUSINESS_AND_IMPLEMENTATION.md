@@ -2,6 +2,14 @@
 
 ## Purpose
 
+> **Approved target-boundary transition (Phase 0, 2026-08-11):**
+> `AUTH_GLOBAL_PERSON_TENANT_ACCOUNT_IMPLEMENTATION_PLAN.md` approves moving the
+> canonical global person to `auth_db.auth_persons` and changing `AuthUser` into a
+> tenant-specific account. The rules below document the currently implemented model
+> and remain operational until the staged dual-write and cutover phases are completed.
+> New work must not deepen dependencies on global username lookup or KYC-owned
+> authentication compatibility fields.
+
 The Auth module owns application accounts, credentials, roles, sessions, JWT issuance, local login, SSO token bridge, and authorization integration.
 
 The module does not own person profile/contact data. Those fields belong to the KYC module.

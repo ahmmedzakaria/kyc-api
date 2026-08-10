@@ -2,6 +2,14 @@
 
 ## Purpose
 
+> **Approved target-boundary transition (Phase 0, 2026-08-11):**
+> `AUTH_GLOBAL_PERSON_TENANT_ACCOUNT_IMPLEMENTATION_PLAN.md` approves moving the
+> canonical global person to `auth_db.auth_persons`. KYC will retain tenant profiles,
+> memberships, evidence, documents, decisions, and workflows. The rules below
+> document the currently implemented KYC-owned person model and remain operational
+> during staged dual-write and stabilization; no destructive ownership cutover is
+> authorized by Phase 0.
+
 The KYC module owns person identity, person profile, person contact information, KYC records, and person documents.
 
 The module is the source of truth for:
