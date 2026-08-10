@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
+import java.util.HashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +66,22 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
+    public void grantApiPermissions(ClientPermissionAssignmentRequestDto requestDto, String username) {
+        SysAccClientApplication application = resolveClient(requestDto);
+        Set<Long> mergedApiRegistryIds = new HashSet<>(
+                clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(application.getId()));
+        if (requestDto.getApiRegistryIds() != null) {
+            mergedApiRegistryIds.addAll(requestDto.getApiRegistryIds());
+        }
+
+        ClientPermissionAssignmentRequestDto mergedRequest = new ClientPermissionAssignmentRequestDto();
+        mergedRequest.setClientApplicationId(application.getId());
+        mergedRequest.setApiRegistryIds(mergedApiRegistryIds);
+        assignApiPermissions(mergedRequest, username);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager")
     public void assignFeaturePermissions(ClientPermissionAssignmentRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
         SysAccClientApplication application = resolveClient(requestDto);
@@ -89,6 +106,22 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
                 })
                 .toList());
         authorizationDataCache.invalidateClientAfterCommit(application.getId());
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager")
+    public void grantFeaturePermissions(ClientPermissionAssignmentRequestDto requestDto, String username) {
+        SysAccClientApplication application = resolveClient(requestDto);
+        Set<String> mergedPrivilegeCodes = new HashSet<>(
+                clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(application.getId()));
+        if (requestDto.getPrivilegeCodes() != null) {
+            mergedPrivilegeCodes.addAll(requestDto.getPrivilegeCodes());
+        }
+
+        ClientPermissionAssignmentRequestDto mergedRequest = new ClientPermissionAssignmentRequestDto();
+        mergedRequest.setClientApplicationId(application.getId());
+        mergedRequest.setPrivilegeCodes(mergedPrivilegeCodes);
+        assignFeaturePermissions(mergedRequest, username);
     }
 
     @Override

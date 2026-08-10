@@ -5,7 +5,11 @@ import com.nexacore.systemmodule.accesscontrol.dto.ClientPermissionAssignmentReq
 public interface ClientPermissionService {
     void assignApiPermissions(ClientPermissionAssignmentRequestDto requestDto, String username);
 
+    void grantApiPermissions(ClientPermissionAssignmentRequestDto requestDto, String username);
+
     void assignFeaturePermissions(ClientPermissionAssignmentRequestDto requestDto, String username);
+
+    void grantFeaturePermissions(ClientPermissionAssignmentRequestDto requestDto, String username);
 
     void assignTenants(ClientPermissionAssignmentRequestDto requestDto, String username);
 }

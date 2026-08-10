@@ -30,6 +30,7 @@ import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.catalog.enums.PrivilegeAction;
+import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges;
 import com.nexacore.systemmodule.layout.enums.PrivilegeMatchMode;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
@@ -220,6 +221,60 @@ public class DataSeeder {
         apiAssignment.setClientCode("WEB");
         apiAssignment.setApiRegistryIds(apiRegistryIds);
         clientPermissionService.assignApiPermissions(apiAssignment, "admin");
+
+        seedSystemAdminBackupPermissions(clientPermissionService, syncReport);
+        seedSystemAdminUserRolePermissions(clientPermissionService, syncReport);
+    }
+
+    private void seedSystemAdminBackupPermissions(ClientPermissionService clientPermissionService,
+                                                  ApiRegistrySyncReportDto syncReport) {
+        ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
+        featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setPrivilegeCodes(Set.of(
+                BootstrapAdministrationPrivileges.DATABASE_BACKUP_VIEW,
+                BootstrapAdministrationPrivileges.DATABASE_BACKUP_EXECUTE,
+                BootstrapAdministrationPrivileges.DATABASE_BACKUP_DOWNLOAD,
+                BootstrapAdministrationPrivileges.DATABASE_BACKUP_DELIVER,
+                BootstrapAdministrationPrivileges.DATABASE_BACKUP_MANAGE
+        ));
+        clientPermissionService.grantFeaturePermissions(featureAssignment, "admin");
+
+        Set<Long> backupApiRegistryIds = syncReport.getRecords().stream()
+                .filter(ApiRegistryDto::isActive)
+                .filter(api -> api.getPathPattern() != null)
+                .filter(api -> api.getPathPattern().startsWith("/api/v1/system/backup"))
+                .map(ApiRegistryDto::getId)
+                .collect(Collectors.toSet());
+        ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+        apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        apiAssignment.setApiRegistryIds(backupApiRegistryIds);
+        clientPermissionService.grantApiPermissions(apiAssignment, "admin");
+    }
+
+    private void seedSystemAdminUserRolePermissions(ClientPermissionService clientPermissionService,
+                                                     ApiRegistrySyncReportDto syncReport) {
+        ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
+        featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setPrivilegeCodes(Set.of(
+                BootstrapAdministrationPrivileges.USER_ADMINISTRATION_VIEW,
+                BootstrapAdministrationPrivileges.USER_ADMINISTRATION_MANAGE,
+                BootstrapAdministrationPrivileges.USER_ADMINISTRATION_ASSIGN,
+                BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_VIEW,
+                BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_MANAGE
+        ));
+        clientPermissionService.grantFeaturePermissions(featureAssignment, "admin");
+
+        Set<Long> userRoleApiRegistryIds = syncReport.getRecords().stream()
+                .filter(ApiRegistryDto::isActive)
+                .filter(api -> api.getPathPattern() != null)
+                .filter(api -> api.getPathPattern().startsWith("/api/v1/system/user")
+                        || api.getPathPattern().startsWith("/api/v1/system/role"))
+                .map(ApiRegistryDto::getId)
+                .collect(Collectors.toSet());
+        ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+        apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        apiAssignment.setApiRegistryIds(userRoleApiRegistryIds);
+        clientPermissionService.grantApiPermissions(apiAssignment, "admin");
     }
 
     private void seedDefaultAuthPolicies(AuthClientAuthPolicyRepository authPolicyRepository,
