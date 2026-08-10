@@ -20,9 +20,13 @@ class BootstrapAdministrationPrivilegeProviderTest {
                 .flatMap(java.util.Collection::stream)
                 .map(action -> action.getPrivilegeCode())
                 .collect(Collectors.toSet());
+        long declaredCodeCount = provider.getPrivilegeFeatures().stream()
+                .map(PrivilegeFeatureDefinitionDto::getActions)
+                .mapToLong(java.util.Collection::size)
+                .sum();
 
         assertThat(codes)
-                .hasSize(18)
+                .hasSize((int) declaredCodeCount)
                 .allMatch(code -> code.matches("\\d{11}"))
                 .contains(
                         BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW,
@@ -42,7 +46,12 @@ class BootstrapAdministrationPrivilegeProviderTest {
                         BootstrapAdministrationPrivileges.WORKFLOW_ADMINISTRATION_VIEW,
                         BootstrapAdministrationPrivileges.WORKFLOW_ADMINISTRATION_MANAGE,
                         BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_VIEW,
-                        BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_MANAGE
+                        BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_MANAGE,
+                        BootstrapAdministrationPrivileges.DATABASE_BACKUP_VIEW,
+                        BootstrapAdministrationPrivileges.DATABASE_BACKUP_EXECUTE,
+                        BootstrapAdministrationPrivileges.DATABASE_BACKUP_DOWNLOAD,
+                        BootstrapAdministrationPrivileges.DATABASE_BACKUP_DELIVER,
+                        BootstrapAdministrationPrivileges.DATABASE_BACKUP_MANAGE
                 );
     }
 }

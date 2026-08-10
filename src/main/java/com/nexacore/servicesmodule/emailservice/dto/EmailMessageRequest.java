@@ -34,5 +34,7 @@ public class EmailMessageRequest {
     private String referenceId;
 
     private Map<String, Object> metadata;
-}
 
+    /** Internal service attachment resources; never populate from an external request path. */
+    private List<EmailAttachmentRequest> attachments;
+}

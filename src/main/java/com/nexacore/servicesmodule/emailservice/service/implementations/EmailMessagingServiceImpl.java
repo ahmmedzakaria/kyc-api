@@ -3,6 +3,7 @@ package com.nexacore.servicesmodule.emailservice.service.implementations;
 import com.nexacore.servicesmodule.emailservice.config.EmailMessagingProperties;
 import com.nexacore.servicesmodule.emailservice.dto.EmailMessageRequest;
 import com.nexacore.servicesmodule.emailservice.dto.EmailMessageResponse;
+import com.nexacore.servicesmodule.emailservice.dto.EmailAttachmentRequest;
 import com.nexacore.servicesmodule.emailservice.enums.EmailMessageType;
 import com.nexacore.servicesmodule.emailservice.service.interfaces.EmailMessagingService;
 import jakarta.mail.MessagingException;
@@ -47,7 +48,8 @@ public class EmailMessagingServiceImpl implements EmailMessagingService {
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            boolean multipart = !CollectionUtils.isEmpty(request.getAttachments());
+            MimeMessageHelper helper = new MimeMessageHelper(message, multipart, "UTF-8");
             helper.setFrom(buildFromAddress());
             helper.setTo(request.getTo().toArray(String[]::new));
             if (!CollectionUtils.isEmpty(request.getCc())) {
@@ -58,6 +60,19 @@ public class EmailMessagingServiceImpl implements EmailMessagingService {
             }
             helper.setSubject(request.getSubject().trim());
             helper.setText(request.getBody(), request.isHtml());
+            if (multipart) {
+                for (EmailAttachmentRequest attachment : request.getAttachments()) {
+                    if (attachment == null || attachment.resource() == null || !attachment.resource().exists()
+                            || !StringUtils.hasText(attachment.filename())) {
+                        throw new IllegalArgumentException("Email attachment is invalid");
+                    }
+                    if (StringUtils.hasText(attachment.contentType())) {
+                        helper.addAttachment(attachment.filename(), attachment.resource(), attachment.contentType());
+                    } else {
+                        helper.addAttachment(attachment.filename(), attachment.resource());
+                    }
+                }
+            }
 
             mailSender.send(message);
             return EmailMessageResponse.builder()

@@ -19,6 +19,11 @@ RUN mvn -B -ntp -DskipTests package
 FROM eclipse-temurin:23-jre
 WORKDIR /app
 
+# Logical database backups use the native PostgreSQL client tools.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create a user for security (optional)
 RUN addgroup --system spring && adduser --system --ingroup spring spring
 
@@ -30,6 +35,7 @@ COPY --from=build /app/target/*.jar app.jar
 # create upload dir (for filesystem photo storage)
 ENV UPLOAD_DIR=/opt/nexacore/uploads
 RUN mkdir -p ${UPLOAD_DIR} && chown -R spring:spring ${UPLOAD_DIR}
+RUN mkdir -p /opt/nexacore/backups && chown -R spring:spring /opt/nexacore/backups
 
 USER spring
 EXPOSE 9100
