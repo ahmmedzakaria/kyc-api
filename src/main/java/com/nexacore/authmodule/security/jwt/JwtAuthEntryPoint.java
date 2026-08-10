@@ -27,9 +27,12 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
 						 AuthenticationException authException) throws IOException {
 		String errorCode = (String) request.getAttribute("jwt_error_code");
 		String code = INVALID_TOKEN_TYPE.equals(errorCode) ? INVALID_TOKEN_TYPE : AUTHENTICATION_REQUIRED;
+		String errorMessage = (String) request.getAttribute("jwt_error_message");
 		String message = INVALID_TOKEN_TYPE.equals(code)
 				? "The supplied token type cannot access this resource"
-				: "A valid user access token is required";
+				: errorMessage == null || errorMessage.isBlank()
+						? "A valid user access token is required"
+						: errorMessage;
 		ClientApplicationContext current = ClientApplicationContextHolder.get().orElse(null);
 		if (current != null) {
 			ClientApplicationContextHolder.set(ClientApplicationContext.builder()

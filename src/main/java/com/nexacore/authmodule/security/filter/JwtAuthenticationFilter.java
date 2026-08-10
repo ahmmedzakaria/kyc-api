@@ -62,6 +62,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         + " sessionActive=" + sessionActive);
 
                 if (!sessionActive) {
+                    request.setAttribute("jwt_error_message",
+                            "User session is not active. Please log in again.");
                     throw new JwtException("User session is not active");
                 }
 
