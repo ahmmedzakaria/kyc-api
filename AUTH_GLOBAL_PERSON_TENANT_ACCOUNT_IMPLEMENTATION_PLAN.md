@@ -2,8 +2,8 @@
 
 ## Status
 
-Phase 0 completed on 2026-08-11. Architectural decisions and the current-state
-inventory are approved and recorded below. Phases 1-7 are not yet implemented.
+Phases 0 and 1 completed on 2026-08-11. Architectural decisions, inventory, and the
+additive Auth foundation are in place. Phases 2-7 are not yet implemented.
 
 ## Phase 0 execution record
 
@@ -159,6 +159,42 @@ changed during Phase 0.
   remove constraints, split accounts, or transfer production authority.
 - Before Phase 3, each of the five locally observed unscoped users needs an explicit,
   trusted tenant disposition or quarantine record.
+
+## Phase 1 execution record
+
+Phase 1 was implemented additively in Auth migration `V12`. The migration has been
+applied successfully to the local `auth_db` and recorded by Flyway.
+
+Delivered foundation:
+
+- created `auth_persons` with canonical identity, lifecycle, verification, audit, and
+  timestamp fields;
+- added the `AuthPerson` entity, `AuthPersonStatus`, and `AuthPersonRepository`;
+- added nullable `tenant_id` and `normalized_username` to `auth_users`;
+- added account lock and credential-lifecycle fields;
+- added missing Auth user actor-audit fields with safe system defaults;
+- added nullable role tenant ownership, stable role code, description, active state,
+  actor audit, and timestamps;
+- added partial tenant/person, tenant/username, and tenant/external-identity indexes;
+- added partial global/tenant role-name and role-code indexes;
+- retained the deployed global username, person, and role-name uniqueness constraints;
+- added a shared `UsernameNormalizer` implementing trim, Unicode NFKC normalization,
+  and `Locale.ROOT` lowercase with a 150-character post-normalization limit;
+- added focused normalizer and Auth migration tests.
+
+Local verification after Flyway application:
+
+```text
+Flyway version: 12 (success)
+auth_persons: present
+auth_users Phase 1 columns: 7/7 present
+auth_roles Phase 1 columns: 8/8 present
+Phase 1 partial indexes: 7/7 present
+```
+
+No existing user was assigned a tenant or normalized username, no role was reclassified,
+and no authentication/repository lookup was switched. Those changes remain Phase 2 and
+later work.
 
 This plan changes the current identity rule from one global `AuthUser` per person to:
 
@@ -739,14 +775,14 @@ never a caller-provided `tenantId: null` convention.
   `KycPerson`, and Keycloak SPI SQL.
 - [x] Update repository design documentation before code changes.
 
-### Phase 1 — additive Auth foundation
+### Phase 1 — additive Auth foundation — completed 2026-08-11
 
-- Create `auth_persons`.
-- Add nullable `tenant_id` and `normalized_username` to `auth_users`.
-- Add tenant/audit columns to `auth_roles`.
-- Add indexes that do not conflict with existing production data.
-- Implement shared username normalization.
-- Do not remove current constraints yet.
+- [x] Create `auth_persons`.
+- [x] Add nullable `tenant_id` and `normalized_username` to `auth_users`.
+- [x] Add tenant/audit columns to `auth_roles`.
+- [x] Add indexes that do not conflict with existing production data.
+- [x] Implement shared username normalization.
+- [x] Do not remove current constraints yet.
 
 ### Phase 2 — application dual-write
 

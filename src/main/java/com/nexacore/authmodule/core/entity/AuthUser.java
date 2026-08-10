@@ -30,6 +30,12 @@ public class AuthUser extends ActionInfo {
     @Column(name = "person_id", nullable = false, unique = true)
     private Long personId;
 
+    @Column(name = "tenant_id")
+    private Long tenantId;
+
+    @Column(name = "normalized_username", length = 150)
+    private String normalizedUsername;
+
     @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -51,6 +57,10 @@ public class AuthUser extends ActionInfo {
     @Column(nullable = false)
     private boolean enabled;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean locked = false;
+
     @Column
     private String externalProvider;
 
@@ -59,6 +69,20 @@ public class AuthUser extends ActionInfo {
 
     @Column
     private LocalDateTime lastLoginAt;
+
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
+    @Column(name = "credentials_expire_at")
+    private LocalDateTime credentialsExpireAt;
+
+    @Builder.Default
+    @Column(name = "created_by", nullable = false)
+    private Long createdBy = 0L;
+
+    @Builder.Default
+    @Column(name = "updated_by", nullable = false)
+    private Long updatedBy = 0L;
 
 //    @Column(length = 255)
 //    private String pictureUrl;
