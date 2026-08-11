@@ -42,11 +42,11 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                 deny(response, 403, "TENANT_DOMAIN_NOT_RECOGNIZED", "The request domain is not assigned to a verified tenant");
                 return;
             }
-            if (tenant.getStatus() != TenantStatus.ACTIVE) {
+            if (tenant.status() != TenantStatus.ACTIVE) {
                 deny(response, 403, "TENANT_NOT_ACTIVE", "The resolved tenant is not active");
                 return;
             }
-            ResolvedTenantContext context = new ResolvedTenantContext(tenant.getId(), tenant.getTenantCode(), hostname);
+            ResolvedTenantContext context = new ResolvedTenantContext(tenant.id(), tenant.tenantCode(), hostname);
             ResolvedTenantContextHolder.set(context);
             request.setAttribute(ResolvedTenantContext.class.getName(), context);
             response.setHeader(TENANT_ID_HEADER, Long.toString(context.tenantId()));

@@ -2,7 +2,6 @@ package com.nexacore.systemmodule.tenant.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
-import com.nexacore.systemmodule.tenant.entity.SysTenant;
 import com.nexacore.systemmodule.tenant.entity.TenantStatus;
 import com.nexacore.systemmodule.tenant.service.HostnameNormalizer;
 import com.nexacore.systemmodule.tenant.service.TenantDomainResolver;
@@ -18,10 +17,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TenantResolutionFilterTest {
-    private final AtomicReference<SysTenant> resolved = new AtomicReference<>();
+    private final AtomicReference<TenantDomainResolver.ResolvedTenant> resolved = new AtomicReference<>();
     private final HostnameNormalizer normalizer = new HostnameNormalizer();
     private final TenantDomainResolver resolver = new TenantDomainResolver(null, normalizer) {
-        @Override public Optional<SysTenant> resolveVerified(String rawHost) {
+        @Override public Optional<TenantDomainResolver.ResolvedTenant> resolveVerified(String rawHost) {
             return Optional.ofNullable(resolved.get());
         }
     };
@@ -59,9 +58,7 @@ class TenantResolutionFilterTest {
         assertThat(response.getContentAsString()).contains("TENANT_NOT_ACTIVE");
     }
 
-    private SysTenant tenant(TenantStatus status) {
-        SysTenant tenant = new SysTenant();
-        tenant.setId(1L); tenant.setTenantCode("system"); tenant.setStatus(status);
-        return tenant;
+    private TenantDomainResolver.ResolvedTenant tenant(TenantStatus status) {
+        return new TenantDomainResolver.ResolvedTenant(1L, "system", status);
     }
 }

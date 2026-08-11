@@ -1,7 +1,7 @@
 package com.nexacore.systemmodule.tenant.service;
 
-import com.nexacore.systemmodule.tenant.entity.SysTenant;
 import com.nexacore.systemmodule.tenant.entity.TenantDomainVerificationStatus;
+import com.nexacore.systemmodule.tenant.entity.TenantStatus;
 import com.nexacore.systemmodule.tenant.repository.TenantDomainRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,14 +21,17 @@ public class TenantDomainResolver {
     private final ConcurrentHashMap<String, CachedTenant> cache = new ConcurrentHashMap<>();
 
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysTenant> resolveVerified(String rawHost) {
+    public Optional<ResolvedTenant> resolveVerified(String rawHost) {
         String hostname = hostnameNormalizer.normalize(rawHost);
         CachedTenant cached = cache.get(hostname);
         if (cached != null && cached.expiresAt().isAfter(Instant.now())) return Optional.of(cached.tenant());
         cache.remove(hostname);
-        Optional<SysTenant> resolved = repository.findByHostnameAndActiveTrueAndVerificationStatus(
+        Optional<ResolvedTenant> resolved = repository.findByHostnameAndActiveTrueAndVerificationStatus(
                         hostname, TenantDomainVerificationStatus.VERIFIED)
-                .map(domain -> domain.getTenant());
+                .map(domain -> {
+                    var tenant = domain.getTenant();
+                    return new ResolvedTenant(tenant.getId(), tenant.getTenantCode(), tenant.getStatus());
+                });
         resolved.ifPresent(tenant -> cache.put(hostname, new CachedTenant(tenant, Instant.now().plus(TTL))));
         return resolved;
     }
@@ -41,5 +44,7 @@ public class TenantDomainResolver {
         hostnames.forEach(this::invalidate);
     }
 
-    private record CachedTenant(SysTenant tenant, Instant expiresAt) {}
+    public record ResolvedTenant(Long id, String tenantCode, TenantStatus status) {}
+
+    private record CachedTenant(ResolvedTenant tenant, Instant expiresAt) {}
 }

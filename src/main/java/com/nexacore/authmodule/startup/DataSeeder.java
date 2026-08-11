@@ -244,6 +244,7 @@ public class DataSeeder {
 
         seedSystemAdminBackupPermissions(clientPermissionService, syncReport);
         seedSystemAdminUserRolePermissions(clientPermissionService, syncReport);
+        seedSystemAdminTenantPermissions(clientPermissionService, syncReport);
     }
 
     private void seedSystemAdminBackupPermissions(ClientPermissionService clientPermissionService,
@@ -294,6 +295,30 @@ public class DataSeeder {
         ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
         apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
         apiAssignment.setApiRegistryIds(userRoleApiRegistryIds);
+        clientPermissionService.grantApiPermissions(apiAssignment, "system_admin");
+    }
+
+    private void seedSystemAdminTenantPermissions(ClientPermissionService clientPermissionService,
+                                                  ApiRegistrySyncReportDto syncReport) {
+        ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
+        featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setPrivilegeCodes(Set.of(
+                BootstrapAdministrationPrivileges.TENANT_VIEW,
+                BootstrapAdministrationPrivileges.TENANT_REGISTER,
+                BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY,
+                BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE
+        ));
+        clientPermissionService.grantFeaturePermissions(featureAssignment, "system_admin");
+
+        Set<Long> tenantApiRegistryIds = syncReport.getRecords().stream()
+                .filter(ApiRegistryDto::isActive)
+                .filter(api -> api.getPathPattern() != null)
+                .filter(api -> api.getPathPattern().startsWith("/api/v1/system/tenants"))
+                .map(ApiRegistryDto::getId)
+                .collect(Collectors.toSet());
+        ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+        apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        apiAssignment.setApiRegistryIds(tenantApiRegistryIds);
         clientPermissionService.grantApiPermissions(apiAssignment, "system_admin");
     }
 

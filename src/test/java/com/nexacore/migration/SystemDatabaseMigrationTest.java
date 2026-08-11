@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("43");
+                .isEqualTo("44");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(43);
+                .isEqualTo(44);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -92,6 +92,13 @@ class SystemDatabaseMigrationTest {
                 + "WHERE client.client_code = 'SYSTEM_ADMIN_WEB' "
                 + "AND privilege.privilege_code LIKE '110601001%' AND permission.active"))
                 .isEqualTo(5);
+        assertThat(count("SELECT count(*) FROM sys_acc_client_feature_permissions permission "
+                + "JOIN sys_acc_client_applications client ON client.id = permission.client_application_id "
+                + "JOIN sys_priv_privileges privilege ON privilege.id = permission.privilege_id "
+                + "WHERE client.client_code = 'SYSTEM_ADMIN_WEB' "
+                + "AND privilege.privilege_code IN ('11020100901','11020100910','11020100980','11020100987') "
+                + "AND permission.active"))
+                .isEqualTo(4);
     }
 
     @Test
@@ -138,7 +145,7 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("43");
+                .isEqualTo("44");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE code = 'ZY' AND created_by = 51 AND updated_by = 52"))
                 .isEqualTo(1);

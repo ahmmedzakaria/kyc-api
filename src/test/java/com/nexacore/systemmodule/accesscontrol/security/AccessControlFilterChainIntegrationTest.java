@@ -31,7 +31,6 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredenti
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.security.PrivilegeAuthorizer;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
-import com.nexacore.systemmodule.tenant.entity.SysTenant;
 import com.nexacore.systemmodule.tenant.entity.TenantStatus;
 import com.nexacore.systemmodule.tenant.security.TenantResolutionFilter;
 import com.nexacore.systemmodule.tenant.service.HostnameNormalizer;
@@ -320,10 +319,8 @@ class AccessControlFilterChainIntegrationTest {
         @Bean HostnameNormalizer hostnameNormalizer() { return new HostnameNormalizer(); }
         @Bean TenantDomainResolver tenantDomainResolver(HostnameNormalizer normalizer) {
             return new TenantDomainResolver(null, normalizer) {
-                @Override public Optional<SysTenant> resolveVerified(String rawHost) {
-                    SysTenant tenant = new SysTenant();
-                    tenant.setId(1L); tenant.setTenantCode("system"); tenant.setStatus(TenantStatus.ACTIVE);
-                    return Optional.of(tenant);
+                @Override public Optional<ResolvedTenant> resolveVerified(String rawHost) {
+                    return Optional.of(new ResolvedTenant(1L, "system", TenantStatus.ACTIVE));
                 }
             };
         }
