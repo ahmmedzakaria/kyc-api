@@ -130,6 +130,12 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public Set<String> getRolePrivilegeCodes(Long roleId) {
+        return new HashSet<>(privilegeRepository.findActivePrivilegeCodesByRoleIdIn(Set.of(roleId)));
+    }
+
+    @Override
     public List<PrivilegeFeatureDefinitionDto> getModulePrivilegeDefinitions() {
         return modulePrivilegeProviders.stream()
                 .flatMap(provider -> provider.getPrivilegeFeatures().stream())

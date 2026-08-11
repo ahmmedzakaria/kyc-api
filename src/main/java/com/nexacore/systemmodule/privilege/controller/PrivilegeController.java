@@ -115,6 +115,16 @@ public class PrivilegeController {
         ));
     }
 
+    @PostMapping("/role-codes")
+    @PrivilegeApi("11010100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
+    public ResponseEntity<ApiResponse<Set<String>>> rolePrivilegeCodes(@RequestBody PrivilegeAssignmentRequestDto requestDto) {
+        return ResponseEntity.ok(ApiResponse.success(
+                privilegeService.getRolePrivilegeCodes(requestDto.getRoleId()),
+                "Role privileges loaded"
+        ));
+    }
+
     @PostMapping("/assign-role")
     @PrivilegeApi("11010100181")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_ASSIGN)")

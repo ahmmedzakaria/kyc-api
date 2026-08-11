@@ -42,6 +42,14 @@ public class HttpExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ApiResponse<?>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.errorCode(
+                HttpStatus.BAD_REQUEST.value(), "INVALID_REQUEST", ex.getMessage()
+        ));
+    }
+
     // Handle validation errors (400 Bad Request)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

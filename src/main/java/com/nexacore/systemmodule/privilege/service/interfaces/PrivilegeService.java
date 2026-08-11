@@ -33,6 +33,8 @@ public interface PrivilegeService {
 
     Set<String> getUserPrivilegeCodes(String username);
 
+    Set<String> getRolePrivilegeCodes(Long roleId);
+
     PrivilegeCheckResponseDto checkPrivilege(PrivilegeCheckRequestDto requestDto);
 
     void assignPrivilegesToRole(PrivilegeAssignmentRequestDto requestDto);
