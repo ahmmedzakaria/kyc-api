@@ -68,6 +68,7 @@ import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -101,6 +102,7 @@ class AccessControlFilterChainIntegrationTest {
     @Autowired private PrivilegeModuleGateway privilegeModuleGateway;
     @Autowired private ClientApplicationService clientApplicationService;
     @Autowired private ClientPermissionService clientPermissionService;
+    @Autowired private EffectiveTenantAccessResolver effectiveTenantAccessResolver;
 
     private MockMvc mvc;
     private SysAccClientApplication client;
@@ -109,7 +111,7 @@ class AccessControlFilterChainIntegrationTest {
     void setUp() {
         Mockito.reset(credentials, registryService, decisionService, jwtUtil, logoutSessionService,
                 authModuleGateway, privilegeService, privilegeModuleGateway,
-                clientApplicationService, clientPermissionService);
+                clientApplicationService, clientPermissionService, effectiveTenantAccessResolver);
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         client = SysAccClientApplication.builder().id(3L).clientCode("client")
                 .clientType(ClientApplicationType.INTERNAL_SERVICE).build();
@@ -148,6 +150,9 @@ class AccessControlFilterChainIntegrationTest {
         when(authModuleGateway.getUserAccess(7L, 1L)).thenReturn(AuthUserAccessDto.builder()
                 .userId(7L).personId(8L)
                 .scopeAssignments(Set.of(new AuthUserScopeAssignmentDto(1L, null, null))).build());
+        when(effectiveTenantAccessResolver.resolve(anyString(), anyLong(), anyLong(), any(), any()))
+                .thenReturn(new EffectiveTenantAccessContext(1L, "system", "localhost", 7L, 3L,
+                        Set.of(new UserScopeAssignment(1L, null, null))));
         when(privilegeService.getUserPrivilegeCodes("alice")).thenReturn(Set.of(REQUIRED));
         when(privilegeModuleGateway.hasPrivilege(anyString(), anyString())).thenReturn(false);
     }
@@ -291,6 +296,7 @@ class AccessControlFilterChainIntegrationTest {
         @Bean LogoutSessionService logoutSessionService() { return Mockito.mock(LogoutSessionService.class); }
         @Bean AuthModuleGateway authModuleGateway() { return Mockito.mock(AuthModuleGateway.class); }
         @Bean PrivilegeService privilegeService() { return Mockito.mock(PrivilegeService.class); }
+        @Bean EffectiveTenantAccessResolver effectiveTenantAccessResolver() { return Mockito.mock(EffectiveTenantAccessResolver.class); }
         @Bean PrivilegeModuleGateway privilegeModuleGateway() { return Mockito.mock(PrivilegeModuleGateway.class); }
         @Bean ClientApplicationService clientApplicationService() { return Mockito.mock(ClientApplicationService.class); }
         @Bean ClientPermissionService clientPermissionService() { return Mockito.mock(ClientPermissionService.class); }
@@ -321,8 +327,9 @@ class AccessControlFilterChainIntegrationTest {
             return new JwtAuthenticationFilter(jwt, logout);
         }
         @Bean AuthenticatedRequestContextFilter authenticatedRequestContextFilter(
-                AuthModuleGateway auth, PrivilegeService privileges) {
-            return new AuthenticatedRequestContextFilter(auth, privileges);
+                AuthModuleGateway auth, PrivilegeService privileges, EffectiveTenantAccessResolver tenants,
+                ApiResponseJsonWriter writer) {
+            return new AuthenticatedRequestContextFilter(auth, privileges, tenants, writer);
         }
         @Bean UserPrivilegeApiAccessFilter userPrivilegeApiAccessFilter(ApiResponseJsonWriter writer,
                 AccessControlProperties properties, PublicRoutePolicy routes) {

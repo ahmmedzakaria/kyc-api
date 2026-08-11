@@ -4,6 +4,7 @@ import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
+import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,14 +24,14 @@ import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
     private final AuthModuleGateway authModuleGateway;
     private final PrivilegeService privilegeService;
+    private final EffectiveTenantAccessResolver effectiveTenantAccessResolver;
+    private final ApiResponseJsonWriter responseWriter;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
-            System.out.println("AuthenticatedRequestContextFilter -> doFilterInternal");
-
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated()) {
                 String username = authentication.getName();
@@ -42,14 +43,18 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                 SysAccClientApplication client = accessContext == null ? null : accessContext.clientApplication();
                 Set<String> privileges = privilegeService.getUserPrivilegeCodes(username);
 
+                Set<UserScopeAssignment> scopes = user.scopeAssignments() == null ? Set.of() : user.scopeAssignments().stream()
+                        .map(scope -> new UserScopeAssignment(scope.tenantId(), scope.businessId(), scope.branchId()))
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                EffectiveTenantAccessContext effectiveTenant = effectiveTenantAccessResolver.resolve(
+                        request.getServerName(), principal.accountId(), principal.tenantId(), client, scopes);
+                EffectiveTenantAccessContextHolder.set(effectiveTenant);
+
                 AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
                         user.userId(), username,
                         client == null ? null : client.getId(),
                         client == null ? null : client.getClientCode(),
-                        user.scopeAssignments() == null ? Set.of() : user.scopeAssignments().stream()
-                                .map(scope -> new UserScopeAssignment(
-                                        scope.tenantId(), scope.businessId(), scope.branchId()))
-                                .collect(java.util.stream.Collectors.toUnmodifiableSet()),
+                        effectiveTenant.effectiveScopes(),
                         accessContext == null ? null : accessContext.traceId(),
                         privileges
                 ));
@@ -61,14 +66,16 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                             .clientDecision(current.clientDecision()).clientDenyReason(current.clientDenyReason())
                             .userDecision(current.userDecision()).userDenyReason(current.userDenyReason())
                             .userId(user.userId())
-                            .scopeAssignments(user.scopeAssignments() == null ? Set.of() : user.scopeAssignments().stream()
-                                    .map(scope -> new UserScopeAssignment(scope.tenantId(), scope.businessId(), scope.branchId()))
-                                    .collect(java.util.stream.Collectors.toUnmodifiableSet()))
+                            .scopeAssignments(effectiveTenant.effectiveScopes())
                             .build());
                 }
             }
             filterChain.doFilter(request, response);
+        } catch (DataScopeAccessDeniedException exception) {
+            AccessControlError error = AccessControlError.DATA_SCOPE_NOT_ALLOWED;
+            responseWriter.writeError(response, error.getStatus(), error.name(), exception.getMessage());
         } finally {
+            EffectiveTenantAccessContextHolder.clear();
             AuthenticatedRequestContextHolder.clear();
         }
     }

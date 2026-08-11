@@ -33,6 +33,8 @@ public class BootstrapAdministrationPrivilegeProvider implements ModulePrivilege
                         PrivilegeAction.VIEW, PrivilegeAction.MANAGE, PrivilegeAction.ASSIGN),
                 feature(ApplicationSubmodule.SYSTEM_ACCESS_CONTROL, "008", "Role Administration",
                         PrivilegeAction.VIEW, PrivilegeAction.MANAGE),
+                feature(ApplicationSubmodule.SYSTEM_ACCESS_CONTROL, "009", "Tenant Administration",
+                        PrivilegeAction.VIEW, PrivilegeAction.CREATE, PrivilegeAction.SYNCHRONIZE, PrivilegeAction.MANAGE),
                 feature(ApplicationSubmodule.SYS_PRIVILEGE, "001", "Privilege Catalog",
                         PrivilegeAction.VIEW, PrivilegeAction.SYNCHRONIZE, PrivilegeAction.ASSIGN),
                 feature(ApplicationSubmodule.SYSTEM_LAYOUT, "001", "Layout Administration",

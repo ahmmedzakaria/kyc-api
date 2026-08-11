@@ -678,7 +678,7 @@ may be displayed exactly once and must expire quickly.
 - Extend to KYC profiles and their owned resources without changing `KycPerson`.
 - Extend workflow runtime and tenant-owned definitions as appropriate.
 - Extend license ownership based on its resolved owner model.
-- Extend auth association records without making `AuthUser` tenant-owned.
+- Extend Auth tenant-account association records while keeping `AuthPerson` global.
 - Handle GIS, logs, and shared reference data according to the approved matrix.
 
 ### Phase 5 — Tenant-specific configuration

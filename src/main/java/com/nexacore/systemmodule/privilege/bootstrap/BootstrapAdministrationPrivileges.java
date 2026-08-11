@@ -19,6 +19,10 @@ public final class BootstrapAdministrationPrivileges {
     public static final String USER_ADMINISTRATION_ASSIGN = "11020100781";
     public static final String ROLE_ADMINISTRATION_VIEW = "11020100801";
     public static final String ROLE_ADMINISTRATION_MANAGE = "11020100887";
+    public static final String TENANT_VIEW = "11020100901";
+    public static final String TENANT_REGISTER = "11020100910";
+    public static final String TENANT_DOMAIN_VERIFY = "11020100980";
+    public static final String TENANT_LIFECYCLE_MANAGE = "11020100987";
 
     public static final String PRIVILEGE_CATALOG_VIEW = "11010100101";
     public static final String PRIVILEGE_CATALOG_SYNCHRONIZE = "11010100180";

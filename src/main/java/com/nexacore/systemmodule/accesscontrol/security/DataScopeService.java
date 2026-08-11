@@ -21,9 +21,11 @@ public class DataScopeService {
     }
 
     public Set<UserScopeAssignment> currentAssignments() {
-        return AuthenticatedRequestContextHolder.get()
-                .map(AuthenticatedRequestContext::scopeAssignments)
-                .orElse(Set.of());
+        return EffectiveTenantAccessContextHolder.get()
+                .map(EffectiveTenantAccessContext::effectiveScopes)
+                .orElseGet(() -> AuthenticatedRequestContextHolder.get()
+                        .map(AuthenticatedRequestContext::scopeAssignments)
+                        .orElse(Set.of()));
     }
 
     public UserScopeAssignment requireWritableScope(Long tenantId, Long businessId, Long branchId) {
@@ -67,7 +69,6 @@ public class DataScopeService {
         }
         return assignedTenantIds.iterator().next();
     }
-//@Todo need to simply it person can have the tenantId
     public <T> Specification<T> restrictToCurrentScopes(String tenantAttribute,
                                                          String businessAttribute,
                                                          String branchAttribute) {
