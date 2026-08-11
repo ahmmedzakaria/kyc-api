@@ -1019,6 +1019,14 @@ Delivered behavior:
   organization-declared profile observations and identifies profile IDs separately
   from global person IDs.
 
+Post-cutover reset (2026-08-11): explicitly approved destructive migrations now
+purge all KYC application records, all Auth people/accounts/roles/scopes and login
+assignments, user-linked logs, and stale System user/role references. Bootstrap no
+longer creates legacy admin or KYC operator accounts/roles. It creates only the
+tenant-scoped `system_admin` account, its new Auth-owned global person, a tenant-level
+scope assignment, and the global `ROLE_SYSTEM_ADMIN`. The initial password must be
+provided through `AUTH_BOOTSTRAP_SYSTEM_PASSWORD`; it is never stored in source.
+
 ## Verification requirements
 
 ### Migration tests

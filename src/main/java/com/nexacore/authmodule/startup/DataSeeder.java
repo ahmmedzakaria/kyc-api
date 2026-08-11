@@ -4,14 +4,15 @@ import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitio
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeMenuItemDto;
 import com.nexacore.authmodule.core.entity.AuthClientAuthPolicy;
 import com.nexacore.authmodule.core.entity.AuthRole;
+import com.nexacore.authmodule.core.entity.AuthPerson;
 import com.nexacore.authmodule.core.entity.AuthUser;
+import com.nexacore.authmodule.core.enums.AuthPersonStatus;
 import com.nexacore.authmodule.core.enums.LoginIdentifierType;
 import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.core.repository.AuthClientAuthPolicyRepository;
 import com.nexacore.authmodule.core.repository.RoleRepository;
+import com.nexacore.authmodule.core.repository.AuthPersonRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
-import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
-import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationRequestDto;
@@ -23,7 +24,6 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicat
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
-import com.nexacore.systemmodule.privilege.assignment.repository.UserPrivilegeRepository;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
@@ -58,15 +58,17 @@ public class DataSeeder {
     @Value("${nexacore.auth.bootstrap-tenant-id:0}")
     private long bootstrapTenantId;
 
+    @Value("${nexacore.auth.bootstrap-system-password:}")
+    private String bootstrapSystemPassword;
+
     private final UsernameNormalizer usernameNormalizer = new UsernameNormalizer();
 
     @Bean
     CommandLineRunner initDatabase(RoleRepository roleRepository,
                                    UserRepository userRepository,
-                                   UserPrivilegeRepository userPrivilegeRepository,
+                                   AuthPersonRepository personRepository,
                                    SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                    List<ModulePrivilegeProvider> modulePrivilegeProviders,
-                                   PersonModuleGateway personModuleGateway,
                                    ClientApplicationService clientApplicationService,
                                    ClientPermissionService clientPermissionService,
                                    ClientApiRegistryService clientApiRegistryService,
@@ -76,62 +78,18 @@ public class DataSeeder {
                                    AuthenticationProperties authenticationProperties,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            AuthRole adminRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_ADMIN")
-                    .orElseGet(() -> createRole(roleRepository, "ROLE_ADMIN"));
+            requireBootstrapTenant();
+            requireBootstrapPassword();
             AuthRole systemAdminRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_SYSTEM_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_SYSTEM_ADMIN"));
-            AuthRole kycOperatorRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_KYC_OPERATOR")
-                    .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_OPERATOR"));
-            AuthRole kycApproverRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_KYC_APPROVER")
-                    .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_APPROVER"));
             systemPrivilegeRegistryService.syncApplicationCatalog();
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
             Set<String> systemPrivilegeCodes = privilegesForModule(adminPrivilegeCodes, ApplicationModule.SYSTEM);
-            Set<String> nonSystemPrivilegeCodes = new HashSet<>(adminPrivilegeCodes);
-            nonSystemPrivilegeCodes.removeAll(systemPrivilegeCodes);
             assignRolePrivileges(systemPrivilegeRegistryService, systemAdminRole, systemPrivilegeCodes);
-            assignRolePrivileges(systemPrivilegeRegistryService, adminRole, nonSystemPrivilegeCodes);
-            assignRolePrivileges(systemPrivilegeRegistryService, kycOperatorRole, Set.of(
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.CREATE),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.UPDATE),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.DELETE),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH)
-            ));
-            assignRolePrivileges(systemPrivilegeRegistryService, kycApproverRole, Set.of(
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.APPROVE),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.REJECT),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEND_BACK),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW),
-                    code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.SEARCH)
-            ));
+            AuthUser systemUser = seedSystemAdministrator(
+                    userRepository, personRepository, passwordEncoder, systemAdminRole);
 
-            seedDefaultUserWithExactRoles(userRepository, passwordEncoder, personModuleGateway,
-                    "admin", "123", "admin@example.com", "01700000000", "Admin", "User", adminRole);
-
-            seedDefaultUserWithExactRoles(userRepository, passwordEncoder, personModuleGateway,
-                    "system_admin", "123", "system.admin@example.com", "01700000005",
-                    "System", "Administrator", systemAdminRole);
-
-            requireBootstrapTenant();
-            Long adminUserId = userRepository.findByTenantIdAndNormalizedUsername(
-                            bootstrapTenantId, usernameNormalizer.normalize("admin"))
-                    .orElseThrow(() -> new IllegalStateException("Seeded admin user not found"))
-                    .getId();
-            userPrivilegeRepository.deleteByUserIdAndPrivilegeModuleCode(
-                    adminUserId, ApplicationModule.SYSTEM.getCode());
-
-            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
-                    "kyc_operator", "123", "operator@example.com", "01700000001", "Kyc", "Operator", kycOperatorRole);
-
-            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
-                    "kyc_approver", "123", "approver@example.com", "01700000002", "Kyc", "Approver", kycApproverRole);
-
-            seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
-                    "kyc_manager", "123", "manager@example.com", "01700000004", "Kyc", "Manager",
-                    kycOperatorRole, kycApproverRole);
-
-            runAsBootstrapAccount(adminUserId, "admin", () -> seedDefaultWebClient(
+            runAsBootstrapAccount(systemUser.getId(), systemUser.getUsername(), () -> seedDefaultWebClient(
                     clientApplicationService,
                     clientPermissionService,
                     clientApiRegistryService,
@@ -145,64 +103,64 @@ public class DataSeeder {
         };
     }
 
-    private void seedDefaultUser(UserRepository userRepository,
-                                 PasswordEncoder passwordEncoder,
-                                 PersonModuleGateway personModuleGateway,
-                                 String username,
-                                 String password,
-                                 String email,
-                                 String mobile,
-                                 String firstName,
-                                 String lastName,
-                                 AuthRole... roles) {
-        PersonSummaryDto person = personModuleGateway.ensurePersonForUser(username, email, mobile, firstName, lastName);
-
-        requireBootstrapTenant();
-        AuthUser existingUser = userRepository.findByTenantIdAndNormalizedUsername(
-                bootstrapTenantId, usernameNormalizer.normalize(username)).orElse(null);
-        if (existingUser != null) {
-            existingUser.setPersonId(person.getId());
-            existingUser.getRoles().addAll(List.of(roles));
-            userRepository.save(existingUser);
-            return;
-        }
-
-        AuthUser user = new AuthUser();
-        user.setUsername(username);
-        user.setNormalizedUsername(usernameNormalizer.normalize(username));
-        user.setTenantId(bootstrapTenantId);
-        user.setPersonId(person.getId());
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRoles(new HashSet<>(List.of(roles)));
-        user.setEnabled(true);
-
-        userRepository.save(user);
-
-        System.out.println("Seeded default user: " + username + " / " + password);
-    }
-
-    private void seedDefaultUserWithExactRoles(UserRepository userRepository,
-                                               PasswordEncoder passwordEncoder,
-                                               PersonModuleGateway personModuleGateway,
-                                               String username,
-                                               String password,
-                                               String email,
-                                               String mobile,
-                                               String firstName,
-                                               String lastName,
-                                               AuthRole... roles) {
-        seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
-                username, password, email, mobile, firstName, lastName, roles);
+    private AuthUser seedSystemAdministrator(UserRepository userRepository,
+                                             AuthPersonRepository personRepository,
+                                             PasswordEncoder passwordEncoder,
+                                             AuthRole systemAdminRole) {
+        String username = "system_admin";
         AuthUser user = userRepository.findByTenantIdAndNormalizedUsername(
-                        bootstrapTenantId, usernameNormalizer.normalize(username))
-                .orElseThrow(() -> new IllegalStateException("Seeded user not found: " + username));
-        user.setRoles(new HashSet<>(List.of(roles)));
-        userRepository.save(user);
+                bootstrapTenantId, usernameNormalizer.normalize(username)).orElse(null);
+        if (user == null) {
+            AuthPerson person = personRepository.save(AuthPerson.builder()
+                    .firstName("System")
+                    .lastName("Administrator")
+                    .status(AuthPersonStatus.ACTIVE)
+                    .active(true)
+                    .createdBy(0L)
+                    .updatedBy(0L)
+                    .build());
+            user = AuthUser.builder()
+                    .tenantId(bootstrapTenantId)
+                    .personId(person.getId())
+                    .username(username)
+                    .normalizedUsername(usernameNormalizer.normalize(username))
+                    .password(passwordEncoder.encode(bootstrapSystemPassword))
+                    .enabled(true)
+                    .locked(false)
+                    .roles(new HashSet<>(Set.of(systemAdminRole)))
+                    .createdBy(0L)
+                    .updatedBy(0L)
+                    .build();
+        } else {
+            user.setRoles(new HashSet<>(Set.of(systemAdminRole)));
+            user.setEnabled(true);
+            user.setLocked(false);
+        }
+        user = userRepository.save(user);
+        if (user.getScopeAssignments().isEmpty()) {
+            var scope = com.nexacore.authmodule.core.entity.AuthUserScopeAssignment.builder()
+                    .user(user)
+                    .userId(user.getId())
+                    .tenantId(bootstrapTenantId)
+                    .active(true)
+                    .createdBy(0L)
+                    .updatedBy(0L)
+                    .build();
+            user.getScopeAssignments().add(scope);
+            user = userRepository.save(user);
+        }
+        return user;
     }
 
     private void requireBootstrapTenant() {
         if (bootstrapTenantId <= 0) {
             throw new IllegalStateException("AUTH_BOOTSTRAP_TENANT_ID must identify a trusted bootstrap tenant");
+        }
+    }
+
+    private void requireBootstrapPassword() {
+        if (bootstrapSystemPassword == null || bootstrapSystemPassword.isBlank()) {
+            throw new IllegalStateException("AUTH_BOOTSTRAP_SYSTEM_PASSWORD is required to create system_admin");
         }
     }
 
@@ -216,7 +174,7 @@ public class DataSeeder {
                 "",
                 true,
                 true,
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"))
         );
         bootstrapContext.setAuthentication(new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities()));
@@ -232,6 +190,10 @@ public class DataSeeder {
         AuthRole role = new AuthRole();
         role.setName(roleName);
         role.setRoleCode(roleName);
+        role.setDescription("Platform system administrator");
+        role.setActive(true);
+        role.setCreatedBy(0L);
+        role.setUpdatedBy(0L);
         return roleRepository.save(role);
     }
 
@@ -246,14 +208,14 @@ public class DataSeeder {
         requestDto.setStatus(ClientApplicationStatus.ACTIVE);
         requestDto.setAllowedOrigins("http://localhost:4200,http://localhost:4300,http://localhost:5300");
         requestDto.setDescription("Default first-party web frontend client.");
-        clientApplicationService.save(requestDto, "admin");
+        clientApplicationService.save(requestDto, "system_admin");
 
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("WEB");
         featureAssignment.setPrivilegeCodes(privilegeCodes);
-        clientPermissionService.assignFeaturePermissions(featureAssignment, "admin");
+        clientPermissionService.assignFeaturePermissions(featureAssignment, "system_admin");
 
-        ApiRegistrySyncReportDto syncReport = clientApiRegistryService.syncFromAnnotations("admin");
+        ApiRegistrySyncReportDto syncReport = clientApiRegistryService.syncFromAnnotations("system_admin");
         if (syncReport.getConflicted() > 0) {
             throw new IllegalStateException("API registry synchronization has unresolved conflicts: "
                     + syncReport.getConflicts());
@@ -268,7 +230,17 @@ public class DataSeeder {
         ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
         apiAssignment.setClientCode("WEB");
         apiAssignment.setApiRegistryIds(apiRegistryIds);
-        clientPermissionService.assignApiPermissions(apiAssignment, "admin");
+        clientPermissionService.assignApiPermissions(apiAssignment, "system_admin");
+
+        ClientPermissionAssignmentRequestDto webTenants = new ClientPermissionAssignmentRequestDto();
+        webTenants.setClientCode("WEB");
+        webTenants.setTenantIds(Set.of(bootstrapTenantId));
+        clientPermissionService.assignTenants(webTenants, "system_admin");
+
+        ClientPermissionAssignmentRequestDto systemAdminTenants = new ClientPermissionAssignmentRequestDto();
+        systemAdminTenants.setClientCode("SYSTEM_ADMIN_WEB");
+        systemAdminTenants.setTenantIds(Set.of(bootstrapTenantId));
+        clientPermissionService.assignTenants(systemAdminTenants, "system_admin");
 
         seedSystemAdminBackupPermissions(clientPermissionService, syncReport);
         seedSystemAdminUserRolePermissions(clientPermissionService, syncReport);
@@ -285,7 +257,7 @@ public class DataSeeder {
                 BootstrapAdministrationPrivileges.DATABASE_BACKUP_DELIVER,
                 BootstrapAdministrationPrivileges.DATABASE_BACKUP_MANAGE
         ));
-        clientPermissionService.grantFeaturePermissions(featureAssignment, "admin");
+        clientPermissionService.grantFeaturePermissions(featureAssignment, "system_admin");
 
         Set<Long> backupApiRegistryIds = syncReport.getRecords().stream()
                 .filter(ApiRegistryDto::isActive)
@@ -296,7 +268,7 @@ public class DataSeeder {
         ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
         apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
         apiAssignment.setApiRegistryIds(backupApiRegistryIds);
-        clientPermissionService.grantApiPermissions(apiAssignment, "admin");
+        clientPermissionService.grantApiPermissions(apiAssignment, "system_admin");
     }
 
     private void seedSystemAdminUserRolePermissions(ClientPermissionService clientPermissionService,
@@ -310,7 +282,7 @@ public class DataSeeder {
                 BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_VIEW,
                 BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_MANAGE
         ));
-        clientPermissionService.grantFeaturePermissions(featureAssignment, "admin");
+        clientPermissionService.grantFeaturePermissions(featureAssignment, "system_admin");
 
         Set<Long> userRoleApiRegistryIds = syncReport.getRecords().stream()
                 .filter(ApiRegistryDto::isActive)
@@ -322,7 +294,7 @@ public class DataSeeder {
         ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
         apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
         apiAssignment.setApiRegistryIds(userRoleApiRegistryIds);
-        clientPermissionService.grantApiPermissions(apiAssignment, "admin");
+        clientPermissionService.grantApiPermissions(apiAssignment, "system_admin");
     }
 
     private void seedDefaultAuthPolicies(AuthClientAuthPolicyRepository authPolicyRepository,

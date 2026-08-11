@@ -20,7 +20,8 @@ import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 @Transactional(transactionManager = "authTransactionManager", readOnly = true)
 public class AuthModuleGatewayImpl implements AuthModuleGateway {
 
-    private static final String ADMIN_ROLE = "ROLE_ADMIN";
+    private static final java.util.Set<String> ADMIN_ROLES = java.util.Set.of(
+            "ROLE_ADMIN", "ROLE_SYSTEM_ADMIN");
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -51,7 +52,7 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
                 .roleIds(user.getRoles().stream()
                         .map(AuthRole::getId)
                         .collect(Collectors.toSet()))
-                .admin(user.getRoles().stream().anyMatch(role -> ADMIN_ROLE.equals(role.getName())))
+                .admin(user.getRoles().stream().anyMatch(role -> ADMIN_ROLES.contains(role.getName())))
                 .build();
     }
 
