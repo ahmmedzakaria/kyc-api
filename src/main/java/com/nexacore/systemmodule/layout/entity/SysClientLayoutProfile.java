@@ -32,6 +32,9 @@ public class SysClientLayoutProfile extends LayoutAuditInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private Long tenantId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_application_id", nullable = false)
     private SysAccClientApplication clientApplication;

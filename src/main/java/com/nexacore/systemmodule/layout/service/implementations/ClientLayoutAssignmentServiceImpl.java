@@ -3,6 +3,7 @@ package com.nexacore.systemmodule.layout.service.implementations;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentDto;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentRequestDto;
+import com.nexacore.systemmodule.layout.dto.LayoutTenantReconciliationDto;
 import com.nexacore.systemmodule.layout.entity.SysClientLayoutProfile;
 import com.nexacore.systemmodule.layout.entity.SysLayoutProfile;
 import com.nexacore.systemmodule.layout.enums.AssignmentScope;
@@ -12,6 +13,7 @@ import com.nexacore.systemmodule.layout.repository.LayoutProfileRepository;
 import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmentService;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,25 +27,29 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     private final ClientApplicationRepository clientApplicationRepository;
     private final LayoutProfileRepository layoutProfileRepository;
     private final AuthModuleGateway authModuleGateway;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public ClientLayoutAssignmentDto assign(ClientLayoutAssignmentRequestDto request, String actor) {
         Long userId = authModuleGateway.getUserId(actor);
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
         SysAccClientApplication client = resolveClient(request);
         SysLayoutProfile profile = resolveProfile(request);
         Long currentId = request.getId() == null ? -1L : request.getId();
 
         if (Boolean.TRUE.equals(request.getDefaultProfile())
-                && clientLayoutProfileRepository.existsByClientApplicationIdAndDefaultProfileTrueAndActiveTrueAndIdNot(client.getId(), currentId)) {
+                && clientLayoutProfileRepository.existsByTenantIdAndClientApplicationIdAndDefaultProfileTrueAndActiveTrueAndIdNot(
+                tenantId, client.getId(), currentId)) {
             throw new IllegalArgumentException("Client already has an active default layout profile");
         }
 
         SysClientLayoutProfile assignment = request.getId() == null
                 ? new SysClientLayoutProfile()
-                : clientLayoutProfileRepository.findById(request.getId())
+                : clientLayoutProfileRepository.findByIdAndTenantId(request.getId(), tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Client layout assignment not found: " + request.getId()));
 
+        assignment.setTenantId(tenantId);
         assignment.setClientApplication(client);
         assignment.setLayoutProfile(profile);
         assignment.setAssignmentScope(request.getAssignmentScope() == null ? AssignmentScope.CLIENT : request.getAssignmentScope());
@@ -66,11 +72,22 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<ClientLayoutAssignmentDto> list(String clientCode) {
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
         SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientCode));
-        return clientLayoutProfileRepository.findByClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(client.getId()).stream()
+        return clientLayoutProfileRepository.findByTenantIdAndClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(
+                        tenantId, client.getId()).stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public LayoutTenantReconciliationDto reconcileCurrentTenant() {
+        long tenantId = dataScopeService.requireEffectiveTenant(null);
+        long assignments = clientLayoutProfileRepository.countByTenantId(tenantId);
+        long mismatches = clientLayoutProfileRepository.countClientAssignmentMismatches(tenantId);
+        return new LayoutTenantReconciliationDto(tenantId, assignments, mismatches, mismatches == 0);
     }
 
     private SysAccClientApplication resolveClient(ClientLayoutAssignmentRequestDto request) {
@@ -94,6 +111,7 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     private ClientLayoutAssignmentDto toDto(SysClientLayoutProfile assignment) {
         return ClientLayoutAssignmentDto.builder()
                 .id(assignment.getId())
+                .tenantId(assignment.getTenantId())
                 .clientApplicationId(assignment.getClientApplication().getId())
                 .clientCode(assignment.getClientApplication().getClientCode())
                 .layoutProfileId(assignment.getLayoutProfile().getId())

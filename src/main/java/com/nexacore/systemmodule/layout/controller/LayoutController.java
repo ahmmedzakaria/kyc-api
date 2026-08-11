@@ -11,6 +11,7 @@ import com.nexacore.systemmodule.layout.dto.LayoutProfileDto;
 import com.nexacore.systemmodule.layout.dto.LayoutProfileRequestDto;
 import com.nexacore.systemmodule.layout.dto.NavNodeDto;
 import com.nexacore.systemmodule.layout.dto.LayoutUiPolicyRequestDto;
+import com.nexacore.systemmodule.layout.dto.LayoutTenantReconciliationDto;
 import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmentService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
@@ -110,6 +111,16 @@ public class LayoutController {
         return ResponseEntity.ok(ApiResponse.success(
                 clientLayoutAssignmentService.list(request.getClientCode()),
                 "Client layout assignments loaded"
+        ));
+    }
+
+    @PostMapping("/client/reconcile")
+    @PrivilegeApi("11040100187")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
+    public ResponseEntity<ApiResponse<LayoutTenantReconciliationDto>> reconcileClientProfiles() {
+        return ResponseEntity.ok(ApiResponse.success(
+                clientLayoutAssignmentService.reconcileCurrentTenant(),
+                "Tenant layout assignments reconciled"
         ));
     }
 

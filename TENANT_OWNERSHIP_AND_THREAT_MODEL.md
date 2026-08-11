@@ -12,6 +12,16 @@
 | Global catalog/reference | System/GIS | privilege definitions and shared reference data | Explicit global classification; tenant overrides live separately |
 | Operational/audit | Log/System | access events, jobs, reconciliation | Capture effective tenant; platform reads are audited |
 
+## Phase 3 pilot decision
+
+`sys_client_layout_profiles` is the first tenant-owned pilot table. Layout profiles,
+themes, fonts, sizes, and navigation definitions remain global catalogs; the
+client-to-profile assignment is owned by exactly one tenant. Reads and direct-ID
+writes require the server-derived tenant context, and the database requires a valid
+tenant foreign key. Existing assignments are expanded from active, trusted client
+tenant mappings. Assignments without such a mapping are quarantined and remain
+inaccessible rather than receiving inferred ownership.
+
 Every new persistent table must declare one classification in its module design and
 must contain `created_by`, `updated_by`, `created_at`, and `updated_at`. Cross-database
 tenant IDs are immutable application-level references validated against `sys_tenants`.
@@ -36,4 +46,3 @@ tenant IDs are immutable application-level references validated against `sys_ten
 | Missing async context | Messages/jobs carry a validated tenant ID and reconstruct context; missing/unknown tenants fail closed |
 | Stale cache after lifecycle/domain change | Cache only successful resolution with bounded TTL and evict on every mutation |
 | Cross-database partial failure | Idempotent workflows and reconciliation; never activate incomplete tenants |
-

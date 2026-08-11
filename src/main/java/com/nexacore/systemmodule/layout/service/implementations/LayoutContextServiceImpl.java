@@ -33,6 +33,8 @@ import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,9 +95,11 @@ public class LayoutContextServiceImpl implements LayoutContextService {
     }
 
     private SysLayoutProfile resolveDefaultProfile(String clientCode) {
+        long tenantId = currentTenantId();
         if (clientCode != null && !clientCode.isBlank()) {
             return clientLayoutProfileRepository
-                    .findFirstByClientApplicationClientCodeAndDefaultProfileTrueAndActiveTrueOrderByDisplayOrderAscIdAsc(clientCode)
+                    .findFirstByTenantIdAndClientApplicationClientCodeAndDefaultProfileTrueAndActiveTrueOrderByDisplayOrderAscIdAsc(
+                            tenantId, clientCode)
                     .map(SysClientLayoutProfile::getLayoutProfile)
                     .orElseGet(() -> layoutProfileRepository.findByProfileCode(DEFAULT_PROFILE_CODE).orElse(null));
         }
@@ -103,6 +107,7 @@ public class LayoutContextServiceImpl implements LayoutContextService {
     }
 
     private List<LayoutProfileDto> resolveAvailableProfiles(String clientCode) {
+        long tenantId = currentTenantId();
         if (clientCode == null || clientCode.isBlank()) {
             return layoutProfileRepository.findByActiveTrueOrderByProfileCodeAsc().stream()
                     .map(this::toProfileDto)
@@ -110,7 +115,8 @@ public class LayoutContextServiceImpl implements LayoutContextService {
         }
         return clientApplicationRepository.findByClientCode(clientCode)
                 .map(SysAccClientApplication::getId)
-                .map(clientLayoutProfileRepository::findByClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc)
+                .map(clientId -> clientLayoutProfileRepository
+                        .findByTenantIdAndClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(tenantId, clientId))
                 .orElse(List.of())
                 .stream()
                 .filter(SysClientLayoutProfile::isSelectable)
@@ -118,6 +124,12 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .filter(SysLayoutProfile::isActive)
                 .map(this::toProfileDto)
                 .toList();
+    }
+
+    private long currentTenantId() {
+        return ResolvedTenantContextHolder.get()
+                .map(context -> context.tenantId())
+                .orElseThrow(() -> new DataScopeAccessDeniedException("A resolved tenant is required for layout assignment access"));
     }
 
     private List<ThemeConfigEntryDto> resolveThemes(SysLayoutProfile profile) {

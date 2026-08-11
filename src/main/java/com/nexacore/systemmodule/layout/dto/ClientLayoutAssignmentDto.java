@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ClientLayoutAssignmentDto {
     private Long id;
+    private Long tenantId;
     private Long clientApplicationId;
     private String clientCode;
     private Long layoutProfileId;
