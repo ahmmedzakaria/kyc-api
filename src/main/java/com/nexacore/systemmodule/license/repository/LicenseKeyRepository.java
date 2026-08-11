@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LicenseKeyRepository extends JpaRepository<SysLicenseKey, Long> {
-    Optional<SysLicenseKey> findByLicenseKeyHash(String licenseKeyHash);
+    Optional<SysLicenseKey> findByLicenseKeyHashAndLicenseSubscriptionTenantId(String licenseKeyHash, Long tenantId);
 
-    List<SysLicenseKey> findByLicenseSubscription_SubscriptionCodeOrderByIssuedAtDesc(String subscriptionCode);
+    List<SysLicenseKey> findByLicenseSubscriptionSubscriptionCodeAndLicenseSubscriptionTenantIdOrderByIssuedAtDesc(
+            String subscriptionCode,
+            Long tenantId
+    );
 }

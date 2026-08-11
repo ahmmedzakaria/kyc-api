@@ -42,6 +42,7 @@ public class SysLicenseAuditEvent {
     private String eventMessageCode;
 
     private Long actorUserId;
+    @Column(nullable = false, updatable = false)
     private Long tenantId;
     private Long businessId;
     private Long clientApplicationId;

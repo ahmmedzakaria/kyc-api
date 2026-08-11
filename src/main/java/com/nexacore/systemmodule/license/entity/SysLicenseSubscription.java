@@ -35,7 +35,7 @@ public class SysLicenseSubscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 80)
+    @Column(nullable = false, length = 80)
     private String subscriptionCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,6 +43,7 @@ public class SysLicenseSubscription {
     @EqualsAndHashCode.Exclude
     private SysLicensePlan licensePlan;
 
+    @Column(nullable = false, updatable = false)
     private Long tenantId;
     private Long businessId;
 

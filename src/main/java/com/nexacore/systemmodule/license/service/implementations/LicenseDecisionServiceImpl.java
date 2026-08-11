@@ -52,15 +52,20 @@ public class LicenseDecisionServiceImpl implements LicenseDecisionService {
         if (request.tenantId() == null && request.businessId() == null && request.clientApplicationId() == null) {
             return denied(LicenseDecisionCode.MISSING_CONTEXT, "system.license.context.missing", "License context is required", null);
         }
+        Long effectiveTenantId;
+        Long effectiveBusinessId = request.businessId();
         if (request.tenantId() != null || request.businessId() != null) {
-            dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
+            var scope = dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
+            effectiveTenantId = scope.tenantId();
+            effectiveBusinessId = scope.businessId();
         } else {
             dataScopeService.requireCurrentClient(request.clientApplicationId());
+            effectiveTenantId = dataScopeService.requireEffectiveTenant(null);
         }
 
         Optional<SysLicenseSubscription> subscription = subscriptionRepository.findDecisionCandidates(
-                        request.tenantId(),
-                        request.businessId(),
+                        effectiveTenantId,
+                        effectiveBusinessId,
                         request.clientApplicationId(),
                         List.of(LicenseStatus.ACTIVE, LicenseStatus.TRIAL, LicenseStatus.GRACE_PERIOD)
                 )

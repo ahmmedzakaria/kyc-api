@@ -8,6 +8,8 @@ import com.nexacore.kycmodule.person.kyc.entity.KycRecord;
 import com.nexacore.kycmodule.person.kyc.repository.KycRecordRepository;
 import com.nexacore.kycmodule.person.kyc.service.interfaces.KycService;
 import com.nexacore.servicesmodule.fileservice.service.interfaces.FileManagementService;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,16 +30,20 @@ public class KycServiceImpl implements KycService {
 
     private final KycRecordRepository repo;
     private final FileManagementService fileManagementService;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional
     public ResponseEntity<ApiResponse<KycDto>> create(KycDto dto, MultipartFile photo) throws Exception {
         try {
             log.info("Creating KYC for nationalId={}", dto.getNationalId());
+            long tenantId = dataScopeService.requireEffectiveTenant(null);
+            long actorId = currentActor();
 //        if (repo.existsByNationalId(dto.getNationalId())) {
 //            throw new IllegalArgumentException("nationalId already exists");
 //        }
             KycRecord r = KycRecord.builder()
+                    .tenantId(tenantId)
                     .firstName(dto.getFirstName())
                     .lastName(dto.getLastName())
                     //.nationalId(dto.getNationalId())
@@ -45,6 +51,8 @@ public class KycServiceImpl implements KycService {
                     .phone(dto.getPhone())
                     .createdAt(Instant.now())
                     .updatedAt(Instant.now())
+                    .createdBy(actorId)
+                    .updatedBy(actorId)
                     .build();
             if (photo != null && !photo.isEmpty()) {
                 StoredFile storedFile = fileManagementService.store("kyc", "profile-photo", photo, null);
@@ -65,7 +73,7 @@ public class KycServiceImpl implements KycService {
     public ResponseEntity<ApiResponse<KycDto>> update(KycDto dto, MultipartFile photo) {
         try {
             log.info("Updating KYC id={}", dto.getId());
-            KycRecord r = repo.findById(dto.getId()).orElseThrow(() -> new IllegalArgumentException("not found"));
+            KycRecord r = findOwned(dto.getId());
             if (dto.getFirstName() != null) r.setFirstName(dto.getFirstName());
             if (dto.getLastName() != null) r.setLastName(dto.getLastName());
             if (dto.getEmail() != null) r.setEmail(dto.getEmail());
@@ -80,6 +88,7 @@ public class KycServiceImpl implements KycService {
                 r.setPhotoContentType(photo.getContentType());
             }
             r.setUpdatedAt(Instant.now());
+            r.setUpdatedBy(currentActor());
             KycRecord saved = repo.save(r);
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(toDto(saved), "Person Information Updated"));
         } catch (Exception e) {
@@ -92,7 +101,7 @@ public class KycServiceImpl implements KycService {
     public ResponseEntity<ApiResponse<Void>> delete(Long id)  {
         try {
             log.info("Deleting KYC id={}", id);
-            KycRecord r = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("not found"));
+            KycRecord r = findOwned(id);
             if (r.getPhotoPath() != null) {
                 try {
                     fileManagementService.delete(r.getPhotoPath());
@@ -100,7 +109,7 @@ public class KycServiceImpl implements KycService {
                     log.warn("failed to delete photo: {}", e.getMessage());
                 }
             }
-            repo.deleteById(id);
+            repo.delete(r);
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("Person Information Deleted"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -111,7 +120,7 @@ public class KycServiceImpl implements KycService {
     @Override
     public ResponseEntity<ApiResponse<KycDto>> getById(Long id) {
         try {
-            KycDto dto = repo.findById(id).map(this::toDto).orElseThrow(() -> new IllegalArgumentException("not found"));
+            KycDto dto = toDto(findOwned(id));
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success(dto, "Person Information Fetched Successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -128,9 +137,15 @@ public class KycServiceImpl implements KycService {
 //            //return repo.findByNationalId(nationalId, pageable).map(this::toDto);
 //        }
             if (searchDto.searchText() == null || searchDto.searchText().isBlank()) {
-                pageData = repo.findAll(pageable);
+                pageData = repo.findAll((root, query, cb) -> cb.equal(root.get("tenantId"),
+                        dataScopeService.requireEffectiveTenant(null)), pageable);
             } else {
-                pageData = repo.findByFirstNameIgnoreCaseContainingOrLastNameIgnoreCaseContaining(searchDto.searchText(), searchDto.searchText(), pageable);
+                long tenantId = dataScopeService.requireEffectiveTenant(null);
+                String text = "%" + searchDto.searchText().toLowerCase() + "%";
+                pageData = repo.findAll((root, query, cb) -> cb.and(
+                        cb.equal(root.get("tenantId"), tenantId),
+                        cb.or(cb.like(cb.lower(root.get("firstName")), text),
+                                cb.like(cb.lower(root.get("lastName")), text))), pageable);
             }
 
             Page<KycDto> response = pageData.map(p -> {
@@ -155,7 +170,7 @@ public class KycServiceImpl implements KycService {
 
     @Override
     public byte[] getPhoto(Long id) throws Exception {
-        KycRecord r = repo.findById(id).orElseThrow(() -> new IllegalArgumentException("not found"));
+        KycRecord r = findOwned(id);
         if (r.getPhotoPath() == null) return null;
         return fileManagementService.read(r.getPhotoPath());
     }
@@ -167,7 +182,7 @@ public class KycServiceImpl implements KycService {
 
     @Override
     public String getPhotoContentType(Long id) {
-        return repo.findById(id).map(KycRecord::getPhotoContentType).orElse(null);
+        return findOwned(id).getPhotoContentType();
     }
 
     private KycDto toDto(KycRecord r) {
@@ -179,5 +194,15 @@ public class KycServiceImpl implements KycService {
                 .email(r.getEmail())
                 .phone(r.getPhone())
                 .build();
+    }
+
+    private KycRecord findOwned(Long id) {
+        long tenantId = dataScopeService.requireEffectiveTenant(null);
+        return repo.findByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("not found"));
+    }
+
+    private long currentActor() {
+        return AuthenticatedRequestContextHolder.get().map(context -> context.userId() == null ? 0L : context.userId()).orElse(0L);
     }
 }

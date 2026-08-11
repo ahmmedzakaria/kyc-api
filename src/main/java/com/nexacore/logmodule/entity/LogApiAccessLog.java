@@ -25,6 +25,7 @@ public class LogApiAccessLog {
     private String clientCode;
     private String clientType;
     private Long userId;
+    private Long tenantId;
     private String username;
     private String apiCode;
     private String moduleCode;
@@ -48,4 +49,7 @@ public class LogApiAccessLog {
     private String responseBody;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+    private Long createdBy = 0L;
+    private Long updatedBy = 0L;
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }

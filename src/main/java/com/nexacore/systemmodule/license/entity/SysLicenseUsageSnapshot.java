@@ -43,6 +43,7 @@ public class SysLicenseUsageSnapshot {
     @EqualsAndHashCode.Exclude
     private SysLicenseSubscription licenseSubscription;
 
+    @Column(nullable = false, updatable = false)
     private Long tenantId;
     private Long businessId;
 

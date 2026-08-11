@@ -10,13 +10,16 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LicenseSubscriptionRepository extends JpaRepository<SysLicenseSubscription, Long> {
-    Optional<SysLicenseSubscription> findBySubscriptionCode(String subscriptionCode);
+    Optional<SysLicenseSubscription> findBySubscriptionCodeAndTenantId(String subscriptionCode, Long tenantId);
+    Optional<SysLicenseSubscription> findByIdAndTenantId(Long id, Long tenantId);
+    List<SysLicenseSubscription> findByTenantIdOrderByIdDesc(Long tenantId);
 
     @Query("""
             select subscription
             from SysLicenseSubscription subscription
             join fetch subscription.licensePlan plan
-            where subscription.status in :statuses
+            where subscription.tenantId = :tenantId
+              and subscription.status in :statuses
               and (
                     (:businessId is not null and subscription.businessId = :businessId)
                  or (:tenantId is not null and subscription.tenantId = :tenantId)

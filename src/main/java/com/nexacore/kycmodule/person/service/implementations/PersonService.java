@@ -187,8 +187,8 @@ public class PersonService {
 
     private KycPersonDocument getPersonDocument(Long profileId, Long documentId) {
         KycPersonProfile profile = ensureProfile(profileId);
-        return personDocumentRepository.findById(documentId)
-                .filter(document -> document.getProfile().getId().equals(profile.getId()))
+        return personDocumentRepository.findByIdAndProfileIdAndProfileTenantId(
+                        documentId, profile.getId(), profile.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("Document not found: " + documentId));
     }
 

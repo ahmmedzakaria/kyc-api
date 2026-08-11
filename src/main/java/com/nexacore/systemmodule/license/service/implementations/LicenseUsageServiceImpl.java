@@ -10,6 +10,7 @@ import com.nexacore.systemmodule.license.service.interfaces.LicenseUsageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class LicenseUsageServiceImpl implements LicenseUsageService {
 
     private final LicenseUsageSnapshotRepository usageRepository;
     private final LicenseSubscriptionRepository subscriptionRepository;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -49,7 +51,8 @@ public class LicenseUsageServiceImpl implements LicenseUsageService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public long getUsageValue(String subscriptionCode, String usagePeriod, String usageCode) {
-        SysLicenseSubscription subscription = subscriptionRepository.findBySubscriptionCode(subscriptionCode)
+        SysLicenseSubscription subscription = subscriptionRepository.findBySubscriptionCodeAndTenantId(
+                        subscriptionCode, dataScopeService.requireEffectiveTenant(null))
                 .orElseThrow(() -> new IllegalArgumentException("License subscription not found: " + subscriptionCode));
         return usageRepository.findByLicenseSubscriptionIdAndUsagePeriodAndUsageCode(
                         subscription.getId(),
@@ -61,12 +64,13 @@ public class LicenseUsageServiceImpl implements LicenseUsageService {
     }
 
     private SysLicenseSubscription resolveSubscription(LicenseUsageRecordRequestDto request) {
+        long tenantId = dataScopeService.requireEffectiveTenant(request.tenantId());
         if (request.subscriptionCode() != null && !request.subscriptionCode().isBlank()) {
-            return subscriptionRepository.findBySubscriptionCode(request.subscriptionCode())
+            return subscriptionRepository.findBySubscriptionCodeAndTenantId(request.subscriptionCode(), tenantId)
                     .orElseThrow(() -> new IllegalArgumentException("License subscription not found: " + request.subscriptionCode()));
         }
         return subscriptionRepository.findDecisionCandidates(
-                        request.tenantId(),
+                        tenantId,
                         request.businessId(),
                         request.clientApplicationId(),
                         List.of(LicenseStatus.ACTIVE, LicenseStatus.TRIAL, LicenseStatus.GRACE_PERIOD)

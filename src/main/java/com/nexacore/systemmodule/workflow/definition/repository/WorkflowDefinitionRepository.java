@@ -15,4 +15,7 @@ public interface WorkflowDefinitionRepository extends JpaRepository<SysWorkflowD
     );
 
     List<SysWorkflowDefinition> findByActiveTrueOrderByWorkflowCodeAsc();
+    List<SysWorkflowDefinition> findByTenantIdAndActiveTrueOrderByWorkflowCodeAsc(Long tenantId);
+    List<SysWorkflowDefinition> findByTenantIdOrderByWorkflowCodeAsc(Long tenantId);
+    Optional<SysWorkflowDefinition> findByIdAndTenantId(Long id, Long tenantId);
 }

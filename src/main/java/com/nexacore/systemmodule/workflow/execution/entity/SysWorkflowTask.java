@@ -56,7 +56,7 @@ public class SysWorkflowTask extends WorkflowAuditInfo {
     @Column(name = "assigned_privilege_code", length = 120)
     private String assignedPrivilegeCode;
 
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", nullable = false, updatable = false)
     private Long tenantId;
 
     @Column(name = "business_id")

@@ -17,6 +17,9 @@ public class KycRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private Long tenantId;
+
     @Column(nullable = false)
     private String firstName;
 
@@ -38,4 +41,10 @@ public class KycRecord {
 
     private Instant createdAt;
     private Instant updatedAt;
+
+    @Column(nullable = false)
+    private Long createdBy;
+
+    @Column(nullable = false)
+    private Long updatedBy;
 }

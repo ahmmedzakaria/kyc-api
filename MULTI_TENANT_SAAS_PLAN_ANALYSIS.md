@@ -681,6 +681,22 @@ may be displayed exactly once and must expire quickly.
 - Extend Auth tenant-account association records while keeping `AuthPerson` global.
 - Handle GIS, logs, and shared reference data according to the approved matrix.
 
+Implementation status (2026-08-12):
+
+- KYC profiles, details, documents, and legacy KYC records are constrained to a
+  server-derived tenant. `KycPerson` remains a global identity and is not tenant-owned.
+- Workflow definitions, instances, and tasks require tenant ownership; composite
+  foreign keys reject cross-tenant parent/child relationships.
+- License plans remain global catalogs. Subscriptions, usage, audit events, and key
+  administration are tenant-scoped, with subscription codes unique per tenant.
+- Auth tenant-account, role, and scope associations were cut over in the preceding
+  Auth phases. `AuthPerson` remains global.
+- GIS administrative boundaries remain shared reference data. They are not assigned
+  artificial tenant ownership.
+- Request, audit, and error logs capture the resolved tenant and authenticated actor.
+  Tenant remains nullable only for genuine platform/startup events without a request
+  context; log rows always carry audit actor columns.
+
 ### Phase 5 — Tenant-specific configuration
 
 - Add tenant-aware layout and branding assignments.

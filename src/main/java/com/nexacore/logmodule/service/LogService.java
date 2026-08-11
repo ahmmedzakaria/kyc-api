@@ -9,6 +9,8 @@ import com.nexacore.logmodule.repository.AuditLogRepository;
 import com.nexacore.logmodule.repository.ErrorLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
 
 @Service
 public class LogService {
@@ -109,13 +111,14 @@ public class LogService {
     }
 
     private void applyContext(LogApiAccessLog log, LogContextDto context) {
-        if (context == null) {
-            return;
-        }
+        context = contextualize(context);
         log.setTraceId(context.getTraceId());
         log.setClientCode(context.getClientCode());
         log.setClientType(context.getClientType());
         log.setUserId(context.getUserId());
+        log.setTenantId(context.getTenantId());
+        log.setCreatedBy(context.getUserId() == null ? 0L : context.getUserId());
+        log.setUpdatedBy(context.getUserId() == null ? 0L : context.getUserId());
         log.setApiCode(context.getApiCode());
         log.setModuleCode(context.getModuleCode());
         log.setModuleName(context.getModuleName());
@@ -133,13 +136,14 @@ public class LogService {
     }
 
     private void applyContext(LogErrorLog log, LogContextDto context) {
-        if (context == null) {
-            return;
-        }
+        context = contextualize(context);
         log.setTraceId(context.getTraceId());
         log.setClientCode(context.getClientCode());
         log.setClientType(context.getClientType());
         log.setUserId(context.getUserId());
+        log.setTenantId(context.getTenantId());
+        log.setCreatedBy(context.getUserId() == null ? 0L : context.getUserId());
+        log.setUpdatedBy(context.getUserId() == null ? 0L : context.getUserId());
         log.setApiCode(context.getApiCode());
         log.setModuleCode(context.getModuleCode());
         log.setModuleName(context.getModuleName());
@@ -155,13 +159,14 @@ public class LogService {
     }
 
     private void applyContext(LogAuditLog log, LogContextDto context) {
-        if (context == null) {
-            return;
-        }
+        context = contextualize(context);
         log.setTraceId(context.getTraceId());
         log.setClientCode(context.getClientCode());
         log.setClientType(context.getClientType());
         log.setUserId(context.getUserId());
+        log.setTenantId(context.getTenantId());
+        log.setCreatedBy(context.getUserId() == null ? 0L : context.getUserId());
+        log.setUpdatedBy(context.getUserId() == null ? 0L : context.getUserId());
         log.setModuleCode(context.getModuleCode());
         log.setModuleName(context.getModuleName());
         log.setSubmoduleCode(context.getSubmoduleCode());
@@ -173,5 +178,12 @@ public class LogService {
         log.setAccessMode(context.getAccessMode());
         log.setBusinessId(context.getBusinessId());
         log.setBranchId(context.getBranchId());
+    }
+
+    private LogContextDto contextualize(LogContextDto context) {
+        if (context != null) return context;
+        Long tenantId = ResolvedTenantContextHolder.get().map(resolved -> resolved.tenantId()).orElse(null);
+        Long userId = AuthenticatedRequestContextHolder.get().map(authenticated -> authenticated.userId()).orElse(null);
+        return LogContextDto.builder().tenantId(tenantId).userId(userId).build();
     }
 }

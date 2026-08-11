@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContext;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -71,7 +73,7 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
             String requestBody = getRequestBody(requestWrapper);
             String responseBody = getResponseBody(responseWrapper);
             String username = getUsername();
-            LogContextDto context = buildLogContext(username);
+            LogContextDto context = buildLogContext(username, request);
             int status = failure == null ? responseWrapper.getStatus() : HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 
             logService.writeApiAccessLog(
@@ -107,16 +109,19 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
         return auth != null && auth.isAuthenticated() ? auth.getName() : "anonymous";
     }
 
-    private LogContextDto buildLogContext(String username) {
+    private LogContextDto buildLogContext(String username, HttpServletRequest request) {
         ClientApplicationContext context = ClientApplicationContextHolder.get().orElse(null);
         SysAccClientApplication clientApplication = context == null ? null : context.clientApplication();
         SysAccApiRegistry apiRegistry = context == null ? null : context.apiRegistry();
+        ResolvedTenantContext tenant = request.getAttribute(ResolvedTenantContext.class.getName()) instanceof ResolvedTenantContext resolved
+                ? resolved : null;
 
         return LogContextDto.builder()
                 .traceId(context == null ? null : context.traceId())
                 .clientCode(clientApplication == null ? null : clientApplication.getClientCode())
                 .clientType(clientApplication == null || clientApplication.getClientType() == null ? null : clientApplication.getClientType().name())
                 .userId(resolveUserId(username))
+                .tenantId(tenant == null ? null : tenant.tenantId())
                 .apiCode(apiRegistry == null ? null : apiRegistry.getApiCode())
                 .moduleCode(apiRegistry == null ? null : apiRegistry.getModuleCode())
                 .moduleName(apiRegistry == null ? null : apiRegistry.getModuleName())
@@ -137,6 +142,10 @@ public class ApiLoggingFilter extends OncePerRequestFilter {
             return null;
         }
         try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getPrincipal() instanceof TenantAccountUserDetails principal) {
+                return principal.accountId();
+            }
             return authModuleGateway.getUserId(username);
         } catch (Exception ignored) {
             return null;

@@ -62,10 +62,10 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProviderConfig.authenticationProvider())
-                .addFilterBefore(tenantResolutionFilter, ClientApplicationAuthenticationFilter.class)
-                .addFilterBefore(clientApplicationAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(tenantResolutionFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(clientApplicationAuthenticationFilter, TenantResolutionFilter.class)
                 .addFilterAfter(clientApiAccessFilter, ClientApplicationAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(jwtAuthenticationFilter, ClientApiAccessFilter.class)
                 .addFilterAfter(authenticatedRequestContextFilter, JwtAuthenticationFilter.class)
                 .addFilterAfter(userPrivilegeApiAccessFilter, AuthenticatedRequestContextFilter.class)
                 .cors(cors -> cors.configurationSource(request -> {

@@ -10,6 +10,7 @@ public class LogContextDto {
     private String clientCode;
     private String clientType;
     private Long userId;
+    private Long tenantId;
     private String apiCode;
     private String moduleCode;
     private String moduleName;

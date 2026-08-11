@@ -7,6 +7,7 @@ import com.nexacore.systemmodule.license.entity.SysLicensePlan;
 import com.nexacore.systemmodule.license.entity.SysLicenseSubscription;
 import com.nexacore.systemmodule.license.repository.LicenseKeyRepository;
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -22,7 +23,9 @@ class LicenseKeyServiceImplTest {
 
     private final LicenseKeyRepository keyRepository = mock(LicenseKeyRepository.class);
     private final LicenseSubscriptionRepository subscriptionRepository = mock(LicenseSubscriptionRepository.class);
-    private final LicenseKeyServiceImpl service = new LicenseKeyServiceImpl(keyRepository, subscriptionRepository);
+    private final DataScopeService dataScopeService = mock(DataScopeService.class);
+    private final LicenseKeyServiceImpl service = new LicenseKeyServiceImpl(
+            keyRepository, subscriptionRepository, dataScopeService);
 
     @Test
     void generatesRawKeyOnceAndStoresOnlyHash() {
@@ -32,7 +35,9 @@ class LicenseKeyServiceImplTest {
                 .licensePlan(SysLicensePlan.builder().id(1L).planCode("PLAN").build())
                 .build();
 
-        when(subscriptionRepository.findBySubscriptionCode("SUB-001")).thenReturn(Optional.of(subscription));
+        when(dataScopeService.requireEffectiveTenant(null)).thenReturn(1L);
+        when(subscriptionRepository.findBySubscriptionCodeAndTenantId("SUB-001", 1L))
+                .thenReturn(Optional.of(subscription));
         when(keyRepository.save(any(SysLicenseKey.class))).thenAnswer(invocation -> {
             SysLicenseKey key = invocation.getArgument(0, SysLicenseKey.class);
             key.setId(99L);

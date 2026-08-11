@@ -23,6 +23,8 @@ import com.nexacore.systemmodule.workflow.definition.service.interfaces.Workflow
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -39,19 +41,21 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     private final WorkflowStepRepository stepRepository;
     private final WorkflowTransitionRepository transitionRepository;
     private final WorkflowAssignmentPolicyRepository assignmentPolicyRepository;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public WorkflowDefinitionDto save(WorkflowDefinitionDto request, String username) {
-        SysWorkflowDefinition definition = resolveDefinition(request);
+        UserScopeAssignment scope = dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
+        SysWorkflowDefinition definition = resolveDefinition(request, scope.tenantId());
         definition.setWorkflowCode(requiredCode(request.workflowCode(), "workflowCode"));
         definition.setWorkflowName(requiredText(request.workflowName(), "workflowName"));
         definition.setModuleId(request.moduleId());
         definition.setSubmoduleId(request.submoduleId());
         definition.setFeatureId(request.featureId());
         definition.setSubjectType(requiredCode(request.subjectType(), "subjectType"));
-        definition.setTenantId(request.tenantId());
-        definition.setBusinessId(request.businessId());
+        definition.setTenantId(scope.tenantId());
+        definition.setBusinessId(scope.businessId());
         definition.setEngineType(request.engineType() == null ? WorkflowEngineType.LOCAL : request.engineType());
         definition.setActive(request.active() == null || request.active());
         definition = definitionRepository.save(definition);
@@ -66,16 +70,18 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<WorkflowDefinitionDto> list(boolean activeOnly) {
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
         List<SysWorkflowDefinition> definitions = activeOnly
-                ? definitionRepository.findByActiveTrueOrderByWorkflowCodeAsc()
-                : definitionRepository.findAll();
+                ? definitionRepository.findByTenantIdAndActiveTrueOrderByWorkflowCodeAsc(tenantId)
+                : definitionRepository.findByTenantIdOrderByWorkflowCodeAsc(tenantId);
         return definitions.stream().map(this::toDto).toList();
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public WorkflowDefinitionDto publish(WorkflowPublishRequestDto request, String username) {
-        SysWorkflowDefinition definition = findDefinition(request);
+        UserScopeAssignment scope = dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
+        SysWorkflowDefinition definition = findDefinition(request, scope);
         SysWorkflowVersion version = versionRepository.findByWorkflowDefinitionAndVersionNumber(definition, request.versionNumber())
                 .orElseThrow(() -> new IllegalArgumentException("Workflow version not found: " + request.versionNumber()));
         version.setStatus(WorkflowDefinitionStatus.PUBLISHED);
@@ -88,7 +94,8 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public WorkflowDefinitionDto retire(WorkflowPublishRequestDto request, String username) {
-        SysWorkflowDefinition definition = findDefinition(request);
+        UserScopeAssignment scope = dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
+        SysWorkflowDefinition definition = findDefinition(request, scope);
         SysWorkflowVersion version = versionRepository.findByWorkflowDefinitionAndVersionNumber(definition, request.versionNumber())
                 .orElseThrow(() -> new IllegalArgumentException("Workflow version not found: " + request.versionNumber()));
         version.setStatus(WorkflowDefinitionStatus.RETIRED);
@@ -177,24 +184,25 @@ public class WorkflowDefinitionServiceImpl implements WorkflowDefinitionService 
         }
     }
 
-    private SysWorkflowDefinition resolveDefinition(WorkflowDefinitionDto request) {
+    private SysWorkflowDefinition resolveDefinition(WorkflowDefinitionDto request, Long tenantId) {
         if (request.id() != null) {
-            return definitionRepository.findById(request.id()).orElseGet(SysWorkflowDefinition::new);
+            return definitionRepository.findByIdAndTenantId(request.id(), tenantId)
+                    .orElseThrow(() -> new IllegalArgumentException("Workflow definition not found: " + request.id()));
         }
         return definitionRepository.findFirstByWorkflowCodeAndSubjectTypeAndTenantIdAndBusinessIdAndActiveTrue(
                 requiredCode(request.workflowCode(), "workflowCode"),
                 requiredCode(request.subjectType(), "subjectType"),
-                request.tenantId(),
+                tenantId,
                 request.businessId()
         ).orElseGet(SysWorkflowDefinition::new);
     }
 
-    private SysWorkflowDefinition findDefinition(WorkflowPublishRequestDto request) {
+    private SysWorkflowDefinition findDefinition(WorkflowPublishRequestDto request, UserScopeAssignment scope) {
         return definitionRepository.findFirstByWorkflowCodeAndSubjectTypeAndTenantIdAndBusinessIdAndActiveTrue(
                 requiredCode(request.workflowCode(), "workflowCode"),
                 requiredCode(request.subjectType(), "subjectType"),
-                request.tenantId(),
-                request.businessId()
+                scope.tenantId(),
+                scope.businessId()
         ).orElseThrow(() -> new IllegalArgumentException("Workflow definition not found: " + request.workflowCode()));
     }
 

@@ -8,6 +8,7 @@ import com.nexacore.systemmodule.license.entity.SysLicenseSubscription;
 import com.nexacore.systemmodule.license.repository.LicenseKeyRepository;
 import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepository;
 import com.nexacore.systemmodule.license.service.interfaces.LicenseKeyService;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,11 +29,14 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
 
     private final LicenseKeyRepository licenseKeyRepository;
     private final LicenseSubscriptionRepository subscriptionRepository;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public GeneratedLicenseKeyDto generateLicenseKey(LicenseKeyRequestDto request) {
-        SysLicenseSubscription subscription = subscriptionRepository.findBySubscriptionCode(request.subscriptionCode())
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        SysLicenseSubscription subscription = subscriptionRepository.findBySubscriptionCodeAndTenantId(
+                        request.subscriptionCode(), tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("License subscription not found: " + request.subscriptionCode()));
         String rawKey = generateRawKey(subscription.getSubscriptionCode());
         String keyHash = sha256(rawKey);
@@ -56,7 +60,8 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public boolean activateLicenseKey(LicenseKeyRequestDto request) {
-        return licenseKeyRepository.findByLicenseKeyHash(sha256(request.rawLicenseKey()))
+        return licenseKeyRepository.findByLicenseKeyHashAndLicenseSubscriptionTenantId(
+                        sha256(request.rawLicenseKey()), dataScopeService.requireEffectiveTenant(null))
                 .filter(this::isUsable)
                 .map(key -> {
                     key.setActivationFingerprintHash(sha256(request.activationFingerprint()));
@@ -71,7 +76,8 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public boolean validateLicenseKey(LicenseKeyRequestDto request) {
-        return licenseKeyRepository.findByLicenseKeyHash(sha256(request.rawLicenseKey()))
+        return licenseKeyRepository.findByLicenseKeyHashAndLicenseSubscriptionTenantId(
+                        sha256(request.rawLicenseKey()), dataScopeService.requireEffectiveTenant(null))
                 .filter(this::isUsable)
                 .map(key -> {
                     key.setLastValidatedAt(LocalDateTime.now());
@@ -84,7 +90,10 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<LicenseKeySummaryDto> listKeys(String subscriptionCode) {
-        return licenseKeyRepository.findByLicenseSubscription_SubscriptionCodeOrderByIssuedAtDesc(subscriptionCode).stream()
+        return licenseKeyRepository
+                .findByLicenseSubscriptionSubscriptionCodeAndLicenseSubscriptionTenantIdOrderByIssuedAtDesc(
+                        subscriptionCode, dataScopeService.requireEffectiveTenant(null))
+                .stream()
                 .map(this::toSummary)
                 .toList();
     }

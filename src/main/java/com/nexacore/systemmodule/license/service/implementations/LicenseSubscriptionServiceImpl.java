@@ -22,6 +22,8 @@ import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,24 +35,25 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     private final LicenseSubscriptionRepository subscriptionRepository;
     private final LicensePlanRepository planRepository;
     private final LicenseEntitlementOverrideRepository overrideRepository;
+    private final DataScopeService dataScopeService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public LicenseSubscriptionResponseDto assignSubscription(LicenseSubscriptionRequestDto request) {
-        if (request.tenantId() == null && request.businessId() == null && request.clientApplicationId() == null) {
-            throw new IllegalArgumentException("At least one license owner is required");
-        }
+        UserScopeAssignment scope = dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
 
         SysLicensePlan plan = planRepository.findByPlanCode(request.planCode())
                 .orElseThrow(() -> new IllegalArgumentException("License plan not found: " + request.planCode()));
         SysLicenseSubscription subscription = request.id() == null
-                ? subscriptionRepository.findBySubscriptionCode(request.subscriptionCode()).orElseGet(SysLicenseSubscription::new)
-                : subscriptionRepository.findById(request.id()).orElseGet(SysLicenseSubscription::new);
+                ? subscriptionRepository.findBySubscriptionCodeAndTenantId(request.subscriptionCode(), scope.tenantId())
+                    .orElseGet(SysLicenseSubscription::new)
+                : subscriptionRepository.findByIdAndTenantId(request.id(), scope.tenantId())
+                    .orElseThrow(() -> new IllegalArgumentException("License subscription not found: " + request.id()));
 
         subscription.setSubscriptionCode(request.subscriptionCode());
         subscription.setLicensePlan(plan);
-        subscription.setTenantId(request.tenantId());
-        subscription.setBusinessId(request.businessId());
+        subscription.setTenantId(scope.tenantId());
+        subscription.setBusinessId(scope.businessId());
         subscription.setClientApplication(referenceClientApplication(request.clientApplicationId()));
         subscription.setStatus(request.status() == null ? LicenseStatus.ACTIVE : request.status());
         subscription.setStartsAt(request.startsAt());
@@ -138,13 +141,14 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<LicenseSubscriptionResponseDto> listSubscriptions() {
-        return subscriptionRepository.findAll().stream()
+        return subscriptionRepository.findByTenantIdOrderByIdDesc(dataScopeService.requireEffectiveTenant(null)).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     private SysLicenseSubscription getByCode(String subscriptionCode) {
-        return subscriptionRepository.findBySubscriptionCode(subscriptionCode)
+        return subscriptionRepository.findBySubscriptionCodeAndTenantId(
+                        subscriptionCode, dataScopeService.requireEffectiveTenant(null))
                 .orElseThrow(() -> new IllegalArgumentException("License subscription not found: " + subscriptionCode));
     }
 

@@ -22,6 +22,7 @@ public class LogAuditLog {
     private String clientCode;
     private String clientType;
     private Long userId;
+    private Long tenantId;
     private String username;
     private String moduleCode;
     private String moduleName;
@@ -42,4 +43,7 @@ public class LogAuditLog {
     private String details;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+    private Long createdBy = 0L;
+    private Long updatedBy = 0L;
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }

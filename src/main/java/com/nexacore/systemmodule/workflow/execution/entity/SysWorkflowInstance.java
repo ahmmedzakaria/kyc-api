@@ -54,7 +54,7 @@ public class SysWorkflowInstance extends WorkflowAuditInfo {
     @Column(name = "subject_id", nullable = false, length = 120)
     private String subjectId;
 
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", nullable = false, updatable = false)
     private Long tenantId;
 
     @Column(name = "business_id")

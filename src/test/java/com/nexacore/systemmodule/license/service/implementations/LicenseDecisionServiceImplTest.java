@@ -15,11 +15,13 @@ import com.nexacore.systemmodule.license.repository.LicenseSubscriptionRepositor
 import com.nexacore.systemmodule.license.repository.LicenseUsageSnapshotRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,6 +56,12 @@ class LicenseDecisionServiceImplTest {
             apiRegistryRepository,
             dataScopeService
     );
+
+    @BeforeEach
+    void authorizeTenantOne() {
+        when(dataScopeService.requireWritableScope(1L, null, null))
+                .thenReturn(new UserScopeAssignment(1L, null, null));
+    }
 
     @Test
     void allowsLicensedModuleEntitlement() {
