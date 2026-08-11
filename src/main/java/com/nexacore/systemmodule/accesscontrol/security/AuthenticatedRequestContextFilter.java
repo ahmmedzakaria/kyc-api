@@ -34,9 +34,10 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated()) {
                 String username = authentication.getName();
-                AuthUserAccessDto user = authentication.getPrincipal() instanceof TenantAccountUserDetails principal
-                        ? authModuleGateway.getUserAccess(principal.accountId(), principal.tenantId())
-                        : authModuleGateway.getUserAccess(username);
+                if (!(authentication.getPrincipal() instanceof TenantAccountUserDetails principal)) {
+                    throw new IllegalStateException("Tenant-bound authenticated principal is required");
+                }
+                AuthUserAccessDto user = authModuleGateway.getUserAccess(principal.accountId(), principal.tenantId());
                 ClientApplicationContext accessContext = ClientApplicationContextHolder.get().orElse(null);
                 SysAccClientApplication client = accessContext == null ? null : accessContext.clientApplication();
                 Set<String> privileges = privilegeService.getUserPrivilegeCodes(username);

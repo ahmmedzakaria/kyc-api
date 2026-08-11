@@ -39,6 +39,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
+import com.nexacore.authmodule.core.service.UsernameNormalizer;
 
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +49,11 @@ import java.util.stream.Collectors;
 
 @Configuration
 public class DataSeeder {
+
+    @Value("${nexacore.auth.bootstrap-tenant-id:0}")
+    private long bootstrapTenantId;
+
+    private final UsernameNormalizer usernameNormalizer = new UsernameNormalizer();
 
     @Bean
     CommandLineRunner initDatabase(RoleRepository roleRepository,
@@ -64,13 +71,13 @@ public class DataSeeder {
                                    AuthenticationProperties authenticationProperties,
                                    PasswordEncoder passwordEncoder) {
         return args -> {
-            AuthRole adminRole = roleRepository.findByName("ROLE_ADMIN")
+            AuthRole adminRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_ADMIN"));
-            AuthRole systemAdminRole = roleRepository.findByName("ROLE_SYSTEM_ADMIN")
+            AuthRole systemAdminRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_SYSTEM_ADMIN")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_SYSTEM_ADMIN"));
-            AuthRole kycOperatorRole = roleRepository.findByName("ROLE_KYC_OPERATOR")
+            AuthRole kycOperatorRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_KYC_OPERATOR")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_OPERATOR"));
-            AuthRole kycApproverRole = roleRepository.findByName("ROLE_KYC_APPROVER")
+            AuthRole kycApproverRole = roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase("ROLE_KYC_APPROVER")
                     .orElseGet(() -> createRole(roleRepository, "ROLE_KYC_APPROVER"));
             systemPrivilegeRegistryService.syncApplicationCatalog();
             Set<String> adminPrivilegeCodes = seedModulePrivileges(systemPrivilegeRegistryService, modulePrivilegeProviders);
@@ -101,7 +108,9 @@ public class DataSeeder {
                     "system_admin", "123", "system.admin@example.com", "01700000005",
                     "System", "Administrator", systemAdminRole);
 
-            Long adminUserId = userRepository.findByUsername("admin")
+            requireBootstrapTenant();
+            Long adminUserId = userRepository.findByTenantIdAndNormalizedUsername(
+                            bootstrapTenantId, usernameNormalizer.normalize("admin"))
                     .orElseThrow(() -> new IllegalStateException("Seeded admin user not found"))
                     .getId();
             userPrivilegeRepository.deleteByUserIdAndPrivilegeModuleCode(
@@ -143,7 +152,9 @@ public class DataSeeder {
                                  AuthRole... roles) {
         PersonSummaryDto person = personModuleGateway.ensurePersonForUser(username, email, mobile, firstName, lastName);
 
-        AuthUser existingUser = userRepository.findByUsername(username).orElse(null);
+        requireBootstrapTenant();
+        AuthUser existingUser = userRepository.findByTenantIdAndNormalizedUsername(
+                bootstrapTenantId, usernameNormalizer.normalize(username)).orElse(null);
         if (existingUser != null) {
             existingUser.setPersonId(person.getId());
             existingUser.getRoles().addAll(List.of(roles));
@@ -153,6 +164,8 @@ public class DataSeeder {
 
         AuthUser user = new AuthUser();
         user.setUsername(username);
+        user.setNormalizedUsername(usernameNormalizer.normalize(username));
+        user.setTenantId(bootstrapTenantId);
         user.setPersonId(person.getId());
         user.setPassword(passwordEncoder.encode(password));
         user.setRoles(new HashSet<>(List.of(roles)));
@@ -175,15 +188,23 @@ public class DataSeeder {
                                                AuthRole... roles) {
         seedDefaultUser(userRepository, passwordEncoder, personModuleGateway,
                 username, password, email, mobile, firstName, lastName, roles);
-        AuthUser user = userRepository.findByUsername(username)
+        AuthUser user = userRepository.findByTenantIdAndNormalizedUsername(
+                        bootstrapTenantId, usernameNormalizer.normalize(username))
                 .orElseThrow(() -> new IllegalStateException("Seeded user not found: " + username));
         user.setRoles(new HashSet<>(List.of(roles)));
         userRepository.save(user);
     }
 
+    private void requireBootstrapTenant() {
+        if (bootstrapTenantId <= 0) {
+            throw new IllegalStateException("AUTH_BOOTSTRAP_TENANT_ID must identify a trusted bootstrap tenant");
+        }
+    }
+
     private AuthRole createRole(RoleRepository roleRepository, String roleName) {
         AuthRole role = new AuthRole();
         role.setName(roleName);
+        role.setRoleCode(roleName);
         return roleRepository.save(role);
     }
 

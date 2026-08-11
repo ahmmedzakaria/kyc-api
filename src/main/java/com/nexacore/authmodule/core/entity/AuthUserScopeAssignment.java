@@ -8,7 +8,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,9 +32,17 @@ public class AuthUserScopeAssignment extends ActionInfo {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumns({
+            @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false,
+                    insertable = false, updatable = false),
+            @JoinColumn(name = "tenant_id", referencedColumnName = "tenant_id",
+                    nullable = false, insertable = false, updatable = false)
+    })
     @EqualsAndHashCode.Exclude
     private AuthUser user;
+
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
@@ -50,4 +61,20 @@ public class AuthUserScopeAssignment extends ActionInfo {
 
     @Column(name = "updated_by", nullable = false)
     private Long updatedBy;
+
+    @PrePersist
+    @PreUpdate
+    void synchronizeAccountKey() {
+        if (user != null) {
+            userId = user.getId();
+            if (tenantId == null) {
+                tenantId = user.getTenantId();
+            } else if (!tenantId.equals(user.getTenantId())) {
+                throw new IllegalStateException("Scope tenant must match the account tenant");
+            }
+        }
+        if (userId == null || tenantId == null) {
+            throw new IllegalStateException("Scope account and tenant are required");
+        }
+    }
 }

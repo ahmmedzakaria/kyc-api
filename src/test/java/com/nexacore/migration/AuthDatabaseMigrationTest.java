@@ -55,7 +55,7 @@ class AuthDatabaseMigrationTest {
                 + "WHERE username='Ambiguous.User'");
         execute("INSERT INTO auth_roles (name) VALUES ('ROLE_LEGACY')");
 
-        migrateTo(null);
+        migrateTo("14");
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success "
                 + "ORDER BY installed_rank DESC LIMIT 1")).isEqualTo("14");
@@ -94,6 +94,53 @@ class AuthDatabaseMigrationTest {
                 + "'ux_auth_roles_global_code_phase1','ux_auth_roles_tenant_code_phase1')"))
                 .isEqualTo(7);
 
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> migrateTo(null))
+                .isInstanceOf(org.flywaydb.core.api.FlywayException.class)
+                .hasMessageContaining("without a trusted tenant");
+
+        // Simulate explicit operator review. No request header or arbitrary profile is
+        // used to choose these tenant dispositions.
+        execute("UPDATE auth_users SET tenant_id=40 WHERE username='No.Scope'");
+        execute("INSERT INTO auth_user_scope_assignments "
+                + "(user_id, tenant_id, active, created_by, updated_by) "
+                + "SELECT id, 40, true, 0, 0 FROM auth_users WHERE username='No.Scope'");
+        execute("DELETE FROM auth_user_scope_assignments WHERE user_id=(SELECT id FROM auth_users "
+                + "WHERE username='Ambiguous.User') AND tenant_id=30");
+        execute("UPDATE auth_users SET tenant_id=20 WHERE username='Ambiguous.User'");
+        execute("UPDATE auth_user_backfill_quarantine SET resolved=true, resolved_by=900, "
+                + "resolved_at=CURRENT_TIMESTAMP, updated_by=900 WHERE NOT resolved");
+
+        migrateTo(null);
+
+        assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success "
+                + "ORDER BY installed_rank DESC LIMIT 1")).isEqualTo("15");
+        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(15);
+        assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name='auth_users' "
+                + "AND column_name IN ('tenant_id','normalized_username') AND is_nullable='NO'"))
+                .isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND indexname IN "
+                + "('ux_auth_users_username','ux_auth_users_person_id')")).isZero();
+        assertThat(count("SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND indexname IN "
+                + "('ux_auth_users_tenant_person','ux_auth_users_tenant_username',"
+                + "'ux_auth_users_tenant_external_identity')")).isEqualTo(3);
+
+        execute("INSERT INTO auth_users (username, normalized_username, person_id, tenant_id, enabled) "
+                + "VALUES ('Legacy.User', 'legacy.user', 101, 20, true)");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "INSERT INTO auth_users (username, normalized_username, person_id, tenant_id, enabled) "
+                                + "VALUES ('LEGACY.USER', 'legacy.user', 999, 10, true)"))
+                .isInstanceOf(SQLException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "INSERT INTO auth_users (username, normalized_username, person_id, tenant_id, enabled) "
+                                + "VALUES ('another', 'another', 101, 10, true)"))
+                .isInstanceOf(SQLException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "INSERT INTO auth_user_scope_assignments "
+                                + "(user_id, tenant_id, active, created_by, updated_by) "
+                                + "SELECT id, 99, true, 0, 0 FROM auth_users "
+                                + "WHERE tenant_id=20 AND normalized_username='legacy.user'"))
+                .isInstanceOf(SQLException.class);
+
         execute("INSERT INTO auth_roles (name, tenant_id, role_code) VALUES "
                 + "('ROLE_GLOBAL_PHASE2', NULL, 'ROLE_GLOBAL_PHASE2'),"
                 + "('ROLE_TENANT_10', 10, 'ROLE_TENANT_10'),"
@@ -111,6 +158,10 @@ class AuthDatabaseMigrationTest {
                         "UPDATE auth_roles SET tenant_id=11 WHERE name='ROLE_TENANT_10'"))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Assigned role tenant ownership cannot be changed");
+
+        execute("INSERT INTO auth_roles (name, tenant_id, role_code) VALUES "
+                + "('ROLE_REVIEWER', 10, 'ROLE_REVIEWER'),"
+                + "('ROLE_REVIEWER', 20, 'ROLE_REVIEWER')");
     }
 
     private void migrateTo(String target) {

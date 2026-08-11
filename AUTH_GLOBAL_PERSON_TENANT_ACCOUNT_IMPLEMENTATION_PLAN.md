@@ -932,14 +932,35 @@ There is no password-reset flow in the current backend, so there was no reset lo
 to migrate in this phase. Any future reset implementation must use the same resolved
 tenant account key.
 
-### Phase 5 — constraint cutover
+### Phase 5 — constraint cutover — implemented; deployment data gate open
 
-- Drop global username/person uniqueness.
-- Add tenant-scoped username/person uniqueness.
-- Make `tenant_id` and `normalized_username` non-null.
-- Add composite user/scope foreign key.
-- Enable role-assignment database trigger.
-- Reject role tenant changes after assignment.
+- [x] Drop global username/person uniqueness.
+- [x] Add tenant-scoped username/person uniqueness.
+- [x] Make `tenant_id` and `normalized_username` non-null.
+- [x] Add composite user/scope foreign key.
+- [x] Enable role-assignment database trigger.
+- [x] Reject role tenant changes after assignment.
+
+Phase 5 is implemented in Auth migration `V15`. The migration has a fail-closed
+preflight for missing tenant/normalized username values, cross-tenant scopes, and
+cross-tenant role assignments. It replaces the Phase 1 partial indexes with final
+tenant-scoped unique indexes, removes legacy global username/person uniqueness, makes
+the account tenant fields mandatory, and replaces the scope's user-only foreign key
+with `(user_id, tenant_id) -> auth_users(id, tenant_id)`.
+
+Application mappings now reflect mandatory tenant account fields and the composite
+scope relationship. User administration direct-ID updates are tenant-predicated,
+legacy global-username reservation checks are removed, cutover comparison telemetry
+defaults off, and default account seeding requires the explicit trusted
+`AUTH_BOOTSTRAP_TENANT_ID` setting. Request authorization now rejects any principal
+that is not account-and-tenant bound.
+
+The migration SQL was exercised successfully through `ROLLBACK` against the local
+PostgreSQL schema. It has not been applied to the local database because five legacy
+accounts still have no trusted tenant; current readiness is `missing tenant=5`,
+`missing normalized username=0`. Those accounts require reviewed dispositions before
+Flyway can apply V15. This is the intentional Phase 3/5 data gate, not a migration
+fallback or inferred assignment.
 
 ### Phase 6 — person ownership cutover
 

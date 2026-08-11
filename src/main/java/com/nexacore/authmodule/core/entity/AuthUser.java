@@ -24,16 +24,16 @@ public class AuthUser extends ActionInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(nullable = false)
     private String username;
 
-    @Column(name = "person_id", nullable = false, unique = true)
+    @Column(name = "person_id", nullable = false)
     private Long personId;
 
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
 
-    @Column(name = "normalized_username", length = 150)
+    @Column(name = "normalized_username", nullable = false, length = 150)
     private String normalizedUsername;
 
     @JsonIgnore

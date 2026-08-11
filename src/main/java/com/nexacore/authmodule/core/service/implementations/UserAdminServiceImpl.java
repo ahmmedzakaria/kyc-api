@@ -59,11 +59,6 @@ public class UserAdminServiceImpl implements UserAdminService {
                     .ifPresent(existing -> {
                         throw new IllegalArgumentException("Username already in use for the tenant: " + requestDto.getUsername());
                     });
-            // Kept until Phase 5 removes the deployed global uniqueness constraint.
-            userRepository.findByUsername(requestDto.getUsername()).ifPresent(existing -> {
-                throw new IllegalArgumentException("Username is still reserved by a legacy global account: "
-                        + requestDto.getUsername());
-            });
             if (requestDto.getPassword() == null || requestDto.getPassword().isBlank()) {
                 throw new IllegalArgumentException("password is required when creating a user");
             }
@@ -81,27 +76,16 @@ public class UserAdminServiceImpl implements UserAdminService {
             user.setNormalizedUsername(normalizedUsername);
             user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
         } else {
-            user = userRepository.findById(requestDto.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + requestDto.getId()));
-            if (user.getTenantId() != null) {
-                Long effectiveTenantId = dataScopeService.requireEffectiveTenant(requestDto.getTenantId());
-                if (!user.getTenantId().equals(effectiveTenantId)) {
-                    throw new DataScopeAccessDeniedException("The user account belongs to another tenant");
-                }
-                userRepository.findByTenantIdAndNormalizedUsername(effectiveTenantId, normalizedUsername)
-                        .filter(existing -> !existing.getId().equals(user.getId()))
-                        .ifPresent(existing -> {
-                            throw new IllegalArgumentException("Username already in use for the tenant: "
-                                    + requestDto.getUsername());
-                        });
-                user.setNormalizedUsername(normalizedUsername);
-            } else {
-                userRepository.findByUsername(requestDto.getUsername())
-                        .filter(existing -> !existing.getId().equals(user.getId()))
-                        .ifPresent(existing -> {
-                            throw new IllegalArgumentException("Username already in use: " + requestDto.getUsername());
-                        });
-            }
+            Long effectiveTenantId = dataScopeService.requireEffectiveTenant(requestDto.getTenantId());
+            user = userRepository.findByIdAndTenantId(requestDto.getId(), effectiveTenantId)
+                    .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
+            userRepository.findByTenantIdAndNormalizedUsername(effectiveTenantId, normalizedUsername)
+                    .filter(existing -> !existing.getId().equals(user.getId()))
+                    .ifPresent(existing -> {
+                        throw new IllegalArgumentException("Username already in use for the tenant: "
+                                + requestDto.getUsername());
+                    });
+            user.setNormalizedUsername(normalizedUsername);
             user.setUsername(requestDto.getUsername().trim());
             // email/mobile/firstName/lastName belong to the linked Person record and are only
             // ever set at creation time (via ensurePersonForUser) — this form doesn't edit an
