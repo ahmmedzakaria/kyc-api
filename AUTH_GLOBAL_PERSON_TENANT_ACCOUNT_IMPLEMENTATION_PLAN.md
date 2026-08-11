@@ -999,6 +999,26 @@ must not be dropped without a later separately approved migration.
 - Require confirmation and audit display for role/privilege replacement operations.
 - Add person/profile views that distinguish canonical and organization-declared data.
 
+Status: **complete (2026-08-11)**.
+
+Delivered behavior:
+
+- the active System administration console lists and mutates accounts only inside
+  the authenticated effective tenant and makes tenant-local username semantics
+  explicit;
+- role administration is split into assignable global templates and tenant custom
+  roles, with role codes, status, descriptions, and created/updated audit metadata;
+- global-template mutation controls are only rendered for `ROLE_SYSTEM_ADMIN`, and
+  the corresponding backend mutation path independently enforces that platform role;
+- tenant-role writes and direct-ID account/role assignment operations are guarded by
+  effective-tenant predicates, while global templates remain assignable but cannot be
+  edited through the tenant role endpoint;
+- full user-role replacement now requires an explicit confirmation that identifies
+  the tenant account and complete replacement set;
+- KYC person preview presents Auth-owned canonical identity separately from the
+  organization-declared profile observations and identifies profile IDs separately
+  from global person IDs.
+
 ## Verification requirements
 
 ### Migration tests

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
 
 import java.util.HashSet;
 import java.util.List;
@@ -39,7 +40,8 @@ public class UserAdminServiceImpl implements UserAdminService {
     @Override
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
     public List<UserDto> listUsers() {
-        return userRepository.findAll().stream()
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        return userRepository.findByTenantIdOrderByNormalizedUsernameAsc(tenantId).stream()
                 .map(this::toDto)
                 .toList();
     }
@@ -105,8 +107,9 @@ public class UserAdminServiceImpl implements UserAdminService {
             throw new IllegalArgumentException("userId is required");
         }
 
-        AuthUser user = userRepository.findById(requestDto.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + requestDto.getUserId()));
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        AuthUser user = userRepository.findByIdAndTenantId(requestDto.getUserId(), tenantId)
+                .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
 
         Set<AuthRole> roles = new HashSet<>(roleRepository.findAllById(requestDto.getRoleIds()));
         if (roles.size() != requestDto.getRoleIds().size()) {
@@ -129,29 +132,73 @@ public class UserAdminServiceImpl implements UserAdminService {
     @Override
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
     public List<RoleDto> listRoles() {
-        return roleRepository.findAll().stream()
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        return roleRepository.findByTenantIdIsNullOrTenantIdOrderByNameAsc(tenantId).stream()
                 .map(RoleDto::fromEntity)
                 .toList();
     }
 
     @Override
     public RoleDto saveRole(RoleRequestDto requestDto) {
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        return saveRole(requestDto, tenantId, false);
+    }
+
+    @Override
+    public RoleDto saveGlobalRole(RoleRequestDto requestDto) {
+        return saveRole(requestDto, null, true);
+    }
+
+    private RoleDto saveRole(RoleRequestDto requestDto, Long tenantId, boolean globalTemplate) {
         if (requestDto.getName() == null || requestDto.getName().isBlank()) {
             throw new IllegalArgumentException("name is required");
         }
+        if (requestDto.getRoleCode() == null || requestDto.getRoleCode().isBlank()) {
+            throw new IllegalArgumentException("roleCode is required");
+        }
 
-        roleRepository.findByName(requestDto.getName()).ifPresent(existing -> {
+        var sameName = globalTemplate
+                ? roleRepository.findByTenantIdIsNullAndNameIgnoreCase(requestDto.getName().trim())
+                : roleRepository.findByTenantIdAndNameIgnoreCase(tenantId, requestDto.getName().trim());
+        sameName.ifPresent(existing -> {
             if (!existing.getId().equals(requestDto.getId())) {
-                throw new IllegalArgumentException("Role name already in use: " + requestDto.getName());
+                throw new IllegalArgumentException("Role name already in use in this role scope: " + requestDto.getName());
             }
         });
 
-        AuthRole role = requestDto.getId() == null
-                ? new AuthRole()
-                : roleRepository.findById(requestDto.getId())
-                        .orElseThrow(() -> new IllegalArgumentException("Role not found: " + requestDto.getId()));
+        String roleCode = requestDto.getRoleCode().trim().toUpperCase(java.util.Locale.ROOT);
+        var sameCode = globalTemplate
+                ? roleRepository.findByTenantIdIsNullAndRoleCodeIgnoreCase(roleCode)
+                : roleRepository.findByTenantIdAndRoleCodeIgnoreCase(tenantId, roleCode);
+        sameCode.ifPresent(existing -> {
+            if (!existing.getId().equals(requestDto.getId())) {
+                throw new IllegalArgumentException("Role code already in use in this role scope: " + roleCode);
+            }
+        });
 
-        role.setName(requestDto.getName());
+        long actor = AuthenticatedRequestContextHolder.get()
+                .map(context -> context.userId() == null ? 0L : context.userId()).orElse(0L);
+        AuthRole role;
+        if (requestDto.getId() == null) {
+            role = new AuthRole();
+            role.setTenantId(tenantId);
+            role.setRoleCode(roleCode);
+            role.setCreatedBy(actor);
+        } else {
+            role = globalTemplate
+                    ? roleRepository.findByIdAndTenantIdIsNull(requestDto.getId())
+                        .orElseThrow(() -> new DataScopeAccessDeniedException("Global role template not found"))
+                    : roleRepository.findByIdAndTenantId(requestDto.getId(), tenantId)
+                        .orElseThrow(() -> new DataScopeAccessDeniedException("Tenant role not found in the effective tenant"));
+            if (!roleCode.equalsIgnoreCase(role.getRoleCode())) {
+                throw new IllegalArgumentException("roleCode is immutable after role creation");
+            }
+        }
+
+        role.setName(requestDto.getName().trim());
+        role.setDescription(requestDto.getDescription() == null ? null : requestDto.getDescription().trim());
+        role.setActive(requestDto.isActive());
+        role.setUpdatedBy(actor);
         return RoleDto.fromEntity(roleRepository.save(role));
     }
 

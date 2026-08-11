@@ -35,4 +35,11 @@ public class RoleController {
     public ResponseEntity<ApiResponse<RoleDto>> saveRole(@RequestBody RoleRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(userAdminService.saveRole(requestDto), "Role saved"));
     }
+
+    @PostMapping("/global/save")
+    @PrivilegeApi("11020100887")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN') and @privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_MANAGE)")
+    public ResponseEntity<ApiResponse<RoleDto>> saveGlobalRole(@RequestBody RoleRequestDto requestDto) {
+        return ResponseEntity.ok(ApiResponse.success(userAdminService.saveGlobalRole(requestDto), "Global role template saved"));
+    }
 }

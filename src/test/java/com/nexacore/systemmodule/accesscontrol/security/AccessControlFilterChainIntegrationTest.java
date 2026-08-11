@@ -140,10 +140,12 @@ class AccessControlFilterChainIntegrationTest {
             return null;
         }).when(jwtUtil).requireTokenType(anyString(), any());
         when(jwtUtil.extractUsername("access")).thenReturn("alice");
+        when(jwtUtil.extractAccountId("access")).thenReturn(7L);
+        when(jwtUtil.extractTenantId("access")).thenReturn(1L);
         when(jwtUtil.extractRoles("access")).thenReturn(List.of("ROLE_USER"));
         when(jwtUtil.extractIssuedAt("access")).thenReturn(Date.from(Instant.now()));
         when(logoutSessionService.isSessionActive(anyString(), any())).thenReturn(true);
-        when(authModuleGateway.getUserAccess("alice")).thenReturn(AuthUserAccessDto.builder()
+        when(authModuleGateway.getUserAccess(7L, 1L)).thenReturn(AuthUserAccessDto.builder()
                 .userId(7L).personId(8L)
                 .scopeAssignments(Set.of(new AuthUserScopeAssignmentDto(1L, null, null))).build());
         when(privilegeService.getUserPrivilegeCodes("alice")).thenReturn(Set.of(REQUIRED));

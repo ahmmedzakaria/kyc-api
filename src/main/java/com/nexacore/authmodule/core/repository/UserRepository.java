@@ -3,6 +3,7 @@ package com.nexacore.authmodule.core.repository;
 import com.nexacore.authmodule.core.entity.AuthUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
+import java.util.List;
 
 public interface UserRepository extends JpaRepository<AuthUser, Long> {
     Optional<AuthUser> findByUsername(String username);
@@ -17,6 +18,8 @@ public interface UserRepository extends JpaRepository<AuthUser, Long> {
             Long tenantId, String externalProvider, String externalSubject);
 
     Optional<AuthUser> findByIdAndTenantId(Long id, Long tenantId);
+
+    List<AuthUser> findByTenantIdOrderByNormalizedUsernameAsc(Long tenantId);
 
     long countByTenantIdIsNull();
 

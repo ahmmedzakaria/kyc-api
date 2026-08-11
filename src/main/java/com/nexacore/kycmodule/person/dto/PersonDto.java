@@ -17,6 +17,10 @@ public class PersonDto {
     private String username;
     private String mobileNumber;
     private String email;
+    private String canonicalMobileNumber;
+    private String canonicalEmail;
+    private String organizationDeclaredMobileNumber;
+    private String organizationDeclaredEmail;
     private String firstName;
     private String lastName;
     private LocalDate dateOfBirth;

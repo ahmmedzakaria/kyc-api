@@ -46,6 +46,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Configuration
 public class DataSeeder {
@@ -126,12 +131,12 @@ public class DataSeeder {
                     "kyc_manager", "123", "manager@example.com", "01700000004", "Kyc", "Manager",
                     kycOperatorRole, kycApproverRole);
 
-            seedDefaultWebClient(
+            runAsBootstrapAccount(adminUserId, "admin", () -> seedDefaultWebClient(
                     clientApplicationService,
                     clientPermissionService,
                     clientApiRegistryService,
                     adminPrivilegeCodes
-            );
+            ));
 
             seedPersonRoutePolicies(layoutRoutePolicyService);
             seedPersonUiPolicies(layoutUiPolicyService);
@@ -198,6 +203,28 @@ public class DataSeeder {
     private void requireBootstrapTenant() {
         if (bootstrapTenantId <= 0) {
             throw new IllegalStateException("AUTH_BOOTSTRAP_TENANT_ID must identify a trusted bootstrap tenant");
+        }
+    }
+
+    private void runAsBootstrapAccount(Long accountId, String username, Runnable action) {
+        SecurityContext previous = SecurityContextHolder.getContext();
+        SecurityContext bootstrapContext = SecurityContextHolder.createEmptyContext();
+        TenantAccountUserDetails principal = new TenantAccountUserDetails(
+                accountId,
+                bootstrapTenantId,
+                username,
+                "",
+                true,
+                true,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+        bootstrapContext.setAuthentication(new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities()));
+        SecurityContextHolder.setContext(bootstrapContext);
+        try {
+            action.run();
+        } finally {
+            SecurityContextHolder.setContext(previous);
         }
     }
 

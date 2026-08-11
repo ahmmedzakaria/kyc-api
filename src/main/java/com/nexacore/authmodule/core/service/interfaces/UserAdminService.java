@@ -18,4 +18,6 @@ public interface UserAdminService {
     List<RoleDto> listRoles();
 
     RoleDto saveRole(RoleRequestDto requestDto);
+
+    RoleDto saveGlobalRole(RoleRequestDto requestDto);
 }

@@ -6,4 +6,7 @@ import lombok.Data;
 public class RoleRequestDto {
     private Long id;
     private String name;
+    private String roleCode;
+    private String description;
+    private boolean active = true;
 }

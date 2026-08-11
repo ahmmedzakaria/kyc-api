@@ -265,6 +265,10 @@ public class PersonService {
         dto.setGender(person.gender());
         dto.setEmail(profile.getTenantEmail() == null ? person.primaryEmail() : profile.getTenantEmail());
         dto.setMobileNumber(profile.getTenantMobile() == null ? person.primaryMobile() : profile.getTenantMobile());
+        dto.setCanonicalEmail(person.primaryEmail());
+        dto.setCanonicalMobileNumber(person.primaryMobile());
+        dto.setOrganizationDeclaredEmail(profile.getTenantEmail());
+        dto.setOrganizationDeclaredMobileNumber(profile.getTenantMobile());
         dto.setNationalId(profile.getNationalId());
         dto.setEmailVerified(person.emailVerified());
         dto.setMobileVerified(person.mobileVerified());

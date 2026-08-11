@@ -11,6 +11,14 @@ import java.util.List;
 public interface RoleRepository extends JpaRepository<AuthRole, Long> {
     Optional<AuthRole> findByName(String name);
 
+    Optional<AuthRole> findByTenantIdAndNameIgnoreCase(Long tenantId, String name);
+
+    Optional<AuthRole> findByTenantIdIsNullAndNameIgnoreCase(String name);
+
+    Optional<AuthRole> findByIdAndTenantId(Long id, Long tenantId);
+
+    Optional<AuthRole> findByIdAndTenantIdIsNull(Long id);
+
     Optional<AuthRole> findByTenantIdAndRoleCodeIgnoreCase(Long tenantId, String roleCode);
 
     Optional<AuthRole> findByTenantIdIsNullAndRoleCodeIgnoreCase(String roleCode);
