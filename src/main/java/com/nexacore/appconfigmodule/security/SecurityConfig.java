@@ -12,6 +12,7 @@ import com.nexacore.systemmodule.accesscontrol.security.PublicRoutePolicy;
 import com.nexacore.systemmodule.accesscontrol.security.AccessControlError;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
+import com.nexacore.systemmodule.tenant.security.TenantResolutionFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ public class SecurityConfig {
     private final ClientApiAccessFilter clientApiAccessFilter;
     private final UserPrivilegeApiAccessFilter userPrivilegeApiAccessFilter;
     private final AuthenticatedRequestContextFilter authenticatedRequestContextFilter;
+    private final TenantResolutionFilter tenantResolutionFilter;
     private final AuthenticationProviderConfig authenticationProviderConfig;
     private final JwtAuthEntryPoint authenticationEntryPoint;
     private final PublicRoutePolicy publicRoutePolicy;
@@ -60,6 +62,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProviderConfig.authenticationProvider())
+                .addFilterBefore(tenantResolutionFilter, ClientApplicationAuthenticationFilter.class)
                 .addFilterBefore(clientApplicationAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(clientApiAccessFilter, ClientApplicationAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
