@@ -13,6 +13,13 @@ models and would create incorrect isolation boundaries if implemented literally.
 
 ## Overall assessment
 
+> **Current-state correction (2026-08-11):** the later Auth cutover supersedes this
+> document's original assumption that `AuthUser` is global. `auth_persons` is now the
+> global human identity authority and `auth_users` is a tenant account with mandatory
+> `tenant_id`; a person may have one account per tenant. Active
+> `AuthUserScopeAssignment` rows further constrain where that tenant account may
+> operate. The implementation plan below uses this deployed model.
+
 The plan should not begin with bulk `tenant_id` migrations or Hibernate filters.
 Before implementation, it needs:
 
@@ -51,27 +58,21 @@ authorized profile.
 ownership to profiles, tenant-owned documents, photos, decisions, reviews, workflows,
 and other scoped relationships.
 
-### 2. `auth_users` must not become single-tenant
+### 2. `auth_users` is a tenant account, not the global person
 
-The plan also lists users among the records needing row ownership. The current model
-deliberately separates a global login from its authorization scopes:
+The completed Auth cutover resolved the earlier identity-model decision:
 
-- Each `AuthUser` references one global `KycPerson`.
-- An `AuthUser` can have multiple `AuthUserScopeAssignment` rows.
-- Scope assignments independently grant tenant/business/branch access.
-- The user's authorization scopes do not have to equal the linked person's
-  organization memberships.
+- `AuthPerson` is the global human identity;
+- each `AuthUser` belongs to exactly one tenant and references one `AuthPerson`;
+- the same person may have a separate account in multiple tenants;
+- username uniqueness is tenant-local after normalization;
+- `AuthUserScopeAssignment` narrows the account to tenant/business/branch operating
+  scopes and cannot cross the account tenant;
+- account authorization remains independent of person organization memberships.
 
-A single `auth_users.tenant_id` would contradict this normalized model:
-
-```text
-one login -> multiple tenant/business/branch authorization scopes
-```
-
-**Required correction:** keep `auth_users` global and derive tenant availability from
-active `AuthUserScopeAssignment` records. If tenant-specific logins are desired, that
-must be treated as a separate identity-model decision covering username uniqueness,
-person linking, external identities, and provisioning.
+**Required correction:** tenant registration must provision a tenant account and its
+scope assignments without duplicating the global person. It must never infer account
+access from membership, domain input, or caller-supplied tenant identifiers.
 
 ### 3. Hibernate filters are not a complete isolation wall
 
@@ -126,7 +127,8 @@ repository contains records with materially different lifecycles:
 
 | Classification | Representative records | Tenant treatment |
 | --- | --- | --- |
-| Global identity | `kyc_person`, `auth_users` | No owning `tenant_id` |
+| Global identity | `auth_persons` | No owning `tenant_id` |
+| Tenant account | `auth_users` | Mandatory account `tenant_id`; scopes may only narrow it |
 | Global platform catalog | privilege modules/actions, API registry definitions, some license plan metadata | Normally global |
 | Tenant-owned resource | KYC profiles, tenant settings, subscriptions, workflow instances | Required owning `tenant_id` |
 | Multi-tenant association | user scope assignments, person memberships, client-tenant assignments | Tenant ID describes the association |
@@ -366,7 +368,7 @@ ResolvedTenant
     Tenant selected from a verified request domain or an approved internal context.
 
 AuthenticatedUser
-    Global AuthUser linked to a global KycPerson.
+    Tenant AuthUser account linked to a global AuthPerson.
 
 EffectiveTenantAccess
     Intersection of the resolved tenant, user scope assignments, client assignments,
@@ -389,6 +391,255 @@ Membership remains separate from access:
 ```text
 KycPersonOrganizationMembership != AuthUserScopeAssignment
 ```
+
+## Tenant registration and onboarding implementation plan
+
+### Objective and first release boundary
+
+Implement a control-plane tenant registry and an idempotent onboarding workflow that
+creates an active tenant, its verified domain binding, client assignments, and its
+first tenant administrator without trusting caller-supplied ownership IDs.
+
+The first release supports platform-administrator-assisted registration. Public
+self-service registration remains disabled until email/domain verification, abuse
+controls, commercial terms, and payment/subscription activation are implemented.
+
+Registration must create this graph:
+
+```text
+sys_tenants
+  +-- sys_tenant_domains
+  +-- sys_acc_client_application_tenants
+  +-- auth_persons (global initial administrator identity)
+        +-- auth_users (tenant account)
+              +-- auth_user_scope_assignments (tenant-level scope)
+              +-- auth_user_roles (tenant administrator role)
+```
+
+Person membership and KYC profiles are deliberately not created during tenant
+registration. Organizational participation and KYC relationships are separate
+business actions and must not grant application access implicitly.
+
+### Control-plane data model
+
+Add the following `system_db` tables through new Flyway migrations.
+
+#### `sys_tenants`
+
+Required fields:
+
+- `id bigint` primary key generated by the platform;
+- immutable, normalized `tenant_code` with global case-insensitive uniqueness;
+- `display_name`, optional `legal_name`, and optional registration/reference number;
+- lifecycle `status`: `PENDING`, `ACTIVE`, `SUSPENDED`, `CANCELLED`;
+- `default_locale`, `default_time_zone`, and optional billing contact fields;
+- optional `subscription_id` once license ownership is finalized;
+- `activated_at`, `suspended_at`, `cancelled_at` and reason fields;
+- mandatory `created_by`, `updated_by`, `created_at`, and `updated_at`.
+
+Tenant IDs are immutable and never recycled. Cancellation must not hard-delete a
+tenant or make its code available for reuse.
+
+#### `sys_tenant_domains`
+
+Required fields:
+
+- `id`, mandatory `tenant_id` foreign key to `sys_tenants`;
+- normalized ASCII `hostname`, globally unique while retained;
+- `domain_type`: `PLATFORM_SUBDOMAIN` or `CUSTOM`;
+- `verification_status`: `PENDING`, `VERIFIED`, `FAILED`, `REVOKED`;
+- hashed verification token/challenge, verification method, expiry and attempt data;
+- `primary_domain`, `verified_at`, `last_checked_at`, `active`;
+- complete actor and timestamp audit fields.
+
+Only a verified, active domain of an active tenant may resolve request tenancy. The
+database must enforce at most one primary active domain per tenant.
+
+#### `sys_tenant_onboarding`
+
+Use a durable workflow/saga record because Auth and System use separate databases:
+
+- globally unique `idempotency_key` and normalized requested tenant code;
+- requested administrator contact data and requested domain;
+- state: `RECEIVED`, `SYSTEM_CREATED`, `AUTH_PROVISIONED`, `CLIENTS_ASSIGNED`,
+  `COMPLETED`, `COMPENSATION_REQUIRED`, `FAILED`;
+- IDs produced by each completed step;
+- safe error code/details, retry count, and audit timestamps.
+
+Do not store a plaintext initial password or raw domain verification secret in this
+table.
+
+### Registration API contracts
+
+Add a narrowly scoped controller under `/api/v1/system/tenants`:
+
+- `POST /register` — platform-only, accepts tenant metadata, administrator identity,
+  initial credential delivery choice, and an idempotency key;
+- `POST /search` and `POST /detail` — platform tenant registry reads;
+- `POST /domain/request-verification` and `POST /domain/verify`;
+- `POST /activate`, `/suspend`, `/reactivate`, and `/cancel`;
+- `POST /retry-onboarding` for failed saga steps;
+- `POST /administrator/reissue-invitation`, never returning a password hash.
+
+Caller-provided `tenantId`, account ID, role ID, or status is not authoritative.
+Registration resolves generated IDs from server-owned records. Direct-ID operations
+must use control-plane repositories and require dedicated tenant-administration
+privileges.
+
+Define distinct privileges for tenant registry view, register, domain verification,
+lifecycle management, onboarding retry, and initial-administrator management. Do not
+reuse `ROLE_SYSTEM_ADMIN` as an unrestricted repository bypass.
+
+### Onboarding orchestration
+
+Implement onboarding as an idempotent saga rather than a cross-database transaction:
+
+1. Validate and reserve the normalized tenant code and requested hostname in
+   `system_db`.
+2. Create `sys_tenants` in `PENDING` and its pending domain record.
+3. Through an Auth gateway, resolve or create the global `AuthPerson` using reviewed
+   identity matching rules.
+4. Create exactly one `AuthUser` account for `(tenant_id, person_id)` with a normalized
+   tenant-local username.
+5. Create its tenant-level `AuthUserScopeAssignment`.
+6. Create or resolve a tenant-owned `ROLE_TENANT_ADMIN`; assign only the approved
+   tenant-administration privilege template, never `ROLE_SYSTEM_ADMIN`.
+7. Assign approved tenant-facing client applications to the new tenant.
+8. Issue a short-lived, single-use activation/invitation token through an out-of-band
+   channel. Store only its hash.
+9. Verify the domain and administrator credential activation.
+10. Activate the tenant only when required Auth, domain, client, and subscription
+    invariants reconcile successfully.
+
+Every step records completion before the next begins. Retries reuse the onboarding
+record and must not create duplicate people, accounts, roles, scopes, or client
+assignments. A partial failure leaves the tenant non-active and inaccessible; it must
+never silently broaden access as compensation.
+
+### Cross-database contracts and reconciliation
+
+Add explicit gateway operations instead of sharing repositories across modules:
+
+- validate tenant existence and active status from Auth, KYC, Log, and integrations;
+- provision/disable the tenant administrator account in Auth;
+- reconcile tenant IDs referenced outside `system_db`;
+- report missing, inactive, or contradictory tenant references;
+- retry safe onboarding steps and flag manual compensation.
+
+Run scheduled reconciliation for tenant registry versus Auth accounts/scopes, client
+assignments, domains, and subscriptions. Unknown tenant IDs fail closed. System
+outages must prevent new Auth/KYC tenant-owned writes rather than accepting an
+unvalidated tenant ID.
+
+### Domain resolution and effective access
+
+After registration is stable, implement `EffectiveTenantAccessContext`:
+
+```text
+verified resolved domain tenant
+AND tenant status is ACTIVE
+AND client is actively assigned to tenant
+AND authenticated account belongs to tenant
+AND active user scope covers requested business/branch
+AND subscription/entitlements allow the operation
+```
+
+Normalize hostnames using a trusted-proxy-aware resolver. Reject unknown, ambiguous,
+unverified, suspended, or cancelled domains before business controllers execute.
+Cache only successful verified mappings with bounded TTL and invalidate cache entries
+on every domain or lifecycle mutation.
+
+### Lifecycle behavior
+
+- `PENDING`: onboarding and verification only; normal authentication is rejected.
+- `ACTIVE`: normal tenant-plane access is allowed subject to all other checks.
+- `SUSPENDED`: login, refresh, writes, and background tenant work are rejected; data
+  remains retained for recovery and audit.
+- `CANCELLED`: access remains disabled; retention/export/deletion follows an explicit
+  policy and cannot be reversed by merely changing a frontend value.
+
+Lifecycle transitions require confirmation, reason, actor audit, and optimistic
+locking. Destructive cancellation needs step-up authentication and an asynchronous
+retention workflow.
+
+### Administration frontend
+
+Add Tenant Administration to `frontendApplications/system-frontend-21`:
+
+- tenant list with status, primary domain, subscription state, onboarding progress,
+  created/updated audit data, and safe failure code;
+- registration wizard for tenant metadata, initial administrator, domain, clients,
+  and confirmation;
+- detail screen with Overview, Domains, Administrator, Client Assignments,
+  Subscription, Audit, and Reconciliation sections;
+- explicit confirmation for suspend, reactivate, cancel, retry, and administrator
+  replacement;
+- platform-only controls hidden according to privilege metadata, with backend
+  authorization remaining authoritative;
+- no arbitrary tenant switcher until effective-access validation is deployed.
+
+The UI must never display or retain a generated plaintext password. Prefer invitation
+and first-login password setup. If an emergency one-time credential is supported, it
+may be displayed exactly once and must expire quickly.
+
+### Delivery phases
+
+#### Registration Phase 0 — decisions and ownership matrix
+
+- Approve tenant lifecycle, code/domain uniqueness, retention, administrator recovery,
+  subscription activation, and public-registration policy.
+- Complete the persistent-table ownership matrix and cross-database reference rules.
+
+#### Registration Phase 1 — registry foundation
+
+- Add tenant, domain, and onboarding tables, entities, repositories, DTOs, audit, and
+  lifecycle constraints.
+- Seed dedicated Tenant Administration privileges and navigation for the System app.
+
+#### Registration Phase 2 — platform-assisted onboarding
+
+- Implement registration API, idempotent saga, Auth provisioning gateway, tenant
+  administrator role/template, client assignments, and reconciliation.
+- Keep tenants pending and inaccessible on any partial failure.
+
+#### Registration Phase 3 — domains and activation
+
+- Implement trusted host normalization, platform subdomains, custom-domain challenge,
+  verification, cache invalidation, and activation readiness checks.
+
+#### Registration Phase 4 — effective tenant context
+
+- Intersect domain, tenant status, client assignment, tenant account, user scope, and
+  subscription policy for login, refresh, API requests, async work, and messages.
+
+#### Registration Phase 5 — administration frontend
+
+- Deliver registry, wizard, detail, lifecycle, audit, and retry screens in
+  `system-frontend-21`.
+
+#### Registration Phase 6 — self-service and commercial activation
+
+- Only after the assisted path is stable, add rate-limited public registration,
+  verified contacts, legal acceptance, payment/subscription activation, abuse
+  controls, and support/recovery workflows.
+
+### Verification and acceptance criteria
+
+- Duplicate tenant codes and hostnames are rejected under case/Unicode normalization.
+- Repeating the same idempotency key returns the original onboarding result.
+- A failure after System creation but before Auth provisioning leaves no active tenant.
+- Retry creates no duplicate person, account, role, scope, domain, or client mapping.
+- The first administrator receives `ROLE_TENANT_ADMIN`, never platform privileges.
+- A tenant administrator cannot register, suspend, inspect, or mutate another tenant.
+- Unknown, pending, suspended, cancelled, and unverified-domain tenants cannot log in.
+- A valid token for tenant A cannot be replayed through tenant B's domain/client.
+- Direct-ID, native-query, bulk, async, scheduled, and message-driven paths fail closed
+  without the effective tenant context.
+- Cross-database reconciliation detects missing tenant, account, scope, client,
+  domain, role, and subscription records.
+- Invitation secrets are hashed, single-use, expiring, and absent from logs/audit.
+- Every lifecycle and cross-tenant control-plane action records actor, reason, tenant,
+  trace ID, and outcome.
 
 ## Recommended revised phasing
 
@@ -455,7 +706,7 @@ KycPersonOrganizationMembership != AuthUserScopeAssignment
 The plan is ready for task-level implementation only when all of the following are
 true:
 
-- `KycPerson` and `AuthUser` are explicitly classified as global.
+- `AuthPerson` is explicitly global, while `AuthUser` is explicitly a tenant account.
 - Every persistent table has an approved ownership classification.
 - Cross-database tenant validation is documented.
 - Domain resolution is intersected with user and client authorization.
@@ -469,9 +720,9 @@ true:
 ## Conclusion
 
 Shared-schema multi-tenancy is compatible with this project, but tenancy must attach to
-owned business relationships rather than global identity records. The existing
-`KycPerson`/`KycPersonProfile`, membership, and `AuthUserScopeAssignment` separation is
-an architectural strength and should form the basis of the SaaS model.
+tenant accounts and owned business relationships rather than the global Auth person.
+The `AuthPerson`/tenant-account, KYC profile, membership, and
+`AuthUserScopeAssignment` separation should form the basis of the SaaS model.
 
 The safest next deliverable is the table ownership matrix and effective tenant-access
 context design. Adding tenant columns or Hibernate filters before those are approved
