@@ -742,6 +742,18 @@ Implementation status (2026-08-12):
 - Add tenant switching only for users explicitly authorized for multiple tenants.
 - Never treat a frontend-selected tenant as authoritative without backend validation.
 
+Implementation status (2026-08-12):
+
+- `system-frontend-21` includes Tenant Administration for registration, domain
+  verification, lifecycle management, status visibility, and tenant search.
+- Navigation and visible actions align with the bootstrap tenant privileges; every
+  API remains independently authorized by the backend.
+- Lifecycle and domain-verification calls send the Phase 6 step-up confirmation and
+  surface backend rejection when the access token is no longer recent.
+- Tenant-facing applications remain hostname-selected. No arbitrary tenant switcher
+  is exposed: the verified domain and authenticated tenant account remain authoritative,
+  while control-plane tenant IDs are explicit target identifiers only.
+
 ## Acceptance criteria before implementation
 
 The plan is ready for task-level implementation only when all of the following are

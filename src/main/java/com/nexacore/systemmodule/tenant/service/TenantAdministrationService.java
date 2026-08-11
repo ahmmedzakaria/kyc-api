@@ -46,8 +46,8 @@ public class TenantAdministrationService {
         domain.setPrimaryDomain(true);
         domain.setCreatedBy(actorId);
         domain.setUpdatedBy(actorId);
-        domainRepository.save(domain);
-        return toResponse(tenant, hostname);
+        domain = domainRepository.save(domain);
+        return toResponse(tenant, domain);
     }
 
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
@@ -55,7 +55,7 @@ public class TenantAdministrationService {
         auditService.recordAttempt(actorId, null, "TENANT_LIST_ALL", null);
         return tenantRepository.findAllByOrderByTenantCodeAsc().stream().map(t -> toResponse(t,
                 domainRepository.findByTenantId(t.getId()).stream()
-                        .filter(SysTenantDomain::isPrimaryDomain).map(SysTenantDomain::getHostname)
+                        .filter(SysTenantDomain::isPrimaryDomain)
                         .findFirst().orElse(null))).toList();
     }
 
@@ -69,7 +69,7 @@ public class TenantAdministrationService {
         domain.setUpdatedBy(actorId);
         domainRepository.save(domain);
         domainResolver.invalidate(domain.getHostname());
-        return toResponse(domain.getTenant(), domain.getHostname());
+        return toResponse(domain.getTenant(), domain);
     }
 
     @Transactional(transactionManager = "systemTransactionManager")
@@ -94,7 +94,7 @@ public class TenantAdministrationService {
         var domains = domainRepository.findByTenantId(saved.getId());
         domainResolver.invalidateAll(domains.stream().map(SysTenantDomain::getHostname).toList());
         return toResponse(saved, domains.stream().filter(SysTenantDomain::isPrimaryDomain)
-                .map(SysTenantDomain::getHostname).findFirst().orElse(null));
+                .findFirst().orElse(null));
     }
 
     private void assertTransition(TenantStatus from, TenantStatus to) {
@@ -104,7 +104,9 @@ public class TenantAdministrationService {
         if (!allowed) throw new IllegalStateException("Invalid tenant lifecycle transition: " + from + " -> " + to);
     }
     private void requireReason(String reason) { if (reason == null || reason.isBlank()) throw new IllegalArgumentException("A lifecycle reason is required"); }
-    private TenantResponse toResponse(SysTenant tenant, String hostname) {
-        return new TenantResponse(tenant.getId(), tenant.getTenantCode(), tenant.getDisplayName(), tenant.getStatus(), hostname, tenant.getCreatedAt(), tenant.getUpdatedAt());
+    private TenantResponse toResponse(SysTenant tenant, SysTenantDomain primaryDomain) {
+        return new TenantResponse(tenant.getId(), tenant.getTenantCode(), tenant.getDisplayName(), tenant.getStatus(),
+                primaryDomain == null ? null : primaryDomain.getId(),
+                primaryDomain == null ? null : primaryDomain.getHostname(), tenant.getCreatedAt(), tenant.getUpdatedAt());
     }
 }
