@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.accesscontrol.security.*;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentRequestDto;
+import com.nexacore.systemmodule.layout.dto.LayoutBrandDto;
 import com.nexacore.systemmodule.layout.entity.SysLayoutProfile;
 import com.nexacore.systemmodule.layout.repository.ClientLayoutProfileRepository;
 import com.nexacore.systemmodule.layout.repository.LayoutProfileRepository;
@@ -39,6 +40,23 @@ class ClientLayoutAssignmentTenantIsolationTest {
         assertThat(directIdTenant.get()).isEqualTo(2L);
     }
 
+    @Test void assignmentStoresTenantSpecificBrandingWithoutChangingGlobalProfile() {
+        authenticateAsTenant(2L);
+        ClientLayoutAssignmentRequestDto request = new ClientLayoutAssignmentRequestDto();
+        request.setClientApplicationId(3L);
+        request.setLayoutProfileId(4L);
+        request.setBrandOverride(LayoutBrandDto.builder()
+                .displayName("Tenant Two")
+                .logoUrl("/tenant-two/logo.svg")
+                .build());
+
+        var result = service().assign(request, "tenant-two-admin");
+
+        assertThat(result.getTenantId()).isEqualTo(2L);
+        assertThat(result.getBrandOverride().getDisplayName()).isEqualTo("Tenant Two");
+        assertThat(result.getBrandOverride().getLogoUrl()).isEqualTo("/tenant-two/logo.svg");
+    }
+
     private ClientLayoutAssignmentServiceImpl service() {
         SysAccClientApplication client = new SysAccClientApplication(); client.setId(3L);
         SysLayoutProfile profile = new SysLayoutProfile(); profile.setId(4L);
@@ -49,6 +67,7 @@ class ClientLayoutAssignmentTenantIsolationTest {
                 directIdTenant.set((Long) args[1]);
                 return Optional.empty();
             }
+            if (method.getName().equals("save")) return args[0];
             throw new UnsupportedOperationException(method.getName());
         });
         ClientApplicationRepository clients = proxy(ClientApplicationRepository.class, (proxy, method, args) -> {

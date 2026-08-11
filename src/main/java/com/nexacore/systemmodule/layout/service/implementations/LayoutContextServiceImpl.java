@@ -62,55 +62,61 @@ public class LayoutContextServiceImpl implements LayoutContextService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public LayoutContextDto getEffectiveLayout(String clientCode, String username, Set<String> privilegeCodes) {
-        SysLayoutProfile activeProfile = resolveDefaultProfile(clientCode);
+        EffectiveProfile activeProfile = resolveDefaultProfile(clientCode);
         List<LayoutProfileDto> profiles = resolveAvailableProfiles(clientCode);
         if (activeProfile == null) {
             return defaultContext(clientCode);
         }
         return LayoutContextDto.builder()
-                .activeProfileCode(activeProfile.getProfileCode())
+                .activeProfileCode(activeProfile.profile().getProfileCode())
                 .availableProfiles(profiles.isEmpty() ? List.of(toProfileDto(activeProfile)) : profiles)
                 .navTree(navigationService.getNavigationTree(clientCode, username, privilegeCodes))
-                .themes(resolveThemes(activeProfile))
-                .sizes(resolveSizes(activeProfile))
-                .fonts(resolveFonts(activeProfile))
+                .themes(resolveThemes(activeProfile.profile()))
+                .sizes(resolveSizes(activeProfile.profile()))
+                .fonts(resolveFonts(activeProfile.profile()))
                 .build();
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public LayoutContextDto getPublicLayout(String clientCode, String origin) {
-        SysLayoutProfile activeProfile = resolveDefaultProfile(clientCode);
+        EffectiveProfile activeProfile = resolveDefaultProfile(clientCode);
         if (activeProfile == null) {
             return defaultContext(clientCode);
         }
         return LayoutContextDto.builder()
-                .activeProfileCode(activeProfile.getProfileCode())
+                .activeProfileCode(activeProfile.profile().getProfileCode())
                 .availableProfiles(List.of(toProfileDto(activeProfile)))
                 .navTree(new ArrayList<>())
-                .themes(resolveThemes(activeProfile))
-                .sizes(resolveSizes(activeProfile))
-                .fonts(resolveFonts(activeProfile))
+                .themes(resolveThemes(activeProfile.profile()))
+                .sizes(resolveSizes(activeProfile.profile()))
+                .fonts(resolveFonts(activeProfile.profile()))
                 .build();
     }
 
-    private SysLayoutProfile resolveDefaultProfile(String clientCode) {
+    private EffectiveProfile resolveDefaultProfile(String clientCode) {
         long tenantId = currentTenantId();
         if (clientCode != null && !clientCode.isBlank()) {
             return clientLayoutProfileRepository
                     .findFirstByTenantIdAndClientApplicationClientCodeAndDefaultProfileTrueAndActiveTrueOrderByDisplayOrderAscIdAsc(
                             tenantId, clientCode)
-                    .map(SysClientLayoutProfile::getLayoutProfile)
-                    .orElseGet(() -> layoutProfileRepository.findByProfileCode(DEFAULT_PROFILE_CODE).orElse(null));
+                    .map(assignment -> new EffectiveProfile(assignment.getLayoutProfile(), assignment))
+                    .orElseGet(this::globalDefaultProfile);
         }
-        return layoutProfileRepository.findByProfileCode(DEFAULT_PROFILE_CODE).orElse(null);
+        return globalDefaultProfile();
+    }
+
+    private EffectiveProfile globalDefaultProfile() {
+        return layoutProfileRepository.findByProfileCode(DEFAULT_PROFILE_CODE)
+                .map(profile -> new EffectiveProfile(profile, null))
+                .orElse(null);
     }
 
     private List<LayoutProfileDto> resolveAvailableProfiles(String clientCode) {
         long tenantId = currentTenantId();
         if (clientCode == null || clientCode.isBlank()) {
             return layoutProfileRepository.findByActiveTrueOrderByProfileCodeAsc().stream()
-                    .map(this::toProfileDto)
+                    .map(profile -> toProfileDto(new EffectiveProfile(profile, null)))
                     .toList();
         }
         return clientApplicationRepository.findByClientCode(clientCode)
@@ -120,9 +126,8 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .orElse(List.of())
                 .stream()
                 .filter(SysClientLayoutProfile::isSelectable)
-                .map(SysClientLayoutProfile::getLayoutProfile)
-                .filter(SysLayoutProfile::isActive)
-                .map(this::toProfileDto)
+                .filter(assignment -> assignment.getLayoutProfile().isActive())
+                .map(assignment -> toProfileDto(new EffectiveProfile(assignment.getLayoutProfile(), assignment)))
                 .toList();
     }
 
@@ -154,7 +159,11 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .build();
     }
 
-    private LayoutProfileDto toProfileDto(SysLayoutProfile profile) {
+    private LayoutProfileDto toProfileDto(EffectiveProfile effectiveProfile) {
+        SysLayoutProfile profile = effectiveProfile.profile();
+        LayoutBrandDto globalBrand = brandingRepository.findFirstByLayoutProfileIdAndActiveTrueOrderByIdAsc(profile.getId())
+                .map(this::toBrandDto)
+                .orElse(null);
         return LayoutProfileDto.builder()
                 .id(profile.getId())
                 .code(profile.getProfileCode())
@@ -172,11 +181,31 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .commandBarEnabled(profile.isCommandBarEnabled())
                 .rtlEnabled(profile.isRtlEnabled())
                 .active(profile.isActive())
-                .brand(brandingRepository.findFirstByLayoutProfileIdAndActiveTrueOrderByIdAsc(profile.getId())
-                        .map(this::toBrandDto)
-                        .orElse(null))
+                .brand(resolveBrand(globalBrand, effectiveProfile.assignment()))
                 .build();
     }
+
+    private LayoutBrandDto resolveBrand(LayoutBrandDto globalBrand, SysClientLayoutProfile assignment) {
+        if (assignment == null) return globalBrand;
+        return LayoutBrandDto.builder()
+                .displayName(firstNonBlank(assignment.getBrandDisplayName(), value(globalBrand, LayoutBrandDto::getDisplayName)))
+                .shortName(firstNonBlank(assignment.getBrandShortName(), value(globalBrand, LayoutBrandDto::getShortName)))
+                .logoUrl(firstNonBlank(assignment.getBrandLogoUrl(), value(globalBrand, LayoutBrandDto::getLogoUrl)))
+                .logoDarkUrl(firstNonBlank(assignment.getBrandLogoDarkUrl(), value(globalBrand, LayoutBrandDto::getLogoDarkUrl)))
+                .faviconUrl(firstNonBlank(assignment.getBrandFaviconUrl(), value(globalBrand, LayoutBrandDto::getFaviconUrl)))
+                .supportUrl(firstNonBlank(assignment.getBrandSupportUrl(), value(globalBrand, LayoutBrandDto::getSupportUrl)))
+                .build();
+    }
+
+    private String value(LayoutBrandDto brand, java.util.function.Function<LayoutBrandDto, String> getter) {
+        return brand == null ? null : getter.apply(brand);
+    }
+
+    private String firstNonBlank(String override, String fallback) {
+        return override == null || override.isBlank() ? fallback : override;
+    }
+
+    private record EffectiveProfile(SysLayoutProfile profile, SysClientLayoutProfile assignment) {}
 
     private LayoutBrandDto toBrandDto(SysLayoutProfileBranding branding) {
         return LayoutBrandDto.builder()

@@ -23,6 +23,7 @@ public class ClientLayoutAssignmentDto {
     private String privilegeCode;
     private DeviceTarget deviceTarget;
     private String moduleCode;
+    private LayoutBrandDto brandOverride;
     private Boolean defaultProfile;
     private Boolean selectable;
     private Integer displayOrder;

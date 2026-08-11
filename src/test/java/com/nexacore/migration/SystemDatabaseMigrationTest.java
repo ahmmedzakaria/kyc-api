@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("40");
+                .isEqualTo("41");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(40);
+                .isEqualTo(41);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -58,6 +58,9 @@ class SystemDatabaseMigrationTest {
                 .isEqualTo("sys_layout_assignment_tenant_quarantine");
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name = 'sys_client_layout_profiles' "
                 + "AND column_name = 'tenant_id' AND is_nullable = 'NO'")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name = 'sys_client_layout_profiles' "
+                + "AND column_name IN ('brand_display_name', 'brand_short_name', 'brand_logo_url', "
+                + "'brand_logo_dark_url', 'brand_favicon_url', 'brand_support_url')")).isEqualTo(6);
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name IN "
                 + "('sys_workflow_definitions', 'sys_workflow_instances', 'sys_workflow_tasks', "
                 + "'sys_license_subscriptions', 'sys_license_usage_snapshots', 'sys_license_audit_events') "
@@ -127,7 +130,7 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("40");
+                .isEqualTo("41");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE code = 'ZY' AND created_by = 51 AND updated_by = 52"))
                 .isEqualTo(1);

@@ -116,7 +116,10 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<LicenseEntitlementResponseDto> listSubscriptionEntitlements(String subscriptionCode) {
-        return overrideRepository.findByLicenseSubscription_SubscriptionCodeAndActiveTrue(subscriptionCode).stream()
+        return overrideRepository
+                .findByLicenseSubscriptionSubscriptionCodeAndLicenseSubscriptionTenantIdAndActiveTrue(
+                        subscriptionCode, dataScopeService.requireEffectiveTenant(null))
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }

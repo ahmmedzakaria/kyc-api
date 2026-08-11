@@ -60,6 +60,24 @@ public class SysClientLayoutProfile extends LayoutAuditInfo {
     @Column(name = "module_code", length = 80)
     private String moduleCode;
 
+    @Column(name = "brand_display_name", length = 180)
+    private String brandDisplayName;
+
+    @Column(name = "brand_short_name", length = 80)
+    private String brandShortName;
+
+    @Column(name = "brand_logo_url", length = 500)
+    private String brandLogoUrl;
+
+    @Column(name = "brand_logo_dark_url", length = 500)
+    private String brandLogoDarkUrl;
+
+    @Column(name = "brand_favicon_url", length = 500)
+    private String brandFaviconUrl;
+
+    @Column(name = "brand_support_url", length = 500)
+    private String brandSupportUrl;
+
     @Column(name = "default_profile", nullable = false)
     private boolean defaultProfile;
 

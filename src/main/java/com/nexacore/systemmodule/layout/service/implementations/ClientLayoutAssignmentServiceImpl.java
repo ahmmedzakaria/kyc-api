@@ -4,6 +4,7 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentDto;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutTenantReconciliationDto;
+import com.nexacore.systemmodule.layout.dto.LayoutBrandDto;
 import com.nexacore.systemmodule.layout.entity.SysClientLayoutProfile;
 import com.nexacore.systemmodule.layout.entity.SysLayoutProfile;
 import com.nexacore.systemmodule.layout.enums.AssignmentScope;
@@ -57,6 +58,7 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
         assignment.setPrivilegeCode(request.getPrivilegeCode());
         assignment.setDeviceTarget(request.getDeviceTarget() == null ? DeviceTarget.ANY : request.getDeviceTarget());
         assignment.setModuleCode(request.getModuleCode());
+        applyBrandOverride(assignment, request.getBrandOverride());
         assignment.setDefaultProfile(Boolean.TRUE.equals(request.getDefaultProfile()));
         assignment.setSelectable(request.getSelectable() == null || request.getSelectable());
         assignment.setDisplayOrder(request.getDisplayOrder() == null ? 100 : request.getDisplayOrder());
@@ -121,10 +123,41 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
                 .privilegeCode(assignment.getPrivilegeCode())
                 .deviceTarget(assignment.getDeviceTarget())
                 .moduleCode(assignment.getModuleCode())
+                .brandOverride(toBrandOverride(assignment))
                 .defaultProfile(assignment.isDefaultProfile())
                 .selectable(assignment.isSelectable())
                 .displayOrder(assignment.getDisplayOrder())
                 .active(assignment.isActive())
                 .build();
+    }
+
+    private void applyBrandOverride(SysClientLayoutProfile assignment, LayoutBrandDto brand) {
+        assignment.setBrandDisplayName(brand == null ? null : trimToNull(brand.getDisplayName()));
+        assignment.setBrandShortName(brand == null ? null : trimToNull(brand.getShortName()));
+        assignment.setBrandLogoUrl(brand == null ? null : trimToNull(brand.getLogoUrl()));
+        assignment.setBrandLogoDarkUrl(brand == null ? null : trimToNull(brand.getLogoDarkUrl()));
+        assignment.setBrandFaviconUrl(brand == null ? null : trimToNull(brand.getFaviconUrl()));
+        assignment.setBrandSupportUrl(brand == null ? null : trimToNull(brand.getSupportUrl()));
+    }
+
+    private LayoutBrandDto toBrandOverride(SysClientLayoutProfile assignment) {
+        if (assignment.getBrandDisplayName() == null && assignment.getBrandShortName() == null
+                && assignment.getBrandLogoUrl() == null && assignment.getBrandLogoDarkUrl() == null
+                && assignment.getBrandFaviconUrl() == null && assignment.getBrandSupportUrl() == null) {
+            return null;
+        }
+        return LayoutBrandDto.builder()
+                .displayName(assignment.getBrandDisplayName())
+                .shortName(assignment.getBrandShortName())
+                .logoUrl(assignment.getBrandLogoUrl())
+                .logoDarkUrl(assignment.getBrandLogoDarkUrl())
+                .faviconUrl(assignment.getBrandFaviconUrl())
+                .supportUrl(assignment.getBrandSupportUrl())
+                .build();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 }

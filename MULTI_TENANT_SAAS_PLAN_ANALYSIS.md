@@ -703,6 +703,18 @@ Implementation status (2026-08-12):
 - Apply tenant-aware entitlements and limits.
 - Define fallback from tenant override to global/default configuration.
 
+Implementation status (2026-08-12):
+
+- Client layout assignments are tenant-owned and may override branding fields while
+  continuing to reuse global layout templates, themes, sizes, and fonts.
+- Branding resolution is field-by-field: tenant/client assignment override, then
+  global profile branding, then the built-in safe default context.
+- License plans and plan entitlements remain global defaults. Tenant-owned
+  subscription overrides apply explicit deny, allow, and limit overrides; missing
+  overrides fall back to the selected global plan entitlement or limit.
+- Configuration and entitlement administration reads resolve the effective tenant
+  on the server and never select by subscription or assignment code alone.
+
 ### Phase 6 — Narrow platform administration
 
 - Add explicit tenant selection for tenant-plane operations.
