@@ -3,8 +3,6 @@ package com.nexacore.kycmodule.person.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "kyc_person")
@@ -42,7 +40,4 @@ public class KycPerson {
     @Column(name = "is_user", nullable = false)
     private Boolean user = false;
 
-    @OneToMany(mappedBy = "person", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<KycPersonDocument> documents = new ArrayList<>();
 }

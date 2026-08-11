@@ -14,9 +14,8 @@ public class KycPersonProfile {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "person_id", nullable = false)
-    private KycPerson person;
+    @Column(name = "person_id", nullable = false)
+    private Long personId;
 
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;
@@ -24,6 +23,12 @@ public class KycPersonProfile {
     private Long businessId;
     @Column(name = "branch_id")
     private Long branchId;
+    @Column(name = "tenant_email", length = 254)
+    private String tenantEmail;
+    @Column(name = "tenant_mobile", length = 30)
+    private String tenantMobile;
+    @Column(name = "national_id", length = 100)
+    private String nationalId;
     @Column(nullable = false)
     private boolean active;
     @Column(name = "created_by", nullable = false)

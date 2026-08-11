@@ -10,6 +10,8 @@ import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -38,6 +40,58 @@ public class AuthGlobalPersonIdentityGateway implements GlobalPersonIdentityGate
         }
         apply(source, person, actor);
         return toDto(repository.saveAndFlush(person));
+    }
+
+    @Override
+    public GlobalPersonIdentityDto create(GlobalPersonIdentityDto source, Long actorId) {
+        requireSource(source);
+        long actor = actorId == null ? 0L : actorId;
+        AuthPerson person = new AuthPerson();
+        apply(source, person, actor);
+        person.setCreatedBy(actor);
+        return toDto(repository.saveAndFlush(person));
+    }
+
+    @Override
+    public GlobalPersonIdentityDto update(Long personId, GlobalPersonIdentityDto source, Long actorId) {
+        requireSource(source);
+        AuthPerson person = repository.findById(personId)
+                .orElseThrow(() -> new IllegalArgumentException("Global person not found: " + personId));
+        apply(source, person, actorId == null ? 0L : actorId);
+        return toDto(repository.saveAndFlush(person));
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public Optional<GlobalPersonIdentityDto> findById(Long personId) {
+        return personId == null ? Optional.empty() : repository.findById(personId).map(this::toDto);
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public Optional<GlobalPersonIdentityDto> findByEmail(String email) {
+        return email == null || email.isBlank() ? Optional.empty()
+                : repository.findFirstByPrimaryEmailIgnoreCase(email.trim()).map(this::toDto);
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public Optional<GlobalPersonIdentityDto> findByMobile(String mobile) {
+        return mobile == null || mobile.isBlank() ? Optional.empty()
+                : repository.findFirstByPrimaryMobile(mobile.trim()).map(this::toDto);
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public List<Long> searchPersonIds(String query) {
+        String text = query == null ? "" : query.trim();
+        return repository.searchActiveIds(text);
+    }
+
+    private void requireSource(GlobalPersonIdentityDto source) {
+        if (source == null || source.firstName() == null || source.firstName().isBlank()) {
+            throw new IllegalArgumentException("Global person first name is required");
+        }
     }
 
     private void apply(GlobalPersonIdentityDto source, AuthPerson person, long actor) {

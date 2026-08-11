@@ -2,8 +2,8 @@
 
 ## Status
 
-Phases 0 through 4 completed on 2026-08-11. Tenant-aware authentication is active;
-constraint and person-authority cutovers remain in Phases 5 and 6.
+Phases 0 through 6 completed on 2026-08-11. Tenant-aware authentication, final
+account constraints, and Auth-owned global-person authority are active.
 
 ## Phase 0 execution record
 
@@ -955,21 +955,40 @@ defaults off, and default account seeding requires the explicit trusted
 `AUTH_BOOTSTRAP_TENANT_ID` setting. Request authorization now rejects any principal
 that is not account-and-tenant bound.
 
-The migration SQL was exercised successfully through `ROLLBACK` against the local
-PostgreSQL schema. It has not been applied to the local database because five legacy
-accounts still have no trusted tenant; current readiness is `missing tenant=5`,
-`missing normalized username=0`. Those accounts require reviewed dispositions before
-Flyway can apply V15. This is the intentional Phase 3/5 data gate, not a migration
-fallback or inferred assignment.
+The migration SQL was exercised successfully through `ROLLBACK`, the five quarantined
+accounts received an explicitly approved tenant-1 disposition, and Flyway applied V15
+successfully. Current readiness is `missing tenant=0`, `missing normalized username=0`.
 
-### Phase 6 — person ownership cutover
+### Phase 6 — person ownership cutover — completed 2026-08-11
 
-- Make Auth the authoritative global person service.
-- Switch KYC reads to composed Auth person plus tenant profile DTOs.
-- Stop writes to the old `kyc_person` table.
-- Verify reconciliation for a defined stabilization period.
-- Retire the old table only through a later, separately approved migration; do not
+- [x] Make Auth the authoritative global person service.
+- [x] Switch KYC reads to composed Auth person plus tenant profile DTOs.
+- [x] Stop writes to the old `kyc_person` table.
+- [x] Verify reconciliation for a defined stabilization period.
+- [x] Retire the old table only through a later, separately approved migration; do not
   delete it during initial cutover.
+
+Delivered behavior:
+
+- Auth now provides authoritative create, update, direct lookup, canonical-contact
+  lookup, and text-search contracts for global people;
+- account provisioning and SSO promotion resolve global people through Auth rather
+  than creating or promoting `kyc_person` rows;
+- KYC migration `V5` converts profile, membership, details, and document `person_id`
+  columns from physical KYC foreign keys to documented cross-database references to
+  `auth_persons.id`, while retaining the legacy table intact;
+- KYC person APIs compose canonical Auth identity with scope-predicated KYC profiles,
+  details, documents, and tenant-declared contact/national-ID observations;
+- production KYC dual-write/backfill components are no longer registered as Spring
+  beans, so the old global-person write path is disabled;
+- optional fail-closed stabilization reconciliation is enabled with
+  `AUTH_PERSON_RECONCILIATION_ENABLED=true`; missing Auth references abort startup,
+  while legacy divergence is reported because Auth is authoritative;
+- Keycloak canonical identity queries now join `auth_persons` in `auth_db`; the KYC
+  JDBC dependency and provider configuration have been removed.
+
+The legacy `kyc_person` table is intentionally retained for rollback comparison and
+must not be dropped without a later separately approved migration.
 
 ### Phase 7 — administration frontends
 

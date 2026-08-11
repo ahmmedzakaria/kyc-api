@@ -22,4 +22,6 @@ public interface UserRepository extends JpaRepository<AuthUser, Long> {
 
     long countByNormalizedUsernameIsNull();
 
+    boolean existsByPersonId(Long personId);
+
 }

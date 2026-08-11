@@ -11,7 +11,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.Optional;
 
-@Component
 @RequiredArgsConstructor
 @Transactional(transactionManager = "kycTransactionManager", readOnly = true)
 public class KycPersonModuleGateway implements PersonModuleGateway {

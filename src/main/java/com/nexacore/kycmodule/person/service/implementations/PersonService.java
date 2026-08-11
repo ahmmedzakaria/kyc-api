@@ -1,7 +1,8 @@
 package com.nexacore.kycmodule.person.service.implementations;
 
 import com.nexacore.kycmodule.person.api.PersonRegisteredEvent;
-import com.nexacore.kycmodule.person.api.KycGlobalPersonDualWriteService;
+import com.nexacore.gatewaymodule.identity.dto.GlobalPersonIdentityDto;
+import com.nexacore.gatewaymodule.identity.service.interfaces.GlobalPersonIdentityGateway;
 import com.nexacore.kycmodule.person.dto.PersonDocumentDto;
 import com.nexacore.kycmodule.person.dto.PersonDto;
 import com.nexacore.kycmodule.person.entity.KycPerson;
@@ -35,7 +36,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PersonService {
 
-    private final PersonRepository personRepository;
     private final PersonDetailsRepository personDetailsRepository;
     private final PersonDocumentRepository personDocumentRepository;
     private final PersonProfileRepository personProfileRepository;
@@ -44,32 +44,31 @@ public class PersonService {
     private final FileManagementService fileManagementService;
     private final ApplicationEventPublisher eventPublisher;
     private final DataScopeService dataScopeService;
-    private final KycGlobalPersonDualWriteService dualWriteService;
+    private final GlobalPersonIdentityGateway globalPersonGateway;
 
     @Transactional(transactionManager = "kycTransactionManager", rollbackFor = IOException.class)
     public PersonDto create(PersonDto dto, MultipartFile photo) throws IOException {
         UserScopeAssignment scope = dataScopeService.requireWritableScope(
                 dto.getTenantId(), dto.getBusinessId(), dto.getBranchId());
-        KycPerson person = resolveGlobalPerson(dto);
-        mapPerson(dto, person);
-        KycPerson savedPerson = personRepository.save(person);
         long actor = currentActor();
+        GlobalPersonIdentityDto globalPerson = resolveGlobalPerson(dto, actor);
         KycPersonProfile profile = personProfileRepository.save(KycPersonProfile.builder()
-                .person(savedPerson).tenantId(scope.tenantId()).businessId(scope.businessId())
-                .branchId(scope.branchId()).active(true).createdBy(actor).updatedBy(actor).build());
+                .personId(globalPerson.personId()).tenantId(scope.tenantId()).businessId(scope.businessId())
+                .branchId(scope.branchId()).tenantEmail(trimToNull(dto.getEmail()))
+                .tenantMobile(trimToNull(dto.getMobileNumber())).nationalId(trimToNull(dto.getNationalId()))
+                .active(true).createdBy(actor).updatedBy(actor).build());
         membershipRepository.save(KycPersonOrganizationMembership.builder()
-                .person(savedPerson).tenantId(scope.tenantId()).businessId(scope.businessId())
+                .personId(globalPerson.personId()).tenantId(scope.tenantId()).businessId(scope.businessId())
                 .branchId(scope.branchId()).membershipType(PersonMembershipType.CUSTOMER)
                 .active(true).primaryMembership(false).createdBy(actor).updatedBy(actor).build());
         savePersonDetails(profile, dto);
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(profile, PersonDocumentType.PROFILE_PHOTO, photo);
         }
-        dualWriteService.synchronize(savedPerson, actor);
         PersonDto result = toDto(profile);
         eventPublisher.publishEvent(new PersonRegisteredEvent(
-                savedPerson.getId(),
-                savedPerson.getUsername(),
+                globalPerson.personId(),
+                dto.getUsername(),
                 Instant.now()
         ));
         return result;
@@ -82,33 +81,25 @@ public class PersonService {
         }
 
         KycPersonProfile profile = ensureProfile(dto.getId());
-        KycPerson existing = profile.getPerson();
-        mapPerson(dto, existing);
-        personRepository.save(existing);
+        profile.setTenantEmail(trimToNull(dto.getEmail()));
+        profile.setTenantMobile(trimToNull(dto.getMobileNumber()));
+        profile.setNationalId(trimToNull(dto.getNationalId()));
+        profile.setUpdatedBy(currentActor());
+        personProfileRepository.save(profile);
         savePersonDetails(profile, dto);
 
         if (photo != null && !photo.isEmpty()) {
             upsertSingleDocument(profile, PersonDocumentType.PROFILE_PHOTO, photo);
         }
 
-        dualWriteService.synchronize(existing, currentActor());
-
         return toDto(profile);
     }
 
     @Transactional(transactionManager = "kycTransactionManager", readOnly = true)
     public Page<PersonDto> search(String q, Pageable pageable) {
-        String searchText = q == null ? "" : q.trim().toLowerCase();
-        Specification<KycPersonProfile> textSearch = (root, query, cb) -> {
-            String pattern = "%" + searchText + "%";
-            var person = root.get("person");
-            return cb.or(
-                    cb.like(cb.lower(cb.coalesce(person.get("firstName"), "")), pattern),
-                    cb.like(cb.lower(cb.coalesce(person.get("lastName"), "")), pattern),
-                    cb.like(cb.lower(cb.coalesce(person.get("email"), "")), pattern),
-                    cb.like(cb.lower(cb.coalesce(person.get("mobileNumber"), "")), pattern)
-            );
-        };
+        List<Long> matchingPersonIds = globalPersonGateway.searchPersonIds(q);
+        Specification<KycPersonProfile> textSearch = (root, query, cb) -> matchingPersonIds.isEmpty()
+                ? cb.disjunction() : root.get("personId").in(matchingPersonIds);
         return personProfileRepository.findAll(
                         dataScopeService.<KycPersonProfile>restrictToCurrentScopes("tenantId", "businessId", "branchId")
                                 .and((root, query, cb) -> cb.isTrue(root.get("active")))
@@ -202,7 +193,6 @@ public class PersonService {
     }
 
     private KycPersonDocument upsertSingleDocument(KycPersonProfile profile, PersonDocumentType documentType, MultipartFile file) throws IOException {
-        KycPerson person = profile.getPerson();
         KycPersonDocument existingDocument = personDocumentRepository
                 .findFirstByProfileIdAndDocumentTypeOrderByCreatedAtDesc(profile.getId(), documentType)
                 .orElse(null);
@@ -215,7 +205,7 @@ public class PersonService {
         );
 
         KycPersonDocument document = existingDocument == null
-                ? KycPersonDocument.builder().person(person).profile(profile).documentType(documentType).build()
+                ? KycPersonDocument.builder().personId(profile.getPersonId()).profile(profile).documentType(documentType).build()
                 : existingDocument;
 
         document.setStoragePath(storedFile.path());
@@ -225,15 +215,13 @@ public class PersonService {
         document = personDocumentRepository.save(document);
 
         if (documentType == PersonDocumentType.PROFILE_PHOTO) {
-            person.setPhotoUrl(buildPhotoApiUrl(person.getId()));
-            personRepository.save(person);
+            // Photo ownership and URL are profile-scoped; the global Auth person is not mutated.
         }
 
         return document;
     }
 
     private KycPersonDocument createDocument(KycPersonProfile profile, PersonDocumentType documentType, MultipartFile file) throws IOException {
-        KycPerson person = profile.getPerson();
         StoredFile storedFile = fileManagementService.store(
                 "person",
                 "profiles/" + profile.getId() + "/" + documentType.name().toLowerCase().replace('_', '-'),
@@ -243,7 +231,7 @@ public class PersonService {
 
         return personDocumentRepository.save(
                 KycPersonDocument.builder()
-                        .person(person)
+                        .personId(profile.getPersonId())
                         .profile(profile)
                         .documentType(documentType)
                         .storagePath(storedFile.path())
@@ -268,15 +256,26 @@ public class PersonService {
     }
 
     private PersonDto toDto(KycPersonProfile profile) {
-        KycPerson person = profile.getPerson();
-        PersonDto dto = mapper.map(person, PersonDto.class);
+        GlobalPersonIdentityDto person = globalPersonGateway.findById(profile.getPersonId())
+                .orElseThrow(() -> new EntityNotFoundException("Global person not found: " + profile.getPersonId()));
+        PersonDto dto = new PersonDto();
+        dto.setFirstName(person.firstName());
+        dto.setLastName(person.lastName());
+        dto.setDateOfBirth(person.dateOfBirth());
+        dto.setGender(person.gender());
+        dto.setEmail(profile.getTenantEmail() == null ? person.primaryEmail() : profile.getTenantEmail());
+        dto.setMobileNumber(profile.getTenantMobile() == null ? person.primaryMobile() : profile.getTenantMobile());
+        dto.setNationalId(profile.getNationalId());
+        dto.setEmailVerified(person.emailVerified());
+        dto.setMobileVerified(person.mobileVerified());
+        dto.setUser(false);
         dto.setId(profile.getId());
-        dto.setPersonId(person.getId());
+        dto.setPersonId(person.personId());
         dto.setTenantId(profile.getTenantId());
         dto.setBusinessId(profile.getBusinessId());
         dto.setBranchId(profile.getBranchId());
         dto.setPhotoUrl(null);
-        dto.setBloodGroup(person.getBloodGrop());
+        dto.setBloodGroup(person.bloodGroup());
 
         KycPersonDetails details = personDetailsRepository.findByProfileId(profile.getId());
         if (details != null) {
@@ -298,7 +297,7 @@ public class PersonService {
             dto.setPermanentAddress(details.getPermanentAddress());
         }
 
-        if (person.getId() != null && personDocumentRepository
+        if (person.personId() != null && personDocumentRepository
                 .findFirstByProfileIdAndDocumentTypeOrderByCreatedAtDesc(profile.getId(), PersonDocumentType.PROFILE_PHOTO)
                 .isPresent()) {
             dto.setPhotoUrl(buildPhotoApiUrl(profile.getId()));
@@ -306,24 +305,13 @@ public class PersonService {
         return dto;
     }
 
-    private KycPerson mapPerson(PersonDto dto, KycPerson person) {
-        String authUsername = person.getUsername();
-        Boolean isUser = person.getUser();
-        mapper.map(dto, person);
-        person.setBloodGrop(dto.getBloodGroup());
-        person.setUsername(authUsername);
-        person.setUser(isUser == null ? false : isUser);
-        return person;
-    }
-
     private void savePersonDetails(KycPersonProfile profile, PersonDto dto) {
-        KycPerson person = profile.getPerson();
         KycPersonDetails details = personDetailsRepository.findByProfileId(profile.getId());
         if (details == null) {
-            details = KycPersonDetails.builder().person(person).profile(profile).build();
+            details = KycPersonDetails.builder().personId(profile.getPersonId()).profile(profile).build();
         }
 
-        details.setPerson(person);
+        details.setPersonId(profile.getPersonId());
         details.setProfile(profile);
         details.setFatherName(dto.getFatherName());
         details.setFatherMobileNumber(dto.getFatherMobileNumber());
@@ -348,7 +336,7 @@ public class PersonService {
     private PersonDocumentDto toDocumentDto(KycPersonDocument document) {
         return PersonDocumentDto.builder()
                 .id(document.getId())
-                .personId(document.getPerson().getId())
+                .personId(document.getPersonId())
                 .profileId(document.getProfile().getId())
                 .documentType(document.getDocumentType())
                 .originalFilename(document.getOriginalFilename())
@@ -363,21 +351,37 @@ public class PersonService {
         return "/api/v1/person/" + personId + "/photo";
     }
 
-    private KycPerson resolveGlobalPerson(PersonDto dto) {
-        if (dto.getEmail() != null) {
-            var existing = personRepository.findByEmail(dto.getEmail().trim());
-            if (existing.isPresent()) return existing.get();
+    private GlobalPersonIdentityDto resolveGlobalPerson(PersonDto dto, long actor) {
+        if (dto.getPersonId() != null) {
+            return globalPersonGateway.findById(dto.getPersonId())
+                    .orElseThrow(() -> new IllegalArgumentException("Global person not found: " + dto.getPersonId()));
         }
-        if (dto.getMobileNumber() != null) {
-            var existing = personRepository.findByMobileNumber(dto.getMobileNumber().trim());
-            if (existing.isPresent()) return existing.get();
-        }
-        return new KycPerson();
+        var byEmail = globalPersonGateway.findByEmail(dto.getEmail());
+        if (byEmail.isPresent()) return byEmail.get();
+        var byMobile = globalPersonGateway.findByMobile(dto.getMobileNumber());
+        if (byMobile.isPresent()) return byMobile.get();
+        return globalPersonGateway.create(identityFromDto(dto, null), actor);
+    }
+
+    private GlobalPersonIdentityDto identityFromDto(PersonDto dto, Long personId) {
+        return GlobalPersonIdentityDto.builder().personId(personId)
+                .firstName(dto.getFirstName()).lastName(dto.getLastName())
+                .dateOfBirth(dto.getDateOfBirth()).gender(dto.getGender())
+                .bloodGroup(dto.getBloodGroup()).primaryEmail(dto.getEmail())
+                .primaryMobile(dto.getMobileNumber())
+                .emailVerified(Boolean.TRUE.equals(dto.getEmailVerified()))
+                .mobileVerified(Boolean.TRUE.equals(dto.getMobileVerified())).active(true).build();
     }
 
     private long currentActor() {
         return com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder.get()
                 .map(context -> context.userId() == null ? 0L : context.userId())
                 .orElse(0L);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

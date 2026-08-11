@@ -15,8 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-@Service
 @RequiredArgsConstructor
+@Deprecated(forRemoval = true)
 public class GlobalPersonBackfillService {
     private final PersonRepository personRepository;
     private final GlobalPersonIdentityGateway identityGateway;

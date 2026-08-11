@@ -1,7 +1,7 @@
 package com.nexacore.kycmodule.person.service.implementations;
 
 import com.nexacore.kycmodule.person.dto.PersonDto;
-import com.nexacore.kycmodule.person.api.KycGlobalPersonDualWriteService;
+import com.nexacore.gatewaymodule.identity.service.interfaces.GlobalPersonIdentityGateway;
 import com.nexacore.kycmodule.person.repository.*;
 import com.nexacore.servicesmodule.fileservice.service.interfaces.FileManagementService;
 import com.nexacore.systemmodule.accesscontrol.security.*;
@@ -29,10 +29,10 @@ class PersonServiceObjectAuthorizationTest {
     private final PersonOrganizationMembershipRepository membershipRepository = mock(PersonOrganizationMembershipRepository.class);
     private final FileManagementService fileService = mock(FileManagementService.class);
     private final PersonService service = new PersonService(
-            personRepository, detailsRepository, documentRepository, profileRepository,
+            detailsRepository, documentRepository, profileRepository,
             membershipRepository, mock(ModelMapper.class), fileService,
             mock(ApplicationEventPublisher.class), new DataScopeService(),
-            mock(KycGlobalPersonDualWriteService.class));
+            mock(GlobalPersonIdentityGateway.class));
 
     @BeforeEach
     void authenticateForTenantA() {

@@ -19,7 +19,7 @@ The module does not own person profile/contact data. Those fields belong to the 
 - Every `AuthUser` must reference a `KycPerson`.
 - Not every `KycPerson` is an `AuthUser`.
 - A person becomes an application user only after approval/business verification.
-- `auth_users.person_id` links an application user to `kyc_person.id`.
+- `auth_users.person_id` links a tenant account to the Auth-owned `auth_persons.id`.
 - `auth_users.person_id` is a mandatory, unique application-level cross-database reference, not a physical foreign key.
 - Person organizational membership and user authorization scope are deliberately separate: membership describes where a person participates; `auth_user_scope_assignments` describes where the login may operate.
 - Email, email verification, mobile number, and mobile verification are not stored in `auth_users`.
@@ -624,7 +624,7 @@ Rules:
 
 - `username` is unique.
 - `person_id` is unique when present.
-- `person_id` points to `kyc_db.kyc_person.id`.
+- `person_id` points to the Auth-owned global `auth_persons.id`.
 - There is no physical cross-database foreign key.
 - `email`, `email_verified`, `mobile_number`, and `mobile_verified` must not be stored in `auth_users`.
 

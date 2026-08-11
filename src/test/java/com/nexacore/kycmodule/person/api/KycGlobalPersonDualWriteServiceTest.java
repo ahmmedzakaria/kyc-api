@@ -6,6 +6,8 @@ import com.nexacore.kycmodule.person.entity.KycPerson;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,6 +51,13 @@ class KycGlobalPersonDualWriteServiceTest {
             this.actorId = actorId;
             return person;
         }
+
+        @Override public GlobalPersonIdentityDto create(GlobalPersonIdentityDto person, Long actorId) { return person; }
+        @Override public GlobalPersonIdentityDto update(Long id, GlobalPersonIdentityDto person, Long actorId) { return person; }
+        @Override public Optional<GlobalPersonIdentityDto> findById(Long id) { return Optional.ofNullable(person); }
+        @Override public Optional<GlobalPersonIdentityDto> findByEmail(String email) { return Optional.empty(); }
+        @Override public Optional<GlobalPersonIdentityDto> findByMobile(String mobile) { return Optional.empty(); }
+        @Override public List<Long> searchPersonIds(String query) { return List.of(); }
 
         @Override
         public boolean existsById(Long personId) {

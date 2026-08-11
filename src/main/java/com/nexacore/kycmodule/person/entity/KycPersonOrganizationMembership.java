@@ -14,9 +14,8 @@ public class KycPersonOrganizationMembership {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "person_id", nullable = false)
-    private KycPerson person;
+    @Column(name = "person_id", nullable = false)
+    private Long personId;
 
     @Column(name = "tenant_id", nullable = false)
     private Long tenantId;

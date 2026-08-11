@@ -6,8 +6,8 @@ import com.nexacore.kycmodule.person.entity.KycPerson;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Component
 @RequiredArgsConstructor
+@Deprecated(forRemoval = true)
 public class KycGlobalPersonDualWriteService {
     private final GlobalPersonIdentityGateway globalPersonIdentityGateway;
 
