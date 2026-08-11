@@ -26,6 +26,7 @@ import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    public static final String JWT_ISSUED_AT_ATTRIBUTE = JwtAuthenticationFilter.class.getName() + ".issuedAt";
 
     private final JwtUtil jwtUtil;
     private final LogoutSessionService logoutSessionService;
@@ -60,6 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String sessionKey = accountId + ":" + tenantId;
                 List<String> roles = jwtUtil.extractRoles(jwt);
                 Instant issuedAt = jwtUtil.extractIssuedAt(jwt).toInstant();
+                request.setAttribute(JWT_ISSUED_AT_ATTRIBUTE, issuedAt);
 
                 boolean sessionActive = logoutSessionService.isSessionActive(sessionKey, issuedAt);
                 System.out.println("[DIAG]     username=" + username + " issuedAt=" + issuedAt

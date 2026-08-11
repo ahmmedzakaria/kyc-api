@@ -33,6 +33,7 @@ class ClientLayoutAssignmentTenantIsolationTest {
         authenticateAsTenant(2L);
         ClientLayoutAssignmentRequestDto request = new ClientLayoutAssignmentRequestDto();
         request.setId(77L); request.setClientApplicationId(3L); request.setLayoutProfileId(4L);
+        request.setTenantId(2L);
 
         assertThatThrownBy(() -> service.assign(request, "tenant-two-admin"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -40,11 +41,23 @@ class ClientLayoutAssignmentTenantIsolationTest {
         assertThat(directIdTenant.get()).isEqualTo(2L);
     }
 
+    @Test void administrationRejectsMissingExplicitTenantSelection() {
+        authenticateAsTenant(2L);
+        ClientLayoutAssignmentRequestDto request = new ClientLayoutAssignmentRequestDto();
+        request.setClientApplicationId(3L);
+        request.setLayoutProfileId(4L);
+
+        assertThatThrownBy(() -> service().assign(request, "tenant-two-admin"))
+                .isInstanceOf(DataScopeAccessDeniedException.class)
+                .hasMessageContaining("Explicit tenant");
+    }
+
     @Test void assignmentStoresTenantSpecificBrandingWithoutChangingGlobalProfile() {
         authenticateAsTenant(2L);
         ClientLayoutAssignmentRequestDto request = new ClientLayoutAssignmentRequestDto();
         request.setClientApplicationId(3L);
         request.setLayoutProfileId(4L);
+        request.setTenantId(2L);
         request.setBrandOverride(LayoutBrandDto.builder()
                 .displayName("Tenant Two")
                 .logoUrl("/tenant-two/logo.svg")

@@ -109,7 +109,7 @@ public class LayoutController {
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<ClientLayoutAssignmentDto>>> listClientProfiles(@RequestBody ClientLayoutListRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
-                clientLayoutAssignmentService.list(request.getClientCode()),
+                clientLayoutAssignmentService.list(request.getTenantId(), request.getClientCode()),
                 "Client layout assignments loaded"
         ));
     }
@@ -117,9 +117,9 @@ public class LayoutController {
     @PostMapping("/client/reconcile")
     @PrivilegeApi("11040100187")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
-    public ResponseEntity<ApiResponse<LayoutTenantReconciliationDto>> reconcileClientProfiles() {
+    public ResponseEntity<ApiResponse<LayoutTenantReconciliationDto>> reconcileClientProfiles(@RequestBody TenantSelectionRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
-                clientLayoutAssignmentService.reconcileCurrentTenant(),
+                clientLayoutAssignmentService.reconcile(request.getTenantId()),
                 "Tenant layout assignments reconciled"
         ));
     }
@@ -222,7 +222,13 @@ public class LayoutController {
 
     @Data
     public static class ClientLayoutListRequest {
+        private Long tenantId;
         private String clientCode;
+    }
+
+    @Data
+    public static class TenantSelectionRequest {
+        private Long tenantId;
     }
 
     @Data

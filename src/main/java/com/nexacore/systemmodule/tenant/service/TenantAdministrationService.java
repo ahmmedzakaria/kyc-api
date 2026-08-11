@@ -19,9 +19,11 @@ public class TenantAdministrationService {
     private final TenantCodeNormalizer codeNormalizer;
     private final HostnameNormalizer hostnameNormalizer;
     private final TenantDomainResolver domainResolver;
+    private final PlatformAdministrationAuditService auditService;
 
     @Transactional(transactionManager = "systemTransactionManager")
     public TenantResponse register(TenantRequest request, long actorId) {
+        auditService.recordAttempt(actorId, null, "TENANT_REGISTER", request.tenantCode());
         String code = codeNormalizer.normalize(request.tenantCode());
         String hostname = hostnameNormalizer.normalize(request.hostname());
         if (tenantRepository.findByTenantCodeIgnoreCase(code).isPresent()) throw new IllegalArgumentException("Tenant code already exists");
@@ -49,7 +51,8 @@ public class TenantAdministrationService {
     }
 
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public List<TenantResponse> list() {
+    public List<TenantResponse> list(long actorId) {
+        auditService.recordAttempt(actorId, null, "TENANT_LIST_ALL", null);
         return tenantRepository.findAllByOrderByTenantCodeAsc().stream().map(t -> toResponse(t,
                 domainRepository.findByTenantId(t.getId()).stream()
                         .filter(SysTenantDomain::isPrimaryDomain).map(SysTenantDomain::getHostname)
@@ -59,6 +62,7 @@ public class TenantAdministrationService {
     @Transactional(transactionManager = "systemTransactionManager")
     public TenantResponse verifyDomain(long domainId, long actorId) {
         SysTenantDomain domain = domainRepository.findById(domainId).orElseThrow(() -> new IllegalArgumentException("Tenant domain not found"));
+        auditService.recordAttempt(actorId, domain.getTenant().getId(), "TENANT_DOMAIN_VERIFY", domain.getHostname());
         domain.setVerificationStatus(TenantDomainVerificationStatus.VERIFIED);
         domain.setVerifiedAt(LocalDateTime.now());
         domain.setLastCheckedAt(LocalDateTime.now());
@@ -70,6 +74,7 @@ public class TenantAdministrationService {
 
     @Transactional(transactionManager = "systemTransactionManager")
     public TenantResponse transition(TenantLifecycleRequest request, TenantStatus target, long actorId) {
+        auditService.recordAttempt(actorId, request.tenantId(), "TENANT_LIFECYCLE_" + target.name(), request.reason());
         SysTenant tenant = tenantRepository.findById(request.tenantId()).orElseThrow(() -> new IllegalArgumentException("Tenant not found"));
         assertTransition(tenant.getStatus(), target);
         if (target == TenantStatus.ACTIVE) {

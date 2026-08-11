@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("41");
+                .isEqualTo("42");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(41);
+                .isEqualTo(42);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -56,6 +56,8 @@ class SystemDatabaseMigrationTest {
         assertThat(regclass("sys_tenant_domains")).isEqualTo("sys_tenant_domains");
         assertThat(regclass("sys_layout_assignment_tenant_quarantine"))
                 .isEqualTo("sys_layout_assignment_tenant_quarantine");
+        assertThat(regclass("sys_platform_admin_audit_events"))
+                .isEqualTo("sys_platform_admin_audit_events");
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name = 'sys_client_layout_profiles' "
                 + "AND column_name = 'tenant_id' AND is_nullable = 'NO'")).isEqualTo(1);
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name = 'sys_client_layout_profiles' "
@@ -130,7 +132,7 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("41");
+                .isEqualTo("42");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE code = 'ZY' AND created_by = 51 AND updated_by = 52"))
                 .isEqualTo(1);

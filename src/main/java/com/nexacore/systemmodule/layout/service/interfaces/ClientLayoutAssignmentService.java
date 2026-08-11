@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface ClientLayoutAssignmentService {
     ClientLayoutAssignmentDto assign(ClientLayoutAssignmentRequestDto request, String actor);
-    List<ClientLayoutAssignmentDto> list(String clientCode);
-    LayoutTenantReconciliationDto reconcileCurrentTenant();
+    List<ClientLayoutAssignmentDto> list(Long tenantId, String clientCode);
+    LayoutTenantReconciliationDto reconcile(Long tenantId);
 }

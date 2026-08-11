@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 public class ClientLayoutAssignmentRequestDto {
     private Long id;
+    private Long tenantId;
     private Long clientApplicationId;
     private String clientCode;
     private Long layoutProfileId;

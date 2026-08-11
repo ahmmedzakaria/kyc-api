@@ -7,6 +7,8 @@ import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPriv
 import com.nexacore.systemmodule.tenant.dto.*;
 import com.nexacore.systemmodule.tenant.entity.TenantStatus;
 import com.nexacore.systemmodule.tenant.service.TenantAdministrationService;
+import com.nexacore.systemmodule.tenant.security.StepUpAuthenticationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,7 @@ import java.util.List;
 @RequestMapping("/api/v1/system/tenants")
 public class TenantAdministrationController {
     private final TenantAdministrationService service;
+    private final StepUpAuthenticationService stepUpAuthenticationService;
 
     @PostMapping("/register")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_REGISTER)
@@ -32,47 +35,55 @@ public class TenantAdministrationController {
     @PostMapping("/list")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_VIEW)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_VIEW)")
-    public ResponseEntity<ApiResponse<List<TenantResponse>>> list() {
-        return ResponseEntity.ok(ApiResponse.success(service.list(), "Tenants loaded"));
+    public ResponseEntity<ApiResponse<List<TenantResponse>>> list(Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(service.list(actorId(authentication)), "Tenants loaded"));
     }
 
     @PostMapping("/domain/verify")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_DOMAIN_VERIFY)")
-    public ResponseEntity<ApiResponse<TenantResponse>> verify(@Valid @RequestBody TenantDomainVerificationRequest request, Authentication authentication) {
+    public ResponseEntity<ApiResponse<TenantResponse>> verify(@Valid @RequestBody TenantDomainVerificationRequest request,
+                                                               Authentication authentication, HttpServletRequest httpRequest) {
+        stepUpAuthenticationService.requireRecentReauthentication(httpRequest);
         return ResponseEntity.ok(ApiResponse.success(service.verifyDomain(request.domainId(), actorId(authentication)), "Tenant domain verified"));
     }
 
     @PostMapping("/activate")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_LIFECYCLE_MANAGE)")
-    public ResponseEntity<ApiResponse<TenantResponse>> activate(@Valid @RequestBody TenantLifecycleRequest request, Authentication authentication) {
-        return transition(request, TenantStatus.ACTIVE, authentication, "Tenant activated");
+    public ResponseEntity<ApiResponse<TenantResponse>> activate(@Valid @RequestBody TenantLifecycleRequest request,
+                                                                 Authentication authentication, HttpServletRequest httpRequest) {
+        return transition(request, TenantStatus.ACTIVE, authentication, httpRequest, "Tenant activated");
     }
 
     @PostMapping("/suspend")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_LIFECYCLE_MANAGE)")
-    public ResponseEntity<ApiResponse<TenantResponse>> suspend(@Valid @RequestBody TenantLifecycleRequest request, Authentication authentication) {
-        return transition(request, TenantStatus.SUSPENDED, authentication, "Tenant suspended");
+    public ResponseEntity<ApiResponse<TenantResponse>> suspend(@Valid @RequestBody TenantLifecycleRequest request,
+                                                                Authentication authentication, HttpServletRequest httpRequest) {
+        return transition(request, TenantStatus.SUSPENDED, authentication, httpRequest, "Tenant suspended");
     }
 
     @PostMapping("/reactivate")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_LIFECYCLE_MANAGE)")
-    public ResponseEntity<ApiResponse<TenantResponse>> reactivate(@Valid @RequestBody TenantLifecycleRequest request, Authentication authentication) {
-        return transition(request, TenantStatus.ACTIVE, authentication, "Tenant reactivated");
+    public ResponseEntity<ApiResponse<TenantResponse>> reactivate(@Valid @RequestBody TenantLifecycleRequest request,
+                                                                   Authentication authentication, HttpServletRequest httpRequest) {
+        return transition(request, TenantStatus.ACTIVE, authentication, httpRequest, "Tenant reactivated");
     }
 
     @PostMapping("/cancel")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_LIFECYCLE_MANAGE)")
-    public ResponseEntity<ApiResponse<TenantResponse>> cancel(@Valid @RequestBody TenantLifecycleRequest request, Authentication authentication) {
-        return transition(request, TenantStatus.CANCELLED, authentication, "Tenant cancelled");
+    public ResponseEntity<ApiResponse<TenantResponse>> cancel(@Valid @RequestBody TenantLifecycleRequest request,
+                                                               Authentication authentication, HttpServletRequest httpRequest) {
+        return transition(request, TenantStatus.CANCELLED, authentication, httpRequest, "Tenant cancelled");
     }
 
     private ResponseEntity<ApiResponse<TenantResponse>> transition(TenantLifecycleRequest request, TenantStatus target,
-                                                                    Authentication authentication, String message) {
+                                                                    Authentication authentication, HttpServletRequest httpRequest,
+                                                                    String message) {
+        stepUpAuthenticationService.requireRecentReauthentication(httpRequest);
         return ResponseEntity.ok(ApiResponse.success(service.transition(request, target, actorId(authentication)), message));
     }
 

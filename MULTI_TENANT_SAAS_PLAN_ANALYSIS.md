@@ -722,6 +722,19 @@ Implementation status (2026-08-12):
 - Audit all cross-tenant access.
 - Add step-up authentication where appropriate for destructive platform operations.
 
+Implementation status (2026-08-12):
+
+- Tenant-plane layout administration requires an explicit `tenantId`; the selected
+  tenant is intersected with the authenticated effective scope before repository access.
+- Unfiltered tenant enumeration and lifecycle lookup remain confined to the tenant
+  control-plane service and repository rather than exposed as a general bypass.
+- Tenant registration, enumeration, domain verification, and lifecycle attempts are
+  written to a dedicated platform-administration audit table in an independent
+  transaction, including actor tenant, target tenant, action, reason, and trace ID.
+- Domain verification and tenant lifecycle changes require a freshly issued access
+  token plus `X-Step-Up-Authentication: reauthenticated`. The maximum token age is
+  configurable and defaults to five minutes.
+
 ### Phase 7 — Frontend rollout
 
 - Add Tenant Administration to `system-frontend-21`.

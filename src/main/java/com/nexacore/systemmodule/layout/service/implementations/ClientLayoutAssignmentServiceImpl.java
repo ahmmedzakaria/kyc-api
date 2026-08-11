@@ -34,7 +34,7 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     @Transactional(transactionManager = "systemTransactionManager")
     public ClientLayoutAssignmentDto assign(ClientLayoutAssignmentRequestDto request, String actor) {
         Long userId = authModuleGateway.getUserId(actor);
-        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        Long tenantId = dataScopeService.requireWritableScope(requireTenantSelection(request.getTenantId()), null, null).tenantId();
         SysAccClientApplication client = resolveClient(request);
         SysLayoutProfile profile = resolveProfile(request);
         Long currentId = request.getId() == null ? -1L : request.getId();
@@ -73,8 +73,8 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public List<ClientLayoutAssignmentDto> list(String clientCode) {
-        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+    public List<ClientLayoutAssignmentDto> list(Long requestedTenantId, String clientCode) {
+        Long tenantId = dataScopeService.requireEffectiveTenant(requireTenantSelection(requestedTenantId));
         SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientCode));
         return clientLayoutProfileRepository.findByTenantIdAndClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(
@@ -85,8 +85,8 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public LayoutTenantReconciliationDto reconcileCurrentTenant() {
-        long tenantId = dataScopeService.requireEffectiveTenant(null);
+    public LayoutTenantReconciliationDto reconcile(Long requestedTenantId) {
+        long tenantId = dataScopeService.requireEffectiveTenant(requireTenantSelection(requestedTenantId));
         long assignments = clientLayoutProfileRepository.countByTenantId(tenantId);
         long mismatches = clientLayoutProfileRepository.countClientAssignmentMismatches(tenantId);
         return new LayoutTenantReconciliationDto(tenantId, assignments, mismatches, mismatches == 0);
@@ -159,5 +159,11 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     private String trimToNull(String value) {
         if (value == null || value.isBlank()) return null;
         return value.trim();
+    }
+
+    private Long requireTenantSelection(Long tenantId) {
+        if (tenantId == null) throw new com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException(
+                "Explicit tenantId is required for layout administration");
+        return tenantId;
     }
 }
