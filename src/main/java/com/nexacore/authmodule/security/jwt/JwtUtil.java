@@ -8,6 +8,7 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -53,12 +54,32 @@ public class JwtUtil {
         claims.put("roles", userDetails.getAuthorities().stream()
                 .map(a -> a.getAuthority())
                 .toList());
+        addAccountClaims(claims, userDetails);
         return generateToken(claims, userDetails, JwtTokenType.ACCESS, jwtExpirationMs);
     }
 
     // 🔹 Generate Refresh Token
     public String generateRefreshToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails, JwtTokenType.REFRESH, refreshExpirationMs);
+        Map<String, Object> claims = new HashMap<>();
+        addAccountClaims(claims, userDetails);
+        return generateToken(claims, userDetails, JwtTokenType.REFRESH, refreshExpirationMs);
+    }
+
+    private void addAccountClaims(Map<String, Object> claims, UserDetails details) {
+        if (!(details instanceof TenantAccountUserDetails tenantAccount)) {
+            throw new IllegalArgumentException("Tenant account principal is required");
+        }
+        claims.put("account_id", tenantAccount.accountId());
+        claims.put("tenant_id", tenantAccount.tenantId());
+    }
+
+    public Long extractAccountId(String token) { return requiredLongClaim(token, "account_id"); }
+    public Long extractTenantId(String token) { return requiredLongClaim(token, "tenant_id"); }
+
+    private Long requiredLongClaim(String token, String name) {
+        Number value = extractClaim(token, claims -> claims.get(name, Number.class));
+        if (value == null) throw new JwtException("Token " + name + " claim is missing");
+        return value.longValue();
     }
 
     private String generateToken(Map<String, Object> extraClaims,

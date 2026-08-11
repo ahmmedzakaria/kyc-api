@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Set;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 
 @Component
 @RequiredArgsConstructor
@@ -33,7 +34,9 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication != null && authentication.isAuthenticated()) {
                 String username = authentication.getName();
-                AuthUserAccessDto user = authModuleGateway.getUserAccess(username);
+                AuthUserAccessDto user = authentication.getPrincipal() instanceof TenantAccountUserDetails principal
+                        ? authModuleGateway.getUserAccess(principal.accountId(), principal.tenantId())
+                        : authModuleGateway.getUserAccess(username);
                 ClientApplicationContext accessContext = ClientApplicationContextHolder.get().orElse(null);
                 SysAccClientApplication client = accessContext == null ? null : accessContext.clientApplication();
                 Set<String> privileges = privilegeService.getUserPrivilegeCodes(username);

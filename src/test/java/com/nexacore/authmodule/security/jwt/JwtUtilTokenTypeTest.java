@@ -4,8 +4,9 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,10 +15,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class JwtUtilTokenTypeTest {
 
     private final JwtUtil jwtUtil = new JwtUtil();
-    private final UserDetails user = User.withUsername("alice")
-            .password("not-used")
-            .authorities("ROLE_USER")
-            .build();
+    private final UserDetails user = new TenantAccountUserDetails(
+            41L, 7L, "alice", "not-used", true, true,
+            java.util.List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
     @BeforeEach
     void configureJwt() {
@@ -39,6 +39,8 @@ class JwtUtilTokenTypeTest {
         assertThat(jwtUtil.extractTokenType(refreshToken)).isEqualTo(JwtTokenType.REFRESH);
         assertThat(jwtUtil.extractRoles(accessToken)).containsExactly("ROLE_USER");
         assertThat(jwtUtil.extractJwtId(accessToken)).isNotBlank().isNotEqualTo(jwtUtil.extractJwtId(refreshToken));
+        assertThat(jwtUtil.extractAccountId(accessToken)).isEqualTo(41L);
+        assertThat(jwtUtil.extractTenantId(refreshToken)).isEqualTo(7L);
         assertThat(jwtUtil.extractClaim(accessToken, Claims::getIssuer)).isEqualTo("test-issuer");
         assertThat(jwtUtil.extractClaim(accessToken, Claims::getAudience)).isEqualTo("test-audience");
     }

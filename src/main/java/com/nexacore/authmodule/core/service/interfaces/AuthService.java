@@ -16,7 +16,7 @@ public interface AuthService {
     public ResponseEntity<ApiResponse<ApplicationContextDto>> getPublicApplicationContext(String origin, String clientCode);
     public ResponseEntity<ApiResponse<ApplicationContextDto>> getApplicationContext(String origin, String clientCode);
     public ResponseEntity<ApiResponse<Void>> logout(String username);
-    public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(LoginStatusRequest request);
+    public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(LoginStatusRequest request, String clientCode);
     public ResponseEntity<ApiResponse<Void>> sessionStatus();
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(RefreshTokenRequest requestDto);
 

@@ -27,6 +27,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import com.nexacore.authmodule.security.service.MyUserDetailsService;
+import com.nexacore.authmodule.security.service.TenantAccountResolver;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -38,7 +42,9 @@ import java.util.List;
 public class AuthServiceImpl implements AuthService {
 
 	private final AuthenticationManager authenticationManager;
-	private final UserDetailsService userDetailsService;
+	private final MyUserDetailsService userDetailsService;
+	private final TenantAccountResolver tenantAccountResolver;
+	private final PasswordEncoder passwordEncoder;
 	private final JwtUtil jwtUtil;
 	private final AuthenticationProperties authenticationProperties;
 	private final KeycloakProperties keycloakProperties;
@@ -56,17 +62,18 @@ public class AuthServiceImpl implements AuthService {
 		}
 
 		try {
-			Authentication authentication = authenticationManager.authenticate(
-					new UsernamePasswordAuthenticationToken(request.username(), request.password())
-			);
+			Long tenantId = tenantAccountResolver.resolveRequiredTenant(clientCode);
+			TenantAccountUserDetails userDetails = userDetailsService.loadTenantUser(tenantId, request.username());
+			if (!passwordEncoder.matches(request.password(), userDetails.getPassword())) {
+				throw new org.springframework.security.authentication.BadCredentialsException("Invalid credentials");
+			}
 
-			if(authentication.isAuthenticated()){
-				var userDetails = userDetailsService.loadUserByUsername(request.username());
+			if(userDetails.isEnabled() && userDetails.isAccountNonLocked()){
 
-				logoutSessionService.login(userDetails.getUsername());
+				logoutSessionService.login(userDetails.sessionKey());
 				String accessToken = jwtUtil.generateToken(userDetails);
 				String refreshToken = jwtUtil.generateRefreshToken(userDetails);
-				refreshTokenSessionService.register(userDetails.getUsername(), jwtUtil.extractJwtId(refreshToken));
+				refreshTokenSessionService.register(userDetails.sessionKey(), jwtUtil.extractJwtId(refreshToken));
 
 				AuthResponse response =  AuthResponse.builder()
 						.accessToken(accessToken)
@@ -79,6 +86,8 @@ public class AuthServiceImpl implements AuthService {
 				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"User authentication Failed"));
 			}
 
+		} catch (org.springframework.security.core.AuthenticationException | IllegalArgumentException e) {
+			return unauthorized("AUTHENTICATION_REQUIRED", "Invalid credentials or tenant context");
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(),List.of("Exception occurred: " + e.getLocalizedMessage())));
 		}
@@ -138,10 +147,17 @@ public class AuthServiceImpl implements AuthService {
 	}
 
 	@Override
-	public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(LoginStatusRequest request) {
-		boolean loggedIn = request != null
-				&& StringUtils.hasText(request.username())
-				&& logoutSessionService.isLoggedIn(request.username());
+	public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(LoginStatusRequest request, String clientCode) {
+		boolean loggedIn = false;
+		if (request != null && StringUtils.hasText(request.username())) {
+			try {
+				Long tenantId = tenantAccountResolver.resolveRequiredTenant(clientCode);
+				TenantAccountUserDetails details = userDetailsService.loadTenantUser(tenantId, request.username());
+				loggedIn = logoutSessionService.isLoggedIn(details.sessionKey());
+			} catch (RuntimeException ignored) {
+				// Public status checks deliberately do not disclose account or tenant existence.
+			}
+		}
 
 		return ResponseEntity.ok(ApiResponse.success(
 				new LoginStatusResponse(loggedIn),
@@ -163,18 +179,22 @@ public class AuthServiceImpl implements AuthService {
 			String refreshToken = requestDto.refreshToken();
 			jwtUtil.requireTokenType(refreshToken, JwtTokenType.REFRESH);
 			String username = jwtUtil.extractUsername(refreshToken);
+			Long accountId = jwtUtil.extractAccountId(refreshToken);
+			Long tenantId = jwtUtil.extractTenantId(refreshToken);
+			String sessionKey = accountId + ":" + tenantId;
 			String tokenId = jwtUtil.extractJwtId(refreshToken);
-			if (!logoutSessionService.isSessionActive(username, jwtUtil.extractIssuedAt(refreshToken).toInstant())
-					|| !refreshTokenSessionService.isActive(username, tokenId)) {
+			if (!logoutSessionService.isSessionActive(sessionKey, jwtUtil.extractIssuedAt(refreshToken).toInstant())
+					|| !refreshTokenSessionService.isActive(sessionKey, tokenId)) {
 				return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token is revoked or inactive");
 			}
 
-			var userDetails = userDetailsService.loadUserByUsername(username);
+			var userDetails = userDetailsService.loadTenantUser(tenantId, username);
+			if (!userDetails.accountId().equals(accountId)) return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token account mismatch");
 
 			if (jwtUtil.validateToken(refreshToken, userDetails, JwtTokenType.REFRESH)) {
 				String newAccessToken = jwtUtil.generateToken(userDetails);
 				String newRefreshToken = jwtUtil.generateRefreshToken(userDetails);
-				if (!refreshTokenSessionService.rotate(username, tokenId, jwtUtil.extractJwtId(newRefreshToken))) {
+				if (!refreshTokenSessionService.rotate(sessionKey, tokenId, jwtUtil.extractJwtId(newRefreshToken))) {
 					return unauthorized("AUTHENTICATION_REQUIRED", "Refresh token has already been rotated");
 				}
 

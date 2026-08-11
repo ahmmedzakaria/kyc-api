@@ -21,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 
 @Component
 @RequiredArgsConstructor
@@ -54,10 +55,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String jwt = authHeader.substring(7);
                 jwtUtil.requireTokenType(jwt, JwtTokenType.ACCESS);
                 String username = jwtUtil.extractUsername(jwt);
+                Long accountId = jwtUtil.extractAccountId(jwt);
+                Long tenantId = jwtUtil.extractTenantId(jwt);
+                String sessionKey = accountId + ":" + tenantId;
                 List<String> roles = jwtUtil.extractRoles(jwt);
                 Instant issuedAt = jwtUtil.extractIssuedAt(jwt).toInstant();
 
-                boolean sessionActive = logoutSessionService.isSessionActive(username, issuedAt);
+                boolean sessionActive = logoutSessionService.isSessionActive(sessionKey, issuedAt);
                 System.out.println("[DIAG]     username=" + username + " issuedAt=" + issuedAt
                         + " sessionActive=" + sessionActive);
 
@@ -75,8 +79,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .map(SimpleGrantedAuthority::new)
                             .toList();
 
+                    TenantAccountUserDetails principal = new TenantAccountUserDetails(
+                            accountId, tenantId, username, "", true, true, authorities);
                     UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+                            new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

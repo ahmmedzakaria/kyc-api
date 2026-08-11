@@ -5,6 +5,7 @@ import com.nexacore.authmodule.core.entity.AuthRole;
 import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
 import com.nexacore.authmodule.core.repository.UserRepository;
+import com.nexacore.authmodule.core.service.UsernameNormalizer;
 import com.nexacore.authmodule.sso.dto.SsoUserProfileDto;
 import com.nexacore.gatewaymodule.person.dto.PersonSummaryDto;
 import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
@@ -34,6 +35,7 @@ public class KeycloakSsoService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PersonModuleGateway personModuleGateway;
+    private final UsernameNormalizer usernameNormalizer;
 
     public SsoUserProfileDto verifyToken(String accessToken) {
         JwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(keycloakProperties.getJwkSetUri()).build();
@@ -61,17 +63,18 @@ public class KeycloakSsoService {
     }
 
     @Transactional
-    public AuthUser syncUser(SsoUserProfileDto profile) {
+    public AuthUser syncUser(SsoUserProfileDto profile, Long tenantId) {
+        if (tenantId == null) throw new JwtException("SSO_TENANT_CONTEXT_REQUIRED");
         Optional<AuthUser> existingUser = profile.personId() == null
                 ? Optional.empty()
-                : userRepository.findByPersonId(profile.personId());
+                : userRepository.findByTenantIdAndPersonId(tenantId, profile.personId());
 
         if (existingUser.isEmpty()) {
-            existingUser = userRepository.findByExternalProviderAndExternalSubject(PROVIDER, profile.subject());
+            existingUser = userRepository.findByTenantIdAndExternalProviderAndExternalSubject(tenantId, PROVIDER, profile.subject());
         }
 
         if (existingUser.isEmpty() && StringUtils.hasText(profile.username())) {
-            existingUser = userRepository.findByUsername(profile.username());
+            existingUser = userRepository.findByTenantIdAndNormalizedUsername(tenantId, usernameNormalizer.normalize(profile.username()));
         }
 
         if (existingUser.isEmpty() && !keycloakProperties.isSyncUser()) {
@@ -83,11 +86,11 @@ public class KeycloakSsoService {
             throw new JwtException("SSO_PERSON_NOT_MAPPED");
         }
         if (existingUser.isEmpty()) {
-            existingUser = userRepository.findByPersonId(personId);
+            existingUser = userRepository.findByTenantIdAndPersonId(tenantId, personId);
         }
 
         AuthUser user = existingUser.orElseGet(AuthUser::new);
-        String username = resolveUniqueUsername(profile.username(), personId);
+        String username = resolveUniqueUsername(profile.username(), personId, tenantId);
         PersonSummaryDto person = personModuleGateway.promotePersonToUser(
                 personId,
                 username,
@@ -96,7 +99,9 @@ public class KeycloakSsoService {
                 profile.lastName()
         );
         user.setPersonId(personId);
+        user.setTenantId(tenantId);
         user.setUsername(person.getUsername());
+        user.setNormalizedUsername(usernameNormalizer.normalize(person.getUsername()));
         user.setExternalProvider(PROVIDER);
         user.setExternalSubject(profile.subject());
         user.setEnabled(true);
@@ -115,14 +120,15 @@ public class KeycloakSsoService {
         return userRepository.save(user);
     }
 
-    private String resolveUniqueUsername(String requestedUsername, Long personId) {
+    private String resolveUniqueUsername(String requestedUsername, Long personId, Long tenantId) {
         String baseUsername = normalizeUsername(requestedUsername);
         String candidate = baseUsername;
         int suffix = 1;
 
         while (true) {
-            Optional<AuthUser> existing = userRepository.findByUsername(candidate);
-            Optional<PersonSummaryDto> existingPerson = personModuleGateway.findSummaryByUsername(candidate);
+            Optional<AuthUser> existing = userRepository.findByTenantIdAndNormalizedUsername(
+                    tenantId, usernameNormalizer.normalize(candidate));
+            Optional<PersonSummaryDto> existingPerson = Optional.empty();
             boolean authUsernameAvailable = existing.isEmpty() || Objects.equals(existing.get().getPersonId(), personId);
             boolean personUsernameAvailable = existingPerson.isEmpty() || Objects.equals(existingPerson.get().getId(), personId);
             if (authUsernameAvailable && personUsernameAvailable) {

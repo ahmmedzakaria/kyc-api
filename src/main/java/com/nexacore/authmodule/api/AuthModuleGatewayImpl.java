@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Collectors;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 
 @Component
 @RequiredArgsConstructor
@@ -25,12 +27,22 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
 
     @Override
     public AuthUserAccessDto getUserAccess(String username) {
-        AuthUser user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
-        System.out.println("AuthModuleGatewayImpl -> getUserAccess");
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof TenantAccountUserDetails principal)
+                || !principal.getUsername().equals(username)) {
+            throw new IllegalArgumentException("Tenant-bound authenticated account is required");
+        }
+        return getUserAccess(principal.accountId(), principal.tenantId());
+    }
+
+    @Override
+    public AuthUserAccessDto getUserAccess(Long accountId, Long tenantId) {
+        AuthUser user = userRepository.findByIdAndTenantId(accountId, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant account not found"));
         return AuthUserAccessDto.builder()
                 .userId(user.getId())
                 .personId(user.getPersonId())
+                .tenantId(user.getTenantId())
                 .scopeAssignments(user.getScopeAssignments().stream()
                         .filter(com.nexacore.authmodule.core.entity.AuthUserScopeAssignment::isActive)
                         .map(scope -> new AuthUserScopeAssignmentDto(

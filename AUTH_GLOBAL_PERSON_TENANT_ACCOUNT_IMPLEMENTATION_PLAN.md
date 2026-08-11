@@ -2,8 +2,8 @@
 
 ## Status
 
-Phases 0 and 1 completed on 2026-08-11. Architectural decisions, inventory, and the
-additive Auth foundation are in place. Phases 2-7 are not yet implemented.
+Phases 0 through 4 completed on 2026-08-11. Tenant-aware authentication is active;
+constraint and person-authority cutovers remain in Phases 5 and 6.
 
 ## Phase 0 execution record
 
@@ -905,13 +905,32 @@ never a caller-provided `tenantId: null` convention.
 Never infer an account tenant from caller-controlled headers or arbitrary profile
 selection.
 
-### Phase 4 — authentication cutover
+### Phase 4 — authentication cutover — completed 2026-08-11
 
-- Resolve tenant before account lookup.
-- Switch login, refresh, reset, SSO, gateway, and Keycloak queries to tenant-aware
+- [x] Resolve tenant before account lookup.
+- [x] Switch login, refresh, reset, SSO, gateway, and Keycloak queries to tenant-aware
   account identity.
-- Bind sessions and tokens to the authenticated account and effective tenant.
-- Run dual-read comparison telemetry before disabling legacy global lookups.
+- [x] Bind sessions and tokens to the authenticated account and effective tenant.
+- [x] Run dual-read comparison telemetry before disabling legacy global lookups.
+
+Delivered behavior:
+
+- client application mappings must resolve to exactly one active tenant before local
+  password or SSO account lookup; missing and multi-tenant mappings fail closed;
+- password and SSO lookup use `(tenant_id, normalized_username)`, tenant/person, and
+  tenant/external-subject keys as applicable;
+- access and refresh tokens carry mandatory `account_id` and `tenant_id` claims;
+- logout and refresh-session state is keyed by the account/tenant pair;
+- authenticated request authorization reloads the exact account using `(id, tenant)`;
+- Micrometer dual-read comparison counters remain enabled by default during the
+  stabilization window and can be disabled with
+  `AUTH_CUTOVER_DUAL_READ_COMPARISON_ENABLED=false`;
+- each Keycloak federation component now requires an explicit tenant ID and all user,
+  search, count, credential, email, and role queries are constrained to that tenant.
+
+There is no password-reset flow in the current backend, so there was no reset lookup
+to migrate in this phase. Any future reset implementation must use the same resolved
+tenant account key.
 
 ### Phase 5 — constraint cutover
 

@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import com.nexacore.authmodule.security.service.MyUserDetailsService;
+import com.nexacore.authmodule.security.service.TenantAccountResolver;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +28,8 @@ public class SsoAuthService {
 
     private final AuthenticationProperties authenticationProperties;
     private final KeycloakSsoService keycloakSsoService;
-    private final UserDetailsService userDetailsService;
+    private final MyUserDetailsService userDetailsService;
+    private final TenantAccountResolver tenantAccountResolver;
     private final JwtUtil jwtUtil;
     private final LogoutSessionService logoutSessionService;
     private final RefreshTokenSessionService refreshTokenSessionService;
@@ -40,13 +43,14 @@ public class SsoAuthService {
 
         try {
             var profile = keycloakSsoService.verifyToken(request.accessToken());
-            var user = keycloakSsoService.syncUser(profile);
-            var userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+            Long tenantId = tenantAccountResolver.resolveRequiredTenant(clientCode);
+            var user = keycloakSsoService.syncUser(profile, tenantId);
+            var userDetails = userDetailsService.loadTenantUser(tenantId, user.getUsername());
 
-            logoutSessionService.login(userDetails.getUsername());
+            logoutSessionService.login(userDetails.sessionKey());
             String accessToken = jwtUtil.generateToken(userDetails);
             String refreshToken = jwtUtil.generateRefreshToken(userDetails);
-            refreshTokenSessionService.register(userDetails.getUsername(), jwtUtil.extractJwtId(refreshToken));
+            refreshTokenSessionService.register(userDetails.sessionKey(), jwtUtil.extractJwtId(refreshToken));
 
             AuthResponse response = AuthResponse.builder()
                     .accessToken(accessToken)

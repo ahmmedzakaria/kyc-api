@@ -8,6 +8,7 @@ import java.util.Set;
 public record AuthUserAccessDto(
         Long userId,
         Long personId,
+        Long tenantId,
         Set<AuthUserScopeAssignmentDto> scopeAssignments,
         Set<Long> roleIds,
         boolean admin

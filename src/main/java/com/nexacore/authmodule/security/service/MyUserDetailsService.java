@@ -1,6 +1,8 @@
 package com.nexacore.authmodule.security.service;
 
 import com.nexacore.authmodule.core.repository.UserRepository;
+import com.nexacore.authmodule.core.service.UsernameNormalizer;
+import com.nexacore.authmodule.core.metrics.AuthCutoverComparisonTelemetry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,21 +17,28 @@ import org.springframework.stereotype.Service;
 public class MyUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final UsernameNormalizer usernameNormalizer;
+    private final AuthCutoverComparisonTelemetry comparisonTelemetry;
 
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        var user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
-
+    public TenantAccountUserDetails loadTenantUser(Long tenantId, String username) {
+        if (tenantId == null) {
+            throw new UsernameNotFoundException("Tenant context is required");
+        }
+        String normalized = usernameNormalizer.normalize(username);
+        var user = userRepository.findByTenantIdAndNormalizedUsername(tenantId, normalized)
+                .orElseThrow(() -> new UsernameNotFoundException("Tenant account not found"));
+        comparisonTelemetry.compare(user);
         var authorities = user.getRoles().stream()
+                .filter(role -> role.isActive()
+                        && (role.getTenantId() == null || role.getTenantId().equals(tenantId)))
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .toList();
+        return new TenantAccountUserDetails(user.getId(), tenantId, user.getUsername(), user.getPassword(),
+                user.isEnabled(), !user.isLocked(), authorities);
+    }
 
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword() == null ? "" : user.getPassword())
-                .disabled(!user.isEnabled())
-                .authorities(authorities)
-                .build();
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        throw new UsernameNotFoundException("Tenant-bound account lookup is required");
     }
 
 //    @Override

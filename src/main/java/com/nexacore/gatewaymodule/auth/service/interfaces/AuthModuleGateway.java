@@ -6,6 +6,8 @@ import com.nexacore.gatewaymodule.service.interfaces.ModuleGateway;
 public interface AuthModuleGateway extends ModuleGateway {
     AuthUserAccessDto getUserAccess(String username);
 
+    AuthUserAccessDto getUserAccess(Long accountId, Long tenantId);
+
     Long getUserId(String username);
 
     void requireUserExists(Long userId);

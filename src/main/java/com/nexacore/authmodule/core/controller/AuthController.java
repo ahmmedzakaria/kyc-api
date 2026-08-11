@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -70,15 +71,17 @@ public class AuthController {
     @PostMapping("/logout")
     @AuthenticatedApi
     public ResponseEntity<ApiResponse<Void>> logout(Authentication authentication) {
-        String username = authentication == null ? null : authentication.getName();
-        return authService.logout(username);
+        String sessionKey = authentication != null && authentication.getPrincipal() instanceof TenantAccountUserDetails principal
+                ? principal.sessionKey() : null;
+        return authService.logout(sessionKey);
     }
 
     @Operation(summary = "Check tracked login status for a username", security = {})
     @PostMapping("/login-status")
     @PublicApi
-    public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(@RequestBody LoginStatusRequest requestDto) {
-        return authService.loginStatus(requestDto);
+    public ResponseEntity<ApiResponse<LoginStatusResponse>> loginStatus(@RequestBody LoginStatusRequest requestDto,
+                                                                        @RequestHeader(value = "X-Client-Code", required = false) String clientCode) {
+        return authService.loginStatus(requestDto, clientCode);
     }
 
     @Operation(summary = "Check current application session")
