@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface LayoutProfileThemeRepository extends JpaRepository<SysLayoutProfileTheme, Long> {
     List<SysLayoutProfileTheme> findByLayoutProfileIdAndActiveTrueOrderByIdAsc(Long layoutProfileId);
+    List<SysLayoutProfileTheme> findByLayoutProfileId(Long layoutProfileId);
 }

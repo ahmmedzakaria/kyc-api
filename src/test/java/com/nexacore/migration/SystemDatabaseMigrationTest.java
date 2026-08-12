@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("44");
+                .isEqualTo("45");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(44);
+                .isEqualTo(45);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -145,7 +145,7 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("44");
+                .isEqualTo("45");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE code = 'ZY' AND created_by = 51 AND updated_by = 52"))
                 .isEqualTo(1);

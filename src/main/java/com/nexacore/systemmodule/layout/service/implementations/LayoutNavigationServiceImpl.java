@@ -291,12 +291,15 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         Long userId = authModuleGateway.getUserId(actor);
         SysLayoutFeatureGroup parent = featureGroupRepository.findById(requiredParent(request))
                 .orElseThrow(() -> new IllegalArgumentException("Layout feature group not found: " + request.getParentId()));
-        String tCode = codeGenerationService.normalizeTCode(request.getTCode());
-        codeGenerationService.validateTCode(tCode);
         SysLayoutFeature feature = request.getId() == null
                 ? new SysLayoutFeature()
                 : featureRepository.findById(request.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Layout feature not found: " + request.getId()));
+        String tCode = codeGenerationService.normalizeTCode(request.getTCode());
+        if (tCode == null) {
+            tCode = feature.getId() == null ? generateTCode() : feature.getTCode();
+        }
+        codeGenerationService.validateTCode(tCode);
         feature.setFeatureGroup(parent);
         feature.setFeatureCode(codeGenerationService.normalizeBusinessCode(request.getCode(), request.getName()));
         feature.setTCode(tCode);
@@ -313,6 +316,14 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         SysLayoutFeature saved = featureRepository.save(feature);
         syncFeaturePrivileges(saved, request.getPrivilegeCodes(), userId);
         return featureNode(saved, Set.copyOf(request.getPrivilegeCodes()), true);
+    }
+
+    private String generateTCode() {
+        String candidate;
+        do {
+            candidate = "T" + featureRepository.nextTCodeValue();
+        } while (featureRepository.existsActiveTCode(candidate));
+        return candidate;
     }
 
     private NavNodeDto featureNode(SysLayoutFeature feature, Set<String> userPrivilegeCodes, boolean includeAll) {

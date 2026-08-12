@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface LayoutThemeChromeOverridesRepository extends JpaRepository<SysLayoutThemeChromeOverrides, Long> {
     Optional<SysLayoutThemeChromeOverrides> findFirstByLayoutProfileThemeIdAndActiveTrue(Long layoutProfileThemeId);
+    void deleteByLayoutProfileThemeId(Long layoutProfileThemeId);
 }

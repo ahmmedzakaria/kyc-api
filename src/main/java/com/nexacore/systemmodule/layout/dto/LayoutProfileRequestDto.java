@@ -6,6 +6,8 @@ import com.nexacore.systemmodule.layout.enums.NavigationMode;
 import com.nexacore.systemmodule.layout.enums.ThemeMode;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class LayoutProfileRequestDto {
     private Long id;
@@ -24,4 +26,8 @@ public class LayoutProfileRequestDto {
     private Boolean commandBarEnabled;
     private Boolean rtlEnabled;
     private Boolean active;
+    /** Null = leave existing themes untouched; non-null (incl. empty) = full-replace. */
+    private List<ThemeConfigEntryDto> themes;
+    private SizeConfigDto sizes;
+    private FontConfigDto fonts;
 }

@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,4 +33,7 @@ public class LayoutProfileDto {
     private Boolean rtlEnabled;
     private Boolean active;
     private LayoutBrandDto brand;
+    private List<ThemeConfigEntryDto> themes;
+    private SizeConfigDto sizes;
+    private FontConfigDto fonts;
 }
