@@ -2,7 +2,6 @@ package com.nexacore.systemmodule.privilege.bootstrap;
 
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeActionDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
-import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.catalog.enums.PrivilegeAction;
@@ -45,7 +44,13 @@ public class BootstrapAdministrationPrivilegeProvider implements ModulePrivilege
                         PrivilegeAction.VIEW, PrivilegeAction.EXECUTE, PrivilegeAction.EXPORT,
                         PrivilegeAction.SYNCHRONIZE, PrivilegeAction.MANAGE),
                 feature(ApplicationSubmodule.SYSTEM_LICENSE, "999", "License Administration",
-                        PrivilegeAction.VIEW, PrivilegeAction.MANAGE)
+                        PrivilegeAction.VIEW, PrivilegeAction.MANAGE),
+                feature(ApplicationSubmodule.LOG_ADMINISTRATION, "001", "Error Log",
+                        PrivilegeAction.VIEW),
+                feature(ApplicationSubmodule.LOG_ADMINISTRATION, "002", "Access Log",
+                        PrivilegeAction.VIEW),
+                feature(ApplicationSubmodule.LOG_ADMINISTRATION, "003", "Audit Log",
+                        PrivilegeAction.VIEW)
         );
     }
 
@@ -54,8 +59,8 @@ public class BootstrapAdministrationPrivilegeProvider implements ModulePrivilege
                                                   String featureName,
                                                   PrivilegeAction... actions) {
         return PrivilegeFeatureDefinitionDto.builder()
-                .moduleCode(ApplicationModule.SYSTEM.getCode())
-                .moduleName(ApplicationModule.SYSTEM.getDisplayName())
+                .moduleCode(submodule.getModule().getCode())
+                .moduleName(submodule.getModule().getDisplayName())
                 .submoduleCode(submodule.getCode())
                 .submoduleName(submodule.getDisplayName())
                 .featureTypeCode(FeatureType.SETUP.getCode())
@@ -75,7 +80,7 @@ public class BootstrapAdministrationPrivilegeProvider implements ModulePrivilege
     private String privilegeCode(ApplicationSubmodule submodule,
                                  String featureCode,
                                  PrivilegeAction action) {
-        return ApplicationModule.SYSTEM.getCode()
+        return submodule.getModule().getCode()
                 + submodule.getCode()
                 + FeatureType.SETUP.getCode()
                 + featureCode

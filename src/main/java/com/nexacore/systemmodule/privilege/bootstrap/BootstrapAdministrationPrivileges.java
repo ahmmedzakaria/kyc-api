@@ -39,4 +39,8 @@ public final class BootstrapAdministrationPrivileges {
     public static final String DATABASE_BACKUP_MANAGE = "11060100187";
     public static final String LICENSE_ADMINISTRATION_VIEW = "11030199901";
     public static final String LICENSE_ADMINISTRATION_MANAGE = "11030199987";
+
+    public static final String LOG_ERROR_VIEW = "09010100101";
+    public static final String LOG_ACCESS_VIEW = "09010100201";
+    public static final String LOG_AUDIT_VIEW = "09010100301";
 }

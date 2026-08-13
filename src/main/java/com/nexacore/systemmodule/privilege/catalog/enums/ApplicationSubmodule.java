@@ -11,6 +11,7 @@ public enum ApplicationSubmodule {
     SYSTEM_LAYOUT(ApplicationModule.SYSTEM, "04", "Layout"),
     SYSTEM_WORKFLOW(ApplicationModule.SYSTEM, "05", "Workflow"),
     SYSTEM_BACKUP(ApplicationModule.SYSTEM, "06", "Backup"),
+    LOG_ADMINISTRATION(ApplicationModule.LOG, "01", "Log Administration"),
     SERVICE_CACHE(ApplicationModule.SERVICES, "01", "Cache Service"),
     SERVICE_EMAIL(ApplicationModule.SERVICES, "02", "Email Service"),
     SERVICE_FILE(ApplicationModule.SERVICES, "03", "File Service"),

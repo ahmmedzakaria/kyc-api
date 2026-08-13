@@ -20,7 +20,7 @@ public class AccessControlProperties {
     private final Environment environment;
 
     private boolean enabled = true;
-    private EnforcementMode enforcementMode = EnforcementMode.REPORT;
+    private EnforcementMode enforcementMode = EnforcementMode.ENFORCE;
     private boolean requireClientForBrowser;
     private boolean requireClientForConfidential = true;
     private boolean registryCoverageEnabled = true;
@@ -40,8 +40,8 @@ public class AccessControlProperties {
     void validateProductionMode() {
         boolean production = Arrays.stream(environment.getActiveProfiles())
                 .anyMatch(profile -> "prod".equalsIgnoreCase(profile) || "production".equalsIgnoreCase(profile));
-        if (production && (!enabled || enforcementMode == EnforcementMode.DISABLED)) {
-            throw new IllegalStateException("Access control cannot be disabled in a production profile");
+        if (production && (!enabled || enforcementMode != EnforcementMode.ENFORCE)) {
+            throw new IllegalStateException("Access control must use ENFORCE mode in a production profile");
         }
         if (!enabled || enforcementMode == EnforcementMode.DISABLED) {
             log.warn("Access-control authorization is disabled; only baseline authentication remains active");
