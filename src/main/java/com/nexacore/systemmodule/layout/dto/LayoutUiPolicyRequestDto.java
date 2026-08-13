@@ -8,6 +8,7 @@ import java.util.Set;
 
 @Data
 public class LayoutUiPolicyRequestDto {
+    private Long version;
     private String clientCode;
     private String actionCode;
     private PrivilegeMatchMode matchMode;

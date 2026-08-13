@@ -14,6 +14,7 @@ import java.util.List;
 @Builder
 public class NavNodeDto {
     private Long id;
+    private Long version;
     private Long parentId;
     private String code;
     private String tCode;

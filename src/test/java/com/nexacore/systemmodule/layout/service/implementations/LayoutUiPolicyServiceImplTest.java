@@ -6,6 +6,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepos
 import com.nexacore.systemmodule.layout.entity.SysLayoutUiPolicy;
 import com.nexacore.systemmodule.layout.entity.SysLayoutUiPolicyPrivilege;
 import com.nexacore.systemmodule.layout.enums.PrivilegeMatchMode;
+import com.nexacore.systemmodule.layout.dto.LayoutUiPolicyRequestDto;
 import com.nexacore.systemmodule.layout.repository.LayoutUiPolicyPrivilegeRepository;
 import com.nexacore.systemmodule.layout.repository.LayoutUiPolicyRepository;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
@@ -13,10 +14,13 @@ import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepositor
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 class LayoutUiPolicyServiceImplTest {
     private final LayoutUiPolicyRepository policyRepository = mock(LayoutUiPolicyRepository.class);
@@ -58,6 +62,29 @@ class LayoutUiPolicyServiceImplTest {
         ));
 
         assertThat(service.getEffectivePolicies(null).getFirst().getPrivilegeCodes()).isEmpty();
+    }
+
+    @Test
+    void saveUsesVersionedFullReplacementAndAllowsRemovalOfEveryPrivilege() {
+        SysLayoutUiPolicy existing = policy(1L, null, PrivilegeMatchMode.ANY);
+        existing.setVersion(4L);
+        when(authModuleGateway.getUserId("admin")).thenReturn(9L);
+        when(policyRepository.findByClientApplicationIdAndActionCode(null, "layout.manage"))
+                .thenReturn(Optional.of(existing));
+        when(policyRepository.save(existing)).thenReturn(existing);
+        when(linkRepository.findByUiPolicyIdAndActiveTrue(1L)).thenReturn(List.of());
+        LayoutUiPolicyRequestDto request = new LayoutUiPolicyRequestDto();
+        request.setActionCode("layout.manage");
+        request.setMatchMode(PrivilegeMatchMode.ANY);
+        request.setVersion(4L);
+        request.setPrivilegeCodes(Set.of());
+
+        UiPrivilegePolicyDto saved = service.save(request, "admin");
+
+        verify(linkRepository).deleteByUiPolicyId(1L);
+        verify(linkRepository).saveAll(List.of());
+        assertThat(saved.getPrivilegeCodes()).isEmpty();
+        assertThat(saved.getVersion()).isEqualTo(4L);
     }
 
     private SysLayoutUiPolicy policy(Long id, Long clientId, PrivilegeMatchMode mode) {

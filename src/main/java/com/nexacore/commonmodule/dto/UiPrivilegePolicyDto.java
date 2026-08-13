@@ -13,8 +13,13 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class UiPrivilegePolicyDto {
+    private Long id;
+    private Long version;
+    private Long clientApplicationId;
+    private String clientCode;
     private String actionCode;
     private String matchMode;
+    private Boolean active;
 
     @Builder.Default
     private Set<String> privilegeCodes = new LinkedHashSet<>();

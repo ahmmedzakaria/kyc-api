@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 public class LayoutNavigationNodeRequestDto {
     private Long id;
+    private Long version;
     private Long parentId;
     private String code;
     private String tCode;

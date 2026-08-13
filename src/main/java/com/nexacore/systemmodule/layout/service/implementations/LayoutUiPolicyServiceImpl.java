@@ -18,6 +18,7 @@ import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepositor
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.OptimisticLockingFailureException;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -25,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,7 +54,7 @@ public class LayoutUiPolicyServiceImpl implements LayoutUiPolicyService {
         Long actorId = authModuleGateway.getUserId(actor);
         synchronize(request.getClientCode(), request.getActionCode(),
                 request.getMatchMode() == null ? PrivilegeMatchMode.ANY : request.getMatchMode(),
-                request.getPrivilegeCodes(), request.getActive() == null || request.getActive(), actorId);
+                request.getPrivilegeCodes(), request.getActive() == null || request.getActive(), actorId, request.getVersion(), true);
         Long clientId = resolveClientId(request.getClientCode());
         return toDto(policyRepository.findByClientApplicationIdAndActionCode(clientId, normalizeActionCode(request.getActionCode()))
                 .orElseThrow());
@@ -65,7 +67,7 @@ public class LayoutUiPolicyServiceImpl implements LayoutUiPolicyService {
                                   PrivilegeMatchMode matchMode,
                                   Collection<String> privilegeCodes,
                                   Long actorId) {
-        synchronize(clientCode, actionCode, matchMode, privilegeCodes, true, actorId);
+        synchronize(clientCode, actionCode, matchMode, privilegeCodes, true, actorId, null, false);
     }
 
     private void synchronize(String clientCode,
@@ -73,11 +75,16 @@ public class LayoutUiPolicyServiceImpl implements LayoutUiPolicyService {
                              PrivilegeMatchMode matchMode,
                              Collection<String> privilegeCodes,
                              boolean active,
-                             Long actorId) {
+                             Long actorId,
+                             Long expectedVersion,
+                             boolean enforceVersion) {
         Long clientId = resolveClientId(clientCode);
         String normalizedActionCode = normalizeActionCode(actionCode);
         SysLayoutUiPolicy policy = policyRepository.findByClientApplicationIdAndActionCode(clientId, normalizedActionCode)
                 .orElseGet(SysLayoutUiPolicy::new);
+        if (enforceVersion && policy.getId() != null && !Objects.equals(policy.getVersion(), expectedVersion)) {
+            throw new OptimisticLockingFailureException("UI policy changed since it was loaded");
+        }
         policy.setClientApplicationId(clientId);
         policy.setActionCode(normalizedActionCode);
         policy.setMatchMode(matchMode);
@@ -113,10 +120,21 @@ public class LayoutUiPolicyServiceImpl implements LayoutUiPolicyService {
                 .map(link -> link.getPrivilege().getPrivilegeCode())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         return UiPrivilegePolicyDto.builder()
+                .id(policy.getId())
+                .version(policy.getVersion())
+                .clientApplicationId(policy.getClientApplicationId())
+                .clientCode(resolveClientCode(policy.getClientApplicationId()))
                 .actionCode(policy.getActionCode())
                 .matchMode(policy.getMatchMode().name())
+                .active(policy.isActive())
                 .privilegeCodes(codes)
                 .build();
+    }
+
+    private String resolveClientCode(Long clientApplicationId) {
+        return clientApplicationId == null ? null : clientApplicationRepository.findById(clientApplicationId)
+                .map(SysAccClientApplication::getClientCode)
+                .orElse(null);
     }
 
     private Long resolveClientId(String clientCode) {

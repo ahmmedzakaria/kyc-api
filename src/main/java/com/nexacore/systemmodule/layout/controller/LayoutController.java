@@ -12,6 +12,7 @@ import com.nexacore.systemmodule.layout.dto.LayoutProfileRequestDto;
 import com.nexacore.systemmodule.layout.dto.NavNodeDto;
 import com.nexacore.systemmodule.layout.dto.LayoutUiPolicyRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutTenantReconciliationDto;
+import com.nexacore.systemmodule.layout.dto.LayoutNavigationIntegrityDto;
 import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmentService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
@@ -213,6 +214,24 @@ public class LayoutController {
                 layoutNavigationService.getFullNavigationTree(),
                 "Layout navigation tree (admin) loaded"
         ));
+    }
+
+    @PostMapping("/navigation/preview")
+    @PrivilegeApi("11040100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<List<NavNodeDto>>> navigationPreview(@RequestBody LayoutContextRequest request) {
+        Set<String> privilegeCodes = request.getUsername() == null || request.getUsername().isBlank()
+                ? Set.of() : privilegeService.getUserPrivilegeCodes(request.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(
+                layoutNavigationService.getNavigationTree(request.getClientCode(), request.getUsername(), privilegeCodes),
+                "Effective navigation preview loaded"));
+    }
+
+    @PostMapping("/navigation/integrity")
+    @PrivilegeApi("11040100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<LayoutNavigationIntegrityDto>> navigationIntegrity() {
+        return ResponseEntity.ok(ApiResponse.success(layoutNavigationService.diagnoseIntegrity(), "Navigation integrity loaded"));
     }
 
     @Data
