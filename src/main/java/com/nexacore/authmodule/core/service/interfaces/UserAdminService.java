@@ -21,7 +21,7 @@ public interface UserAdminService {
 
     void assignRoles(UserRoleAssignmentRequestDto requestDto);
 
-    Set<UserScopeAssignmentDto> getScopeAssignments(Long userId);
+    VersionedAssignmentDto<UserScopeAssignmentDto> getScopeAssignments(Long userId);
 
     void replaceScopeAssignments(UserScopeAssignmentRequestDto requestDto);
 

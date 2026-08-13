@@ -13,4 +13,5 @@ public class ClientPermissionAssignmentRequestDto {
     private Set<Long> tenantIds;
     private Set<Long> businessIds;
     private Set<ClientScopeAssignmentDto> scopeAssignments;
+    private String version;
 }

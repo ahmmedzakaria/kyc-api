@@ -7,4 +7,5 @@ import java.util.Set;
 public class UserScopeAssignmentRequestDto {
     private Long userId;
     private Set<UserScopeAssignmentDto> scopeAssignments;
+    private String version;
 }

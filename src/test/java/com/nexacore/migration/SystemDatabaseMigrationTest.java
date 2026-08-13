@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("50");
+                .isEqualTo("51");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(50);
+                .isEqualTo(51);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -127,7 +127,10 @@ class SystemDatabaseMigrationTest {
                 "('POST:/api/v1/system/user/detail','POST','/api/v1/system/user/detail',false,true,'REQUIRED','PRIVILEGE','TENANT','ANNOTATION',0,0,0,now(),now())," +
                 "('POST:/api/v1/system/user/role-assignments','POST','/api/v1/system/user/role-assignments',false,true,'REQUIRED','PRIVILEGE','TENANT','ANNOTATION',0,0,0,now(),now())," +
                 "('POST:/api/v1/system/role/detail','POST','/api/v1/system/role/detail',false,true,'REQUIRED','PRIVILEGE','TENANT','ANNOTATION',0,0,0,now(),now())," +
-                "('POST:/api/v1/system/role/privilege-assignments','POST','/api/v1/system/role/privilege-assignments',false,true,'REQUIRED','PRIVILEGE','TENANT','ANNOTATION',0,0,0,now(),now())");
+                "('POST:/api/v1/system/role/privilege-assignments','POST','/api/v1/system/role/privilege-assignments',false,true,'REQUIRED','PRIVILEGE','TENANT','ANNOTATION',0,0,0,now(),now())," +
+                "('POST:/api/v1/system/tenants/authorized','POST','/api/v1/system/tenants/authorized',false,true,'REQUIRED','AUTHENTICATED','TENANT','ANNOTATION',0,0,0,now(),now())," +
+                "('POST:/api/v1/system/tenants/businesses','POST','/api/v1/system/tenants/businesses',false,true,'REQUIRED','AUTHENTICATED','TENANT','ANNOTATION',0,0,0,now(),now())," +
+                "('POST:/api/v1/system/tenants/branches','POST','/api/v1/system/tenants/branches',false,true,'REQUIRED','AUTHENTICATED','TENANT','ANNOTATION',0,0,0,now(),now())");
 
         migrateTo(null);
 
@@ -144,6 +147,13 @@ class SystemDatabaseMigrationTest {
                 "'/api/v1/system/user/detail','/api/v1/system/user/role-assignments'," +
                 "'/api/v1/system/role/detail','/api/v1/system/role/privilege-assignments')"))
                 .isEqualTo(4);
+        assertThat(count("SELECT count(*) FROM sys_acc_client_api_permissions permission " +
+                "JOIN sys_acc_client_applications client ON client.id=permission.client_application_id " +
+                "JOIN sys_acc_api_registry api ON api.id=permission.api_registry_id " +
+                "WHERE client.client_code='SYSTEM_ADMIN_WEB' AND permission.active AND api.path_pattern IN (" +
+                "'/api/v1/system/tenants/authorized','/api/v1/system/tenants/businesses'," +
+                "'/api/v1/system/tenants/branches')"))
+                .isEqualTo(3);
         assertThat(count("SELECT count(*) FROM sys_acc_client_application_tenants assignment " +
                 "JOIN sys_acc_client_applications client ON client.id=assignment.client_application_id " +
                 "WHERE client.client_code='SYSTEM_ADMIN_WEB' AND assignment.active"))

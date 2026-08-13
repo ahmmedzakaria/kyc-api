@@ -17,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,6 +26,20 @@ import java.util.List;
 public class TenantAdministrationController {
     private final TenantAdministrationService service;
     private final StepUpAuthenticationService stepUpAuthenticationService;
+    private final AuthorizedScopeLookupService scopeLookupService;
+
+    @PostMapping("/authorized") @AuthenticatedApi
+    public ResponseEntity<ApiResponse<List<ScopeLookupDto>>> authorized() {
+        return ResponseEntity.ok(ApiResponse.success(scopeLookupService.tenants(),"Authorized tenants loaded"));
+    }
+    @PostMapping("/businesses") @AuthenticatedApi
+    public ResponseEntity<ApiResponse<List<ScopeLookupDto>>> businesses(@RequestBody ScopeLookupRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(scopeLookupService.businesses(request.tenantId()),"Authorized businesses loaded"));
+    }
+    @PostMapping("/branches") @AuthenticatedApi
+    public ResponseEntity<ApiResponse<List<ScopeLookupDto>>> branches(@RequestBody ScopeLookupRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(scopeLookupService.branches(request.tenantId(),request.businessId()),"Authorized branches loaded"));
+    }
 
     @PostMapping("/register")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_REGISTER)

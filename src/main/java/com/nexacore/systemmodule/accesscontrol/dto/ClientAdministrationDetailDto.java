@@ -8,5 +8,6 @@ public record ClientAdministrationDetailDto(
         ClientApplicationDto client,
         Set<Long> apiRegistryIds,
         Set<String> privilegeCodes,
-        Set<ClientScopeAssignmentDto> scopeAssignments
+        Set<ClientScopeAssignmentDto> scopeAssignments,
+        String scopeVersion
 ) {}

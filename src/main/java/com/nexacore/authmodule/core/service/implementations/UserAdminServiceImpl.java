@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Set;
 import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 import com.nexacore.commonmodule.util.AssignmentVersion;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +42,7 @@ public class UserAdminServiceImpl implements UserAdminService {
     private final PasswordEncoder passwordEncoder;
     private final UsernameNormalizer usernameNormalizer;
     private final DataScopeService dataScopeService;
+    private final AuthorizedScopeLookupService scopeLookupService;
 
     @Override
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
@@ -153,15 +155,19 @@ public class UserAdminServiceImpl implements UserAdminService {
 
     @Override
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
-    public Set<UserScopeAssignmentDto> getScopeAssignments(Long userId) {
+    public VersionedAssignmentDto<UserScopeAssignmentDto> getScopeAssignments(Long userId) {
         AuthUser user = requireScopedUser(userId);
-        return user.getScopeAssignments().stream()
+        List<UserScopeAssignmentDto> items = user.getScopeAssignments().stream()
                 .map(scope -> new UserScopeAssignmentDto(
                         scope.getTenantId(), scope.getBusinessId(), scope.getBranchId(), scope.isActive()))
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .sorted(java.util.Comparator.comparing(scope -> scopeKey(scope.tenantId(),scope.businessId(),scope.branchId())))
+                .toList();
+        return new VersionedAssignmentDto<>(AssignmentVersion.of(items.stream()
+                .map(scope -> scopeKey(scope.tenantId(),scope.businessId(),scope.branchId())).toList()),items);
     }
 
     @Override
+    @Transactional(transactionManager = "authTransactionManager")
     public void replaceScopeAssignments(UserScopeAssignmentRequestDto requestDto) {
         AuthUser user = requireScopedUser(requestDto.getUserId());
         Set<UserScopeAssignmentDto> requested = requestDto.getScopeAssignments() == null
@@ -172,6 +178,21 @@ public class UserAdminServiceImpl implements UserAdminService {
         if (requested.stream().anyMatch(scope -> !scope.active() || !user.getTenantId().equals(scope.tenantId()))) {
             throw new DataScopeAccessDeniedException("User scopes must be active and belong to the account tenant");
         }
+        AssignmentVersion.requireCurrent(requestDto.getVersion(),user.getScopeAssignments().stream()
+                .map(scope -> scopeKey(scope.getTenantId(),scope.getBusinessId(),scope.getBranchId())).toList());
+        Set<String> requestedKeys = requested.stream().map(scope -> scopeKey(scope.tenantId(),scope.businessId(),scope.branchId()))
+                .collect(java.util.stream.Collectors.toSet());
+        user.getScopeAssignments().forEach(scope -> {
+            if (!scopeLookupService.canManageAssignment(scope.getTenantId(),scope.getBusinessId(),scope.getBranchId())
+                    && !requestedKeys.contains(scopeKey(scope.getTenantId(),scope.getBusinessId(),scope.getBranchId()))) {
+                throw new DataScopeAccessDeniedException("Assignments outside the effective scope are locked and cannot be removed");
+            }
+        });
+        Set<String> currentKeys = user.getScopeAssignments().stream()
+                .map(scope -> scopeKey(scope.getTenantId(),scope.getBusinessId(),scope.getBranchId()))
+                .collect(java.util.stream.Collectors.toSet());
+        requested.stream().filter(scope -> !currentKeys.contains(scopeKey(scope.tenantId(),scope.businessId(),scope.branchId())))
+                .forEach(scope -> scopeLookupService.validateAssignment(scope.tenantId(),scope.businessId(),scope.branchId()));
         long actorId = AuthenticatedRequestContextHolder.get()
                 .map(context -> context.userId() == null ? 0L : context.userId()).orElse(0L);
         user.getScopeAssignments().clear();
@@ -193,6 +214,10 @@ public class UserAdminServiceImpl implements UserAdminService {
         Long tenantId = dataScopeService.requireEffectiveTenant(null);
         return userRepository.findByIdAndTenantId(userId, tenantId)
                 .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
+    }
+
+    private String scopeKey(Long tenantId,Long businessId,Long branchId) {
+        return tenantId+":"+(businessId==null?"":businessId)+":"+(branchId==null?"":branchId);
     }
 
     @Override

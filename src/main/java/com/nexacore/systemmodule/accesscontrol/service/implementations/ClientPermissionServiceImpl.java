@@ -18,6 +18,9 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissi
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
+import com.nexacore.commonmodule.util.AssignmentVersion;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,7 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     private final ClientApplicationTenantRepository clientApplicationTenantRepository;
     private final AuthModuleGateway authModuleGateway;
     private final AuthorizationDataCache authorizationDataCache;
+    private final AuthorizedScopeLookupService scopeLookupService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -132,7 +136,19 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
         Long actorId = authModuleGateway.getUserId(username);
         SysAccClientApplication application = resolveClient(requestDto);
         Set<ClientScopeAssignmentDto> assignments = normalizedScopes(requestDto);
-        if (getScopeAssignments(application.getId(), null).equals(assignments)) return;
+        Set<ClientScopeAssignmentDto> current = getScopeAssignments(application.getId(), null);
+        if (requestDto.getVersion()!=null) AssignmentVersion.requireCurrent(requestDto.getVersion(),current.stream().map(this::scopeKey).toList());
+        Set<String> requestedKeys=assignments.stream().map(this::scopeKey).collect(java.util.stream.Collectors.toSet());
+        current.forEach(scope -> {
+            if (!scopeLookupService.canManageAssignment(scope.tenantId(),scope.businessId(),scope.branchId())
+                    && !requestedKeys.contains(scopeKey(scope))) {
+                throw new DataScopeAccessDeniedException("Assignments outside the effective scope are locked and cannot be removed");
+            }
+        });
+        Set<String> currentKeys=current.stream().map(this::scopeKey).collect(java.util.stream.Collectors.toSet());
+        assignments.stream().filter(scope -> !currentKeys.contains(scopeKey(scope)))
+                .forEach(scope -> scopeLookupService.validateAssignment(scope.tenantId(),scope.businessId(),scope.branchId()));
+        if (current.equals(assignments)) return;
         clientApplicationTenantRepository.deleteByClientApplicationId(application.getId());
         clientApplicationTenantRepository.saveAll(assignments.stream()
                 .map(scope -> SysAccClientApplicationTenant.builder()
@@ -157,6 +173,7 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
                 .apiRegistryIds(getApiPermissions(application.getId(), null))
                 .privilegeCodes(getFeaturePermissions(application.getId(), null))
                 .scopeAssignments(getScopeAssignments(application.getId(), null))
+                .scopeVersion(AssignmentVersion.of(getScopeAssignments(application.getId(), null).stream().map(this::scopeKey).toList()))
                 .build();
     }
 
@@ -195,5 +212,8 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
 
     private SysAccClientApplication resolveClient(ClientPermissionAssignmentRequestDto requestDto) {
         return clientApplicationService.requireClientApplication(requestDto.getClientApplicationId(), requestDto.getClientCode());
+    }
+    private String scopeKey(ClientScopeAssignmentDto scope) {
+        return scope.tenantId()+":"+(scope.businessId()==null?"":scope.businessId())+":"+(scope.branchId()==null?"":scope.branchId());
     }
 }

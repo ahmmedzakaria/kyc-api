@@ -69,7 +69,7 @@ public class UserController {
     @PostMapping("/scope-assignments")
     @PrivilegeApi("11020100701")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).USER_ADMINISTRATION_VIEW)")
-    public ResponseEntity<ApiResponse<Set<UserScopeAssignmentDto>>> scopeAssignments(
+    public ResponseEntity<ApiResponse<VersionedAssignmentDto<UserScopeAssignmentDto>>> scopeAssignments(
             @RequestBody UserScopeAssignmentRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(
                 userAdminService.getScopeAssignments(requestDto.getUserId()), "User scope assignments loaded"));

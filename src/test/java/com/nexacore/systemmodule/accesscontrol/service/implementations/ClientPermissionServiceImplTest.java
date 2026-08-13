@@ -9,6 +9,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.*;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -27,8 +28,9 @@ class ClientPermissionServiceImplTest {
     private final ClientApplicationTenantRepository scopes = mock(ClientApplicationTenantRepository.class);
     private final AuthModuleGateway auth = mock(AuthModuleGateway.class);
     private final AuthorizationDataCache cache = mock(AuthorizationDataCache.class);
+    private final AuthorizedScopeLookupService scopeLookup = mock(AuthorizedScopeLookupService.class);
     private final ClientPermissionServiceImpl service = new ClientPermissionServiceImpl(
-            clients, apis, privileges, apiPermissions, featurePermissions, scopes, auth, cache);
+            clients, apis, privileges, apiPermissions, featurePermissions, scopes, auth, cache, scopeLookup);
 
     @Test
     void replacesNormalizedHierarchicalScopeTuples() {

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
 import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,10 +37,12 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     private final LicensePlanRepository planRepository;
     private final LicenseEntitlementOverrideRepository overrideRepository;
     private final DataScopeService dataScopeService;
+    private final AuthorizedScopeLookupService scopeLookupService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public LicenseSubscriptionResponseDto assignSubscription(LicenseSubscriptionRequestDto request) {
+        scopeLookupService.validateAssignment(request.tenantId(), request.businessId(), null);
         UserScopeAssignment scope = dataScopeService.requireWritableScope(request.tenantId(), request.businessId(), null);
 
         SysLicensePlan plan = planRepository.findByPlanCode(request.planCode())

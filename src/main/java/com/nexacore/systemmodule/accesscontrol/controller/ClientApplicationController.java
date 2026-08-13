@@ -121,6 +121,8 @@ public class ClientApplicationController {
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).CLIENT_TENANT_ASSIGN)")
     public ResponseEntity<ApiResponse<Void>> assignTenants(@RequestBody ClientPermissionAssignmentRequestDto requestDto,
                                                            Authentication authentication) {
+        if (requestDto.getVersion()==null || requestDto.getVersion().isBlank())
+            throw new IllegalArgumentException("Assignment version is required; reload before replacing scopes");
         clientPermissionService.assignTenants(requestDto, authentication.getName());
         return ResponseEntity.ok(ApiResponse.success(null, "Client tenants updated"));
     }

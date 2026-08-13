@@ -6,6 +6,7 @@ import com.nexacore.authmodule.core.service.UsernameNormalizer;
 import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -26,7 +27,7 @@ class UserAdminServiceObjectAuthorizationTest {
         when(roles.findByIdAndTenantId(99L, 7L)).thenReturn(Optional.empty());
         when(roles.findByIdAndTenantIdIsNull(99L)).thenReturn(Optional.empty());
         UserAdminServiceImpl service = new UserAdminServiceImpl(users, roles, mock(PersonModuleGateway.class),
-                mock(PasswordEncoder.class), mock(UsernameNormalizer.class), scope);
+                mock(PasswordEncoder.class), mock(UsernameNormalizer.class), scope, mock(AuthorizedScopeLookupService.class));
 
         assertThatThrownBy(() -> service.getRole(99L)).isInstanceOf(DataScopeAccessDeniedException.class);
         verify(roles).findByIdAndTenantId(99L, 7L);
@@ -40,7 +41,7 @@ class UserAdminServiceObjectAuthorizationTest {
         when(scope.requireEffectiveTenant(null)).thenReturn(7L);
         when(users.findByIdAndTenantId(99L, 7L)).thenReturn(Optional.empty());
         UserAdminServiceImpl service = new UserAdminServiceImpl(users, roles, mock(PersonModuleGateway.class),
-                mock(PasswordEncoder.class), mock(UsernameNormalizer.class), scope);
+                mock(PasswordEncoder.class), mock(UsernameNormalizer.class), scope, mock(AuthorizedScopeLookupService.class));
 
         assertThatThrownBy(() -> service.getUserRoleAssignments(99L)).isInstanceOf(DataScopeAccessDeniedException.class);
         verify(users).findByIdAndTenantId(99L, 7L);
