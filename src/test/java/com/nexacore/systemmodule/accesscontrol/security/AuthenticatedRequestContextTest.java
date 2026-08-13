@@ -78,6 +78,26 @@ class AuthenticatedRequestContextTest {
     }
 
     @Test
+    void businessScopeCoversItsBranchesButBranchScopeRejectsSiblingAndParent() {
+        DataScopeService service = new DataScopeService();
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                7L, "manager", 3L, "WEB", Set.of(new UserScopeAssignment(11L, 12L, null)),
+                "trace-1", Set.of()));
+        assertThat(service.requireWritableScope(11L, 12L, 13L))
+                .isEqualTo(new UserScopeAssignment(11L, 12L, 13L));
+        assertThatThrownBy(() -> service.requireWritableScope(11L, 14L, 15L))
+                .isInstanceOf(DataScopeAccessDeniedException.class);
+
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                7L, "operator", 3L, "WEB", Set.of(new UserScopeAssignment(11L, 12L, 13L)),
+                "trace-2", Set.of()));
+        assertThatThrownBy(() -> service.requireWritableScope(11L, 12L, 14L))
+                .isInstanceOf(DataScopeAccessDeniedException.class);
+        assertThatThrownBy(() -> service.requireWritableScope(11L, 12L, null))
+                .isInstanceOf(DataScopeAccessDeniedException.class);
+    }
+
+    @Test
     void multipleAssignmentsRequireExplicitWritableScope() {
         AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
                 7L, "operator", 3L, "WEB", Set.of(

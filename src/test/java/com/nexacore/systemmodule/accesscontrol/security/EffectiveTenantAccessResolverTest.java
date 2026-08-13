@@ -44,4 +44,29 @@ class EffectiveTenantAccessResolverTest {
                 Set.of(new UserScopeAssignment(11L, null, null))))
                 .isInstanceOf(DataScopeAccessDeniedException.class).hasMessageContaining("verified request tenant");
     }
+
+    @Test void rejectsHostnameContradictionAndMissingEffectiveScope() {
+        SysAccClientApplication client = new SysAccClientApplication(); client.setId(3L);
+        ResolvedTenantContextHolder.set(new ResolvedTenantContext(11L, "acme", "acme.example"));
+
+        assertThatThrownBy(() -> resolver.resolve("other.example", 7L, 11L, client,
+                Set.of(new UserScopeAssignment(11L, null, null))))
+                .isInstanceOf(DataScopeAccessDeniedException.class).hasMessageContaining("contradictory");
+        assertThatThrownBy(() -> resolver.resolve("acme.example", 7L, 11L, client,
+                Set.of(new UserScopeAssignment(12L, null, null))))
+                .isInstanceOf(DataScopeAccessDeniedException.class).hasMessageContaining("No active account scope");
+    }
+
+    @Test void rejectsClientNotAssignedToResolvedTenant() {
+        ClientApplicationTenantRepository deniedAssignments = (ClientApplicationTenantRepository) Proxy.newProxyInstance(
+                ClientApplicationTenantRepository.class.getClassLoader(), new Class<?>[]{ClientApplicationTenantRepository.class},
+                (proxy, method, args) -> false);
+        EffectiveTenantAccessResolver deniedResolver = new EffectiveTenantAccessResolver(new HostnameNormalizer(), deniedAssignments);
+        SysAccClientApplication client = new SysAccClientApplication(); client.setId(3L);
+        ResolvedTenantContextHolder.set(new ResolvedTenantContext(11L, "acme", "acme.example"));
+
+        assertThatThrownBy(() -> deniedResolver.resolve("acme.example", 7L, 11L, client,
+                Set.of(new UserScopeAssignment(11L, null, null))))
+                .isInstanceOf(DataScopeAccessDeniedException.class).hasMessageContaining("client is not assigned");
+    }
 }
