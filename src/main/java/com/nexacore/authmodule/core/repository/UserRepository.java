@@ -22,6 +22,7 @@ public interface UserRepository extends JpaRepository<AuthUser, Long> {
     List<AuthUser> findByTenantIdOrderByNormalizedUsernameAsc(Long tenantId);
 
     long countByTenantIdIsNull();
+    long countByTenantId(Long tenantId);
 
     long countByNormalizedUsernameIsNull();
 

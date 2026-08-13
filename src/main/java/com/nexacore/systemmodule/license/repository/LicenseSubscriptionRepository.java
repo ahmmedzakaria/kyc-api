@@ -13,6 +13,7 @@ public interface LicenseSubscriptionRepository extends JpaRepository<SysLicenseS
     Optional<SysLicenseSubscription> findBySubscriptionCodeAndTenantId(String subscriptionCode, Long tenantId);
     Optional<SysLicenseSubscription> findByIdAndTenantId(Long id, Long tenantId);
     List<SysLicenseSubscription> findByTenantIdOrderByIdDesc(Long tenantId);
+    long countByTenantId(Long tenantId);
 
     @Query("""
             select subscription

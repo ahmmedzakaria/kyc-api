@@ -55,6 +55,41 @@ public class TenantAdministrationController {
         return ResponseEntity.ok(ApiResponse.success(service.list(actorId(authentication)), "Tenants loaded"));
     }
 
+    @PostMapping("/detail")
+    @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_VIEW)
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_VIEW)")
+    public ResponseEntity<ApiResponse<TenantDetailDto>> detail(@RequestBody TenantDomainMutationRequest request,
+                                                                Authentication authentication) {
+        return ResponseEntity.ok(ApiResponse.success(service.detail(request.tenantId(), actorId(authentication)), "Tenant detail loaded"));
+    }
+
+    @PostMapping("/domain/add")
+    @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY)
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_DOMAIN_VERIFY)")
+    public ResponseEntity<ApiResponse<TenantDomainDto>> addDomain(@Valid @RequestBody TenantDomainMutationRequest request,
+                                                                  Authentication authentication, HttpServletRequest httpRequest) {
+        stepUpAuthenticationService.requireRecentReauthentication(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success(service.addDomain(request, actorId(authentication)), "Tenant domain added"));
+    }
+
+    @PostMapping("/domain/set-primary")
+    @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY)
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_DOMAIN_VERIFY)")
+    public ResponseEntity<ApiResponse<TenantDomainDto>> setPrimaryDomain(@Valid @RequestBody TenantDomainMutationRequest request,
+                                                                         Authentication authentication, HttpServletRequest httpRequest) {
+        stepUpAuthenticationService.requireRecentReauthentication(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success(service.setPrimaryDomain(request, actorId(authentication)), "Primary domain changed"));
+    }
+
+    @PostMapping("/domain/deactivate")
+    @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY)
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_DOMAIN_VERIFY)")
+    public ResponseEntity<ApiResponse<TenantDomainDto>> deactivateDomain(@Valid @RequestBody TenantDomainMutationRequest request,
+                                                                         Authentication authentication, HttpServletRequest httpRequest) {
+        stepUpAuthenticationService.requireRecentReauthentication(httpRequest);
+        return ResponseEntity.ok(ApiResponse.success(service.deactivateDomain(request, actorId(authentication)), "Tenant domain deactivated"));
+    }
+
     @PostMapping("/domain/verify")
     @PrivilegeApi(BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY)
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_DOMAIN_VERIFY)")

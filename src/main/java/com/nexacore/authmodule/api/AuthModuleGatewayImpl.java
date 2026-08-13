@@ -74,4 +74,9 @@ public class AuthModuleGatewayImpl implements AuthModuleGateway {
             throw new IllegalArgumentException("Role not found: " + roleId);
         }
     }
+
+    @Override
+    public long countUsersByTenantId(Long tenantId) {
+        return userRepository.countByTenantId(tenantId);
+    }
 }

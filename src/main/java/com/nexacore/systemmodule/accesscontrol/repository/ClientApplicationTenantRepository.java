@@ -12,6 +12,7 @@ public interface ClientApplicationTenantRepository extends JpaRepository<SysAccC
     boolean existsByClientApplicationIdAndBusinessIdAndActiveTrue(Long clientApplicationId, Long businessId);
 
     boolean existsByClientApplicationIdAndTenantIdAndActiveTrue(Long clientApplicationId, Long tenantId);
+    long countByTenantIdAndActiveTrue(Long tenantId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from SysAccClientApplicationTenant tenant where tenant.clientApplication.id = :clientApplicationId")

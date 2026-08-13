@@ -13,4 +13,6 @@ public interface AuthModuleGateway extends ModuleGateway {
     void requireUserExists(Long userId);
 
     void requireRoleExists(Long roleId);
+
+    long countUsersByTenantId(Long tenantId);
 }

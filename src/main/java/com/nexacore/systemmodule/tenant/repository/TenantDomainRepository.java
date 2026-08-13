@@ -12,4 +12,5 @@ public interface TenantDomainRepository extends JpaRepository<SysTenantDomain, L
             String hostname, TenantDomainVerificationStatus verificationStatus);
     boolean existsByHostnameIgnoreCase(String hostname);
     List<SysTenantDomain> findByTenantId(Long tenantId);
+    Optional<SysTenantDomain> findByIdAndTenantId(Long id, Long tenantId);
 }

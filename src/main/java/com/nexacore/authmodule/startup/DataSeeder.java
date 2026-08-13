@@ -419,6 +419,7 @@ public class DataSeeder {
         synchronizeRoute(service, "/access-control/api-registry", BootstrapAdministrationPrivileges.API_REGISTRY_VIEW);
         synchronizeRoute(service, "/access-control/privileges", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_VIEW);
         synchronizeRoute(service, "/access-control/tenants", BootstrapAdministrationPrivileges.TENANT_VIEW);
+        synchronizeRoute(service, "/access-control/tenants/:id", BootstrapAdministrationPrivileges.TENANT_VIEW);
         synchronizeRoute(service, "/access-control/users", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_VIEW);
         synchronizeRoute(service, "/access-control/roles", BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_VIEW);
         synchronizeRoute(service, "/access-control/roles/:id/privileges", BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_VIEW);

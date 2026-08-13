@@ -15,6 +15,15 @@ public class PlatformAdministrationAuditService {
 
     @Transactional(transactionManager = "systemTransactionManager", propagation = Propagation.REQUIRES_NEW)
     public void recordAttempt(long actorId, Long targetTenantId, String actionCode, String reason) {
+        record(actorId, targetTenantId, actionCode, "ATTEMPT", reason);
+    }
+
+    @Transactional(transactionManager = "systemTransactionManager")
+    public void recordSuccess(long actorId, Long targetTenantId, String actionCode, String reason) {
+        record(actorId, targetTenantId, actionCode, "SUCCESS", reason);
+    }
+
+    private void record(long actorId, Long targetTenantId, String actionCode, String outcome, String reason) {
         var requestContext = AuthenticatedRequestContextHolder.get().orElse(null);
         SysPlatformAdminAuditEvent event = new SysPlatformAdminAuditEvent();
         event.setActorUserId(actorId);
@@ -22,7 +31,7 @@ public class PlatformAdministrationAuditService {
                 .map(scope -> scope.tenantId()).distinct().filter(id -> id != null).findFirst().orElse(null));
         event.setTargetTenantId(targetTenantId);
         event.setActionCode(actionCode);
-        event.setOutcome("ATTEMPT");
+        event.setOutcome(outcome);
         event.setReason(reason == null || reason.isBlank() ? null : reason.trim());
         event.setTraceId(requestContext == null ? null : requestContext.traceId());
         event.setCreatedBy(actorId);

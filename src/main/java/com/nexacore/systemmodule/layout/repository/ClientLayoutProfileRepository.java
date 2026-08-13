@@ -19,6 +19,15 @@ public interface ClientLayoutProfileRepository extends JpaRepository<SysClientLa
 
     @Query("""
             select count(assignment) from SysClientLayoutProfile assignment
+            where assignment.tenantId = :tenantId and (
+                assignment.brandDisplayName is not null or assignment.brandShortName is not null
+                or assignment.brandLogoUrl is not null or assignment.brandLogoDarkUrl is not null
+                or assignment.brandFaviconUrl is not null or assignment.brandSupportUrl is not null)
+            """)
+    long countBrandingOverrides(Long tenantId);
+
+    @Query("""
+            select count(assignment) from SysClientLayoutProfile assignment
             where assignment.tenantId = :tenantId
               and not exists (
                   select clientTenant.id from SysAccClientApplicationTenant clientTenant
