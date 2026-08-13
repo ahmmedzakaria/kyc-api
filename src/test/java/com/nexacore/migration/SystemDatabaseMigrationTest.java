@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("45");
+                .isEqualTo("49");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(45);
+                .isEqualTo(49);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -113,6 +113,30 @@ class SystemDatabaseMigrationTest {
                 + "AND privilege.privilege_code IN ('11020100901','11020100910','11020100980','11020100987') "
                 + "AND permission.active"))
                 .isEqualTo(4);
+    }
+
+    @Test
+    void grantsSystemAdminWebTheSharedAuthenticatedSessionLifecycle() throws SQLException {
+        migrateTo("48");
+        execute("INSERT INTO sys_acc_api_registry (api_code,http_method,path_pattern,public_api,active," +
+                "client_authentication_requirement,user_authorization_requirement,data_scope,source,priority," +
+                "created_by,updated_by,created_at,updated_at) VALUES " +
+                "('POST:/api/v1/auth/application-context','POST','/api/v1/auth/application-context',false,true,'OPTIONAL','AUTHENTICATED','NONE','ANNOTATION',0,0,0,now(),now())," +
+                "('POST:/api/v1/auth/session-status','POST','/api/v1/auth/session-status',false,true,'OPTIONAL','AUTHENTICATED','NONE','ANNOTATION',0,0,0,now(),now())," +
+                "('POST:/api/v1/auth/logout','POST','/api/v1/auth/logout',false,true,'OPTIONAL','AUTHENTICATED','NONE','ANNOTATION',0,0,0,now(),now())");
+
+        migrateTo(null);
+
+        assertThat(count("SELECT count(*) FROM sys_acc_client_api_permissions permission " +
+                "JOIN sys_acc_client_applications client ON client.id=permission.client_application_id " +
+                "JOIN sys_acc_api_registry api ON api.id=permission.api_registry_id " +
+                "WHERE client.client_code='SYSTEM_ADMIN_WEB' AND client.status='ACTIVE' AND permission.active " +
+                "AND api.path_pattern IN ('/api/v1/auth/application-context','/api/v1/auth/session-status','/api/v1/auth/logout')"))
+                .isEqualTo(3);
+        assertThat(count("SELECT count(*) FROM sys_acc_client_application_tenants assignment " +
+                "JOIN sys_acc_client_applications client ON client.id=assignment.client_application_id " +
+                "WHERE client.client_code='SYSTEM_ADMIN_WEB' AND assignment.active"))
+                .isGreaterThanOrEqualTo(1);
     }
 
     @Test

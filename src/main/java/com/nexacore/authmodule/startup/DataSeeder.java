@@ -98,6 +98,8 @@ public class DataSeeder {
 
             seedPersonRoutePolicies(layoutRoutePolicyService);
             seedPersonUiPolicies(layoutUiPolicyService);
+            seedSystemAdminRoutePolicies(layoutRoutePolicyService);
+            seedSystemAdminUiPolicies(layoutUiPolicyService);
 
             seedDefaultAuthPolicies(authPolicyRepository, authenticationProperties);
         };
@@ -407,6 +409,52 @@ public class DataSeeder {
         routePolicyService.synchronizePolicy("WEB", "/person/:id/preview", PrivilegeMatchMode.ANY, Set.of(
                 code(ApplicationModule.KYC, ApplicationSubmodule.KYC_PERSON, FeatureType.OPERATIONS, "001", PrivilegeAction.VIEW)
         ), 0L);
+    }
+
+    private void seedSystemAdminRoutePolicies(LayoutRoutePolicyService service) {
+        synchronizeRoute(service, "/access-control/client-applications", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW);
+        synchronizeRoute(service, "/access-control/client-applications/create", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
+        synchronizeRoute(service, "/access-control/client-applications/:id/edit", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
+        synchronizeRoute(service, "/access-control/client-applications/:id", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW);
+        synchronizeRoute(service, "/access-control/api-registry", BootstrapAdministrationPrivileges.API_REGISTRY_VIEW);
+        synchronizeRoute(service, "/access-control/privileges", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_VIEW);
+        synchronizeRoute(service, "/access-control/tenants", BootstrapAdministrationPrivileges.TENANT_VIEW);
+        synchronizeRoute(service, "/access-control/users", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_VIEW);
+        synchronizeRoute(service, "/layout/profiles", BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_VIEW);
+        synchronizeRoute(service, "/layout/navigation-tree", BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_VIEW);
+        synchronizeRoute(service, "/license", BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_VIEW);
+        synchronizeRoute(service, "/backup", BootstrapAdministrationPrivileges.DATABASE_BACKUP_VIEW);
+    }
+
+    private void synchronizeRoute(LayoutRoutePolicyService service, String route, String privilege) {
+        service.synchronizePolicy("SYSTEM_ADMIN_WEB", route, PrivilegeMatchMode.ANY, Set.of(privilege), 0L);
+    }
+
+    private void seedSystemAdminUiPolicies(LayoutUiPolicyService service) {
+        synchronizeAction(service, "client-applications.create", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
+        synchronizeAction(service, "client-applications.edit", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
+        synchronizeAction(service, "client-applications.rotate", BootstrapAdministrationPrivileges.CLIENT_CREDENTIAL_ROTATE);
+        synchronizeAction(service, "client-applications.assign-api", BootstrapAdministrationPrivileges.CLIENT_API_PERMISSION_ASSIGN);
+        synchronizeAction(service, "client-applications.assign-feature", BootstrapAdministrationPrivileges.CLIENT_FEATURE_PERMISSION_ASSIGN);
+        synchronizeAction(service, "client-applications.assign-scope", BootstrapAdministrationPrivileges.CLIENT_TENANT_ASSIGN);
+        synchronizeAction(service, "api-registry.manage", BootstrapAdministrationPrivileges.API_REGISTRY_MANAGE);
+        synchronizeAction(service, "api-registry.synchronize", BootstrapAdministrationPrivileges.API_REGISTRY_SYNCHRONIZE);
+        synchronizeAction(service, "privileges.assign", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_ASSIGN);
+        synchronizeAction(service, "users.manage", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_MANAGE);
+        synchronizeAction(service, "users.assign", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_ASSIGN);
+        synchronizeAction(service, "tenants.register", BootstrapAdministrationPrivileges.TENANT_REGISTER);
+        synchronizeAction(service, "tenants.verify-domain", BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY);
+        synchronizeAction(service, "tenants.manage-lifecycle", BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE);
+        synchronizeAction(service, "layout.manage", BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_MANAGE);
+        synchronizeAction(service, "license.manage", BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_MANAGE);
+        synchronizeAction(service, "backup.execute", BootstrapAdministrationPrivileges.DATABASE_BACKUP_EXECUTE);
+        synchronizeAction(service, "backup.download", BootstrapAdministrationPrivileges.DATABASE_BACKUP_DOWNLOAD);
+        synchronizeAction(service, "backup.deliver", BootstrapAdministrationPrivileges.DATABASE_BACKUP_DELIVER);
+        synchronizeAction(service, "backup.manage", BootstrapAdministrationPrivileges.DATABASE_BACKUP_MANAGE);
+    }
+
+    private void synchronizeAction(LayoutUiPolicyService service, String action, String privilege) {
+        service.synchronizePolicy("SYSTEM_ADMIN_WEB", action, PrivilegeMatchMode.ANY, Set.of(privilege), 0L);
     }
 
     private void seedPersonUiPolicies(LayoutUiPolicyService uiPolicyService) {
