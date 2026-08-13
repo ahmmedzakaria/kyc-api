@@ -246,6 +246,25 @@ public class DataSeeder {
         seedSystemAdminUserRolePermissions(clientPermissionService, syncReport);
         seedSystemAdminTenantPermissions(clientPermissionService, syncReport);
         seedSystemAdminPlatformPermissions(clientPermissionService, syncReport);
+        seedSystemAdminSessionLifecyclePermissions(clientPermissionService, syncReport);
+    }
+
+    private void seedSystemAdminSessionLifecyclePermissions(ClientPermissionService clientPermissionService,
+                                                            ApiRegistrySyncReportDto syncReport) {
+        Set<String> lifecyclePaths = Set.of(
+                "/api/v1/auth/application-context",
+                "/api/v1/auth/session-status",
+                "/api/v1/auth/logout"
+        );
+        Set<Long> lifecycleApiRegistryIds = syncReport.getRecords().stream()
+                .filter(ApiRegistryDto::isActive)
+                .filter(api -> lifecyclePaths.contains(api.getPathPattern()))
+                .map(ApiRegistryDto::getId)
+                .collect(Collectors.toSet());
+        ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+        apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        apiAssignment.setApiRegistryIds(lifecycleApiRegistryIds);
+        clientPermissionService.grantApiPermissions(apiAssignment, "system_admin");
     }
 
     private void seedSystemAdminPlatformPermissions(ClientPermissionService clientPermissionService,
