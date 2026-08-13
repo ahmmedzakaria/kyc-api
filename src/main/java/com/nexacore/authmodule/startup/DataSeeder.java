@@ -245,6 +245,50 @@ public class DataSeeder {
         seedSystemAdminBackupPermissions(clientPermissionService, syncReport);
         seedSystemAdminUserRolePermissions(clientPermissionService, syncReport);
         seedSystemAdminTenantPermissions(clientPermissionService, syncReport);
+        seedSystemAdminPlatformPermissions(clientPermissionService, syncReport);
+    }
+
+    private void seedSystemAdminPlatformPermissions(ClientPermissionService clientPermissionService,
+                                                    ApiRegistrySyncReportDto syncReport) {
+        ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
+        featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setPrivilegeCodes(Set.of(
+                BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW,
+                BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE,
+                BootstrapAdministrationPrivileges.CLIENT_CREDENTIAL_ROTATE,
+                BootstrapAdministrationPrivileges.CLIENT_API_PERMISSION_ASSIGN,
+                BootstrapAdministrationPrivileges.CLIENT_FEATURE_PERMISSION_ASSIGN,
+                BootstrapAdministrationPrivileges.CLIENT_TENANT_ASSIGN,
+                BootstrapAdministrationPrivileges.API_REGISTRY_VIEW,
+                BootstrapAdministrationPrivileges.API_REGISTRY_MANAGE,
+                BootstrapAdministrationPrivileges.API_REGISTRY_SYNCHRONIZE,
+                BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_VIEW,
+                BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_SYNCHRONIZE,
+                BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_ASSIGN,
+                BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_VIEW,
+                BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_MANAGE,
+                BootstrapAdministrationPrivileges.WORKFLOW_ADMINISTRATION_VIEW,
+                BootstrapAdministrationPrivileges.WORKFLOW_ADMINISTRATION_MANAGE,
+                BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_VIEW,
+                BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_MANAGE
+        ));
+        clientPermissionService.grantFeaturePermissions(featureAssignment, "system_admin");
+
+        Set<Long> platformApiRegistryIds = syncReport.getRecords().stream()
+                .filter(ApiRegistryDto::isActive)
+                .filter(api -> api.getPathPattern() != null)
+                .filter(api -> api.getPathPattern().startsWith("/api/v1/system/client-app")
+                        || api.getPathPattern().startsWith("/api/v1/system/api-registry")
+                        || api.getPathPattern().startsWith("/api/v1/system/privilege")
+                        || api.getPathPattern().startsWith("/api/v1/system/layout")
+                        || api.getPathPattern().startsWith("/api/v1/system/workflow")
+                        || api.getPathPattern().startsWith("/api/v1/system/license"))
+                .map(ApiRegistryDto::getId)
+                .collect(Collectors.toSet());
+        ClientPermissionAssignmentRequestDto apiAssignment = new ClientPermissionAssignmentRequestDto();
+        apiAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        apiAssignment.setApiRegistryIds(platformApiRegistryIds);
+        clientPermissionService.grantApiPermissions(apiAssignment, "system_admin");
     }
 
     private void seedSystemAdminBackupPermissions(ClientPermissionService clientPermissionService,
