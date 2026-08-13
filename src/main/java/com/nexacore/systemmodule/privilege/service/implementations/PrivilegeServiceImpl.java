@@ -60,6 +60,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import com.nexacore.commonmodule.util.AssignmentVersion;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeImpactDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateRequest;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateResultDto;
+import java.util.LinkedHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -111,8 +116,17 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 requestDto.getActionCode()
         );
 
-        SysPrivPrivilege privilege = privilegeRepository.findByPrivilegeCode(privilegeCode)
-                .orElseGet(SysPrivPrivilege::new);
+        SysPrivPrivilege privilege;
+        if(requestDto.getId()==null) {
+            if(privilegeRepository.findByPrivilegeCode(privilegeCode).isPresent())
+                throw new IllegalArgumentException("Privilege code already exists: "+privilegeCode);
+            privilege=new SysPrivPrivilege();
+        } else {
+            privilege=privilegeRepository.findById(requestDto.getId())
+                    .orElseThrow(()->new IllegalArgumentException("Privilege not found: "+requestDto.getId()));
+            privilegeRepository.findByPrivilegeCode(privilegeCode).filter(other->!other.getId().equals(privilege.getId()))
+                    .ifPresent(other->{throw new IllegalArgumentException("Privilege code already exists: "+privilegeCode);});
+        }
 
         privilege.setPrivilegeCode(privilegeCode);
         privilege.setFeature(resolveFeature(requestDto));
@@ -131,6 +145,39 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         return privilegeRepository.findAll().stream()
                 .map(PrivilegeDto::fromEntity)
                 .toList();
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public PrivilegeImpactDto getImpact(String privilegeCode) {
+        SysPrivPrivilege privilege=privilegeRepository.findByPrivilegeCode(privilegeCode)
+                .orElseThrow(()->new IllegalArgumentException("Privilege not found: "+privilegeCode));
+        Map<String,Long> dependencies=new LinkedHashMap<>();
+        dependencies.put("roles",privilegeRepository.countRoleDependencies(privilege.getId()));
+        dependencies.put("users",privilegeRepository.countUserDependencies(privilege.getId()));
+        dependencies.put("clients",privilegeRepository.countClientDependencies(privilege.getId()));
+        dependencies.put("apiRoutes",privilegeRepository.countApiDependencies(privilegeCode));
+        dependencies.put("routePolicies",privilegeRepository.countRouteDependencies(privilege.getId()));
+        dependencies.put("uiPolicies",privilegeRepository.countUiPolicyDependencies(privilege.getId()));
+        dependencies.put("navigationFeatures",privilegeRepository.countNavigationDependencies(privilege.getId()));
+        dependencies.put("licenseEntitlements",privilegeRepository.countLicenseDependencies(privilege.getId()));
+        long total=dependencies.values().stream().mapToLong(Long::longValue).sum();
+        return new PrivilegeImpactDto(privilege.getId(),privilegeCode,privilegeVersion(privilege),Map.copyOf(dependencies),total);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager")
+    public PrivilegeDeactivateResultDto deactivate(PrivilegeDeactivateRequest request) {
+        PrivilegeImpactDto impact=getImpact(request.privilegeCode());
+        if(!java.util.Objects.equals(impact.version(),request.version())) throw new IllegalStateException("Privilege dependencies changed; reload impact before deactivation");
+        if(!request.dependenciesPresented()) return new PrivilegeDeactivateResultDto(false,impact);
+        SysPrivPrivilege privilege=privilegeRepository.findById(impact.privilegeId()).orElseThrow();
+        privilege.setActive(false); privilegeRepository.save(privilege); authorizationDataCache.invalidateAllUserPrivilegesAfterCommit();
+        return new PrivilegeDeactivateResultDto(true,getImpact(request.privilegeCode()));
+    }
+
+    private String privilegeVersion(SysPrivPrivilege privilege) {
+        return AssignmentVersion.of(List.of(privilege.getId()+":"+privilege.getPrivilegeCode()+":"+privilege.isActive()+":"+privilege.getUpdatedAt()));
     }
 
     @Override

@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class ApiRegistryRequestDto {
     private Long id;
+    private Long version;
     private String apiCode;
     private String httpMethod;
     private String pathPattern;

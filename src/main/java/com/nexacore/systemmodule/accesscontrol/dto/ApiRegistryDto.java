@@ -8,6 +8,7 @@ import lombok.Data;
 @Builder
 public class ApiRegistryDto {
     private Long id;
+    private Long version;
     private String apiCode;
     private String httpMethod;
     private String pathPattern;
@@ -34,6 +35,7 @@ public class ApiRegistryDto {
     public static ApiRegistryDto fromEntity(SysAccApiRegistry api) {
         return ApiRegistryDto.builder()
                 .id(api.getId())
+                .version(api.getVersion())
                 .apiCode(api.getApiCode())
                 .httpMethod(api.getHttpMethod())
                 .pathPattern(api.getPathPattern())

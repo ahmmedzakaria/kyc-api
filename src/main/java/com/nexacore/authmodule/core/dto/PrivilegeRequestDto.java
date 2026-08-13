@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class PrivilegeRequestDto {
+    private Long id;
     private String moduleCode;
     private String moduleName;
     private String submoduleCode;

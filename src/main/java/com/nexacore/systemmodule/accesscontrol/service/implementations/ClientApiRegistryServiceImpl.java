@@ -4,6 +4,8 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryRequestDto;
 import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncReportDto;
+import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistrySyncChangeDto;
+import com.nexacore.systemmodule.accesscontrol.dto.ApiRegistryConflictDto;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.repository.ApiRegistryRepository;
 import com.nexacore.systemmodule.accesscontrol.security.ClientSecuredApi;
@@ -28,6 +30,7 @@ import java.util.Objects;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import com.nexacore.commonmodule.util.AssignmentVersion;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +55,9 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
                 .orElseGet(SysAccApiRegistry::new)
                 : apiRegistryRepository.findById(requestDto.getId())
                 .orElseThrow(() -> new IllegalArgumentException("API registry not found: " + requestDto.getId()));
+        if (api.getId() != null && !Objects.equals(api.getVersion(), requestDto.getVersion())) {
+            throw new IllegalStateException("API registry entry changed; reload before saving");
+        }
 
         api.setApiCode(requireText(requestDto.getApiCode(), "apiCode"));
         api.setHttpMethod(requireText(requestDto.getHttpMethod(), "httpMethod").toUpperCase());
@@ -81,7 +87,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
 
         validateNoAmbiguousActiveRoute(api);
 
-        ApiRegistryDto saved = ApiRegistryDto.fromEntity(apiRegistryRepository.save(api));
+        ApiRegistryDto saved = ApiRegistryDto.fromEntity(apiRegistryRepository.saveAndFlush(api));
         authorizationDataCache.invalidateRegistryAfterCommit();
         return saved;
     }
@@ -168,8 +174,75 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
         authorizationDataCache.invalidateRegistryAfterCommit();
         return ApiRegistrySyncReportDto.builder()
                 .added(added).changed(changed).unchanged(unchanged).deactivated(deactivated)
-                .conflicted(conflicts.size()).conflicts(List.copyOf(conflicts)).records(list())
+                .conflicted(conflicts.size()).conflicts(List.copyOf(conflicts)).records(list()).applied(true)
                 .build();
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public ApiRegistrySyncReportDto previewSyncFromAnnotations() {
+        Map<String, List<DiscoveredMapping>> candidates = new LinkedHashMap<>();
+        requestMappingHandlerMapping.getHandlerMethods().forEach((mappingInfo, handlerMethod) -> {
+            ClientSecuredApi annotation=findClientSecuredApi(handlerMethod);
+            if(annotation==null) return;
+            Set<String> methods=mappingInfo.getMethodsCondition().getMethods().stream().map(Enum::name).collect(java.util.stream.Collectors.toSet());
+            if(methods.isEmpty()) {
+                candidates.computeIfAbsent("UNDECLARED:"+handlerMethod,k->new ArrayList<>())
+                        .add(new DiscoveredMapping("", "", annotation,handlerMethod.toString()));
+                return;
+            }
+            mappingInfo.getPatternValues().stream().map(this::normalizePath).forEach(path->methods.forEach(method->
+                    candidates.computeIfAbsent(method+":"+path,k->new ArrayList<>())
+                            .add(new DiscoveredMapping(path,method,annotation,handlerMethod.toString()))));
+        });
+        List<ApiRegistryConflictDto> conflictDetails=new ArrayList<>();
+        Set<String> conflicted=new java.util.HashSet<>();
+        candidates.forEach((code,values)->{
+            if(values.size()>1 || code.startsWith("UNDECLARED:")) {
+                conflicted.add(code); conflictDetails.add(new ApiRegistryConflictDto(code,
+                        values.stream().map(DiscoveredMapping::handler).toList(),
+                        List.of(code.startsWith("UNDECLARED:") ? "Handler does not declare an explicit HTTP method" : "Multiple handlers declare the same method and path")));
+            }
+        });
+        List<Map.Entry<String,List<DiscoveredMapping>>> unique=candidates.entrySet().stream().filter(e->e.getValue().size()==1 && !e.getKey().startsWith("UNDECLARED:")).toList();
+        for(int left=0;left<unique.size();left++) for(int right=left+1;right<unique.size();right++) {
+            var a=unique.get(left); var b=unique.get(right);
+            if(apiRouteMatcher.hasUnresolvedOverlap(asRegistry(a.getKey(),a.getValue().getFirst()),asRegistry(b.getKey(),b.getValue().getFirst()))) {
+                String reason="Unresolved route-precedence overlap between "+a.getKey()+" and "+b.getKey();
+                conflicted.add(a.getKey()); conflicted.add(b.getKey());
+                conflictDetails.add(new ApiRegistryConflictDto(a.getKey()+" <> "+b.getKey(),
+                        List.of(a.getValue().getFirst().handler(),b.getValue().getFirst().handler()),List.of(reason)));
+            }
+        }
+        Map<String,SysAccApiRegistry> existing=apiRegistryRepository.findAll().stream().collect(java.util.stream.Collectors.toMap(SysAccApiRegistry::getApiCode,value->value,(a,b)->a,LinkedHashMap::new));
+        List<ApiRegistrySyncChangeDto> changes=new ArrayList<>(); int added=0,changed=0,unchanged=0,deactivated=0;
+        for(var entry:unique) {
+            if(conflicted.contains(entry.getKey())) continue;
+            SysAccApiRegistry proposed=asRegistry(entry.getKey(),entry.getValue().getFirst());
+            SysAccApiRegistry before=existing.get(entry.getKey());
+            if(before==null) { added++; changes.add(new ApiRegistrySyncChangeDto("ADDED",entry.getKey(),null,ApiRegistryDto.fromEntity(proposed))); }
+            else if(!Objects.equals(fingerprint(before),fingerprint(proposed))) { changed++; changes.add(new ApiRegistrySyncChangeDto("CHANGED",entry.getKey(),ApiRegistryDto.fromEntity(before),ApiRegistryDto.fromEntity(proposed))); }
+            else unchanged++;
+        }
+        Set<String> discovered=candidates.keySet();
+        for(SysAccApiRegistry before:existing.values()) if(SOURCE_ANNOTATION.equals(before.getSource()) && before.isActive() && !discovered.contains(before.getApiCode())) {
+            deactivated++; SysAccApiRegistry after=copyForPreview(before); after.setActive(false);
+            changes.add(new ApiRegistrySyncChangeDto("DEACTIVATED",before.getApiCode(),ApiRegistryDto.fromEntity(before),ApiRegistryDto.fromEntity(after)));
+        }
+        List<String> versionParts=new ArrayList<>(changes.stream().map(change->change.kind()+":"+change.apiCode()+":"+(change.before()==null?"":change.before().getVersion())).toList());
+        versionParts.addAll(conflictDetails.stream().map(ApiRegistryConflictDto::apiCode).sorted().toList());
+        return ApiRegistrySyncReportDto.builder().added(added).changed(changed).unchanged(unchanged).deactivated(deactivated)
+                .conflicted(conflicted.size()).conflicts(conflictDetails.stream().flatMap(item->item.reasons().stream()).toList())
+                .conflictDetails(conflictDetails).changes(changes).previewVersion(AssignmentVersion.of(versionParts)).applied(false).build();
+    }
+
+    @Override
+    public ApiRegistrySyncReportDto syncFromAnnotations(String username,String previewVersion) {
+        ApiRegistrySyncReportDto preview=previewSyncFromAnnotations();
+        if(previewVersion==null || !previewVersion.equals(preview.getPreviewVersion())) throw new IllegalStateException("Synchronization preview is stale; preview again");
+        if(preview.getConflicted()>0) throw new IllegalStateException("Ambiguous registry mappings must be resolved before synchronization");
+        ApiRegistrySyncReportDto applied=syncFromAnnotations(username); applied.setPreviewVersion(previewVersion); applied.setChanges(preview.getChanges());
+        return applied;
     }
 
     @Override
@@ -282,6 +355,25 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
                 .priority(mapping.annotation().priority()).active(true).build();
     }
 
+    private SysAccApiRegistry asRegistry(String apiCode,DiscoveredMapping mapping) {
+        ClientSecuredApi annotation=mapping.annotation();
+        return SysAccApiRegistry.builder().apiCode(apiCode).httpMethod(mapping.method()).pathPattern(mapping.path())
+                .moduleCode(annotation.moduleCode()).moduleName(annotation.moduleName()).submoduleCode(annotation.submoduleCode()).submoduleName(annotation.submoduleName())
+                .featureTypeCode(annotation.featureTypeCode()).featureTypeName(annotation.featureTypeName()).featureCode(annotation.featureCode()).featureName(annotation.featureName())
+                .actionCode(annotation.actionCode()).actionName(annotation.actionName()).requiredPrivilegeCode(requiredPrivilegeCode(annotation))
+                .publicApi(annotation.publicApi()).clientAuthenticationRequirement(annotation.clientAuthentication().name())
+                .userAuthorizationRequirement(annotation.userAuthorization().name()).dataScope(annotation.dataScope().name())
+                .source(SOURCE_ANNOTATION).priority(annotation.priority()).active(true).version(0L).build();
+    }
+
+    private SysAccApiRegistry copyForPreview(SysAccApiRegistry source) {
+        SysAccApiRegistry copy=SysAccApiRegistry.builder().id(source.getId()).version(source.getVersion()).apiCode(source.getApiCode()).httpMethod(source.getHttpMethod())
+                .pathPattern(source.getPathPattern()).requiredPrivilegeCode(source.getRequiredPrivilegeCode()).publicApi(source.isPublicApi())
+                .clientAuthenticationRequirement(source.getClientAuthenticationRequirement()).userAuthorizationRequirement(source.getUserAuthorizationRequirement())
+                .dataScope(source.getDataScope()).source(source.getSource()).priority(source.getPriority()).active(source.isActive()).build();
+        return copy;
+    }
+
     private String fingerprint(SysAccApiRegistry api) {
         return String.join("|", nullSafe(api.getApiCode()), nullSafe(api.getHttpMethod()), nullSafe(api.getPathPattern()),
                 nullSafe(api.getModuleCode()), nullSafe(api.getModuleName()),
@@ -299,6 +391,7 @@ public class ClientApiRegistryServiceImpl implements ClientApiRegistryService {
     private String defaultText(String value, String fallback) { return value == null || value.isBlank() ? fallback : value.trim(); }
 
     private record AnnotationMapping(String path, String method, ClientSecuredApi annotation) {}
+    private record DiscoveredMapping(String path,String method,ClientSecuredApi annotation,String handler) {}
     private enum SyncOutcome { ADDED, CHANGED, UNCHANGED }
 
     private String requireText(String value, String fieldName) {

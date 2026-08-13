@@ -10,6 +10,9 @@ import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeImpactDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateRequest;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateResultDto;
 
 import java.util.List;
 import java.util.Set;
@@ -40,4 +43,8 @@ public interface PrivilegeService {
     void assignPrivilegesToRole(PrivilegeAssignmentRequestDto requestDto);
 
     void assignPrivilegesToUser(PrivilegeAssignmentRequestDto requestDto);
+
+    PrivilegeImpactDto getImpact(String privilegeCode);
+
+    PrivilegeDeactivateResultDto deactivate(PrivilegeDeactivateRequest request);
 }

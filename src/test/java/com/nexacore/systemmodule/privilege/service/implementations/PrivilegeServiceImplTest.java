@@ -39,6 +39,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
 
 class PrivilegeServiceImplTest {
@@ -78,6 +79,24 @@ class PrivilegeServiceImplTest {
             layoutUiPolicyService,
             authorizationDataCache
     );
+
+    @Test
+    void deactivationRequiresTheCurrentPresentedDependencyImpact() {
+        SysPrivPrivilege privilege=SysPrivPrivilege.builder().id(77L).privilegeCode("11010100180").active(true).build();
+        when(privilegeRepository.findByPrivilegeCode("11010100180")).thenReturn(java.util.Optional.of(privilege));
+        when(privilegeRepository.findById(77L)).thenReturn(java.util.Optional.of(privilege));
+        when(privilegeRepository.countRoleDependencies(77L)).thenReturn(2L);
+        when(privilegeRepository.countApiDependencies("11010100180")).thenReturn(1L);
+        var impact=service.getImpact("11010100180");
+        assertThat(impact.totalActiveDependencies()).isEqualTo(3);
+
+        var result=service.deactivate(new com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateRequest(
+                "11010100180",impact.version(),true));
+
+        assertThat(result.deactivated()).isTrue();
+        assertThat(privilege.isActive()).isFalse();
+        verify(privilegeRepository).save(privilege);
+    }
 
     {
         when(authorizationDataCache.userPrivileges(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->

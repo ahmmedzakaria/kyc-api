@@ -11,6 +11,12 @@ import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeImpactDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeImpactRequest;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateRequest;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateResultDto;
+import com.nexacore.systemmodule.accesscontrol.dto.CatalogPageRequest;
+import com.nexacore.systemmodule.accesscontrol.dto.CatalogPageDto;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import com.nexacore.authmodule.core.service.interfaces.UserAdminService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
@@ -47,6 +53,17 @@ public class PrivilegeController {
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
     public ResponseEntity<ApiResponse<List<PrivilegeDto>>> listPrivileges() {
         return ResponseEntity.ok(ApiResponse.success(privilegeService.getAllPrivileges(), "Privileges loaded"));
+    }
+
+    @PostMapping("/search")
+    @PrivilegeApi("11010100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
+    public ResponseEntity<ApiResponse<CatalogPageDto<PrivilegeDto>>> searchPrivileges(@RequestBody CatalogPageRequest request) {
+        String query=request.query()==null?"":request.query().trim().toLowerCase();
+        List<PrivilegeDto> rows=privilegeService.getAllPrivileges().stream().filter(item->query.isEmpty() || item.getPrivilegeCode().contains(query)
+                || item.getModuleName().toLowerCase().contains(query)||item.getFeatureName().toLowerCase().contains(query)).toList();
+        int start=Math.min(request.page()*request.pageSize(),rows.size());int end=Math.min(start+request.pageSize(),rows.size());
+        return ResponseEntity.ok(ApiResponse.success(new CatalogPageDto<>(rows.subList(start,end),rows.size(),request.page(),request.pageSize()),"Privilege catalog page loaded"));
     }
 
     @PostMapping("/definitions")
@@ -143,5 +160,19 @@ public class PrivilegeController {
     public ResponseEntity<ApiResponse<Void>> assignPrivilegesToUser(@RequestBody PrivilegeAssignmentRequestDto requestDto) {
         privilegeService.assignPrivilegesToUser(requestDto);
         return ResponseEntity.ok(ApiResponse.success(null, "User privileges updated"));
+    }
+
+    @PostMapping("/impact")
+    @PrivilegeApi("11010100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
+    public ResponseEntity<ApiResponse<PrivilegeImpactDto>> impact(@RequestBody PrivilegeImpactRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(privilegeService.getImpact(request.privilegeCode()),"Privilege dependency impact loaded"));
+    }
+
+    @PostMapping("/deactivate")
+    @PrivilegeApi("11010100180")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_SYNCHRONIZE)")
+    public ResponseEntity<ApiResponse<PrivilegeDeactivateResultDto>> deactivate(@RequestBody PrivilegeDeactivateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(privilegeService.deactivate(request),"Privilege deactivation evaluated"));
     }
 }

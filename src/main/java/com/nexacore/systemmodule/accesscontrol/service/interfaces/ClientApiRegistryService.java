@@ -16,5 +16,9 @@ public interface ClientApiRegistryService {
 
     ApiRegistrySyncReportDto syncFromAnnotations(String username);
 
+    default ApiRegistrySyncReportDto previewSyncFromAnnotations() { throw new UnsupportedOperationException("Synchronization preview is unavailable"); }
+
+    default ApiRegistrySyncReportDto syncFromAnnotations(String username, String previewVersion) { return syncFromAnnotations(username); }
+
     Optional<SysAccApiRegistry> resolve(HttpServletRequest request);
 }
