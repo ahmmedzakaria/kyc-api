@@ -14,6 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
+import com.nexacore.commonmodule.dto.IdRequestDto;
+import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
+import com.nexacore.commonmodule.util.AssignmentVersion;
+import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 
 @RestController
 @RequiredArgsConstructor
@@ -21,12 +26,32 @@ import java.util.List;
 public class RoleController {
 
     private final UserAdminService userAdminService;
+    private final PrivilegeService privilegeService;
 
     @PostMapping("/list")
     @PrivilegeApi("11020100801")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<RoleDto>>> listRoles() {
         return ResponseEntity.ok(ApiResponse.success(userAdminService.listRoles(), "Roles loaded"));
+    }
+
+    @PostMapping("/detail")
+    @PrivilegeApi("11020100801")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<RoleDto>> roleDetail(@RequestBody IdRequestDto request) {
+        return ResponseEntity.ok(ApiResponse.success(userAdminService.getRole(Long.valueOf(request.getId())), "Role loaded"));
+    }
+
+    @PostMapping("/privilege-assignments")
+    @PrivilegeApi("11020100801")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_VIEW) and @privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
+    public ResponseEntity<ApiResponse<VersionedAssignmentDto<String>>> privilegeAssignments(@RequestBody IdRequestDto request) {
+        Long roleId = Long.valueOf(request.getId());
+        userAdminService.getRole(roleId);
+        Set<String> codes = privilegeService.getRolePrivilegeCodes(roleId);
+        return ResponseEntity.ok(ApiResponse.success(
+                new VersionedAssignmentDto<>(AssignmentVersion.of(codes), codes.stream().sorted().toList()),
+                "Role privilege assignments loaded"));
     }
 
     @PostMapping("/save")

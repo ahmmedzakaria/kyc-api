@@ -420,6 +420,8 @@ public class DataSeeder {
         synchronizeRoute(service, "/access-control/privileges", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_VIEW);
         synchronizeRoute(service, "/access-control/tenants", BootstrapAdministrationPrivileges.TENANT_VIEW);
         synchronizeRoute(service, "/access-control/users", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_VIEW);
+        synchronizeRoute(service, "/access-control/roles", BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_VIEW);
+        synchronizeRoute(service, "/access-control/roles/:id/privileges", BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_VIEW);
         synchronizeRoute(service, "/layout/profiles", BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_VIEW);
         synchronizeRoute(service, "/layout/navigation-tree", BootstrapAdministrationPrivileges.LAYOUT_ADMINISTRATION_VIEW);
         synchronizeRoute(service, "/license", BootstrapAdministrationPrivileges.LICENSE_ADMINISTRATION_VIEW);
@@ -442,6 +444,7 @@ public class DataSeeder {
         synchronizeAction(service, "privileges.assign", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_ASSIGN);
         synchronizeAction(service, "users.manage", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_MANAGE);
         synchronizeAction(service, "users.assign", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_ASSIGN);
+        synchronizeAction(service, "roles.manage", BootstrapAdministrationPrivileges.ROLE_ADMINISTRATION_MANAGE);
         synchronizeAction(service, "tenants.register", BootstrapAdministrationPrivileges.TENANT_REGISTER);
         synchronizeAction(service, "tenants.verify-domain", BootstrapAdministrationPrivileges.TENANT_DOMAIN_VERIFY);
         synchronizeAction(service, "tenants.manage-lifecycle", BootstrapAdministrationPrivileges.TENANT_LIFECYCLE_MANAGE);

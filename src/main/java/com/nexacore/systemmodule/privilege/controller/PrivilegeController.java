@@ -12,6 +12,7 @@ import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
+import com.nexacore.authmodule.core.service.interfaces.UserAdminService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
 import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ import java.util.Set;
 public class PrivilegeController {
 
     private final PrivilegeService privilegeService;
+    private final UserAdminService userAdminService;
 
     @PostMapping("/save")
     @PrivilegeApi("11010100180")
@@ -119,6 +121,7 @@ public class PrivilegeController {
     @PrivilegeApi("11010100101")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
     public ResponseEntity<ApiResponse<Set<String>>> rolePrivilegeCodes(@RequestBody PrivilegeAssignmentRequestDto requestDto) {
+        userAdminService.getRole(requestDto.getRoleId());
         return ResponseEntity.ok(ApiResponse.success(
                 privilegeService.getRolePrivilegeCodes(requestDto.getRoleId()),
                 "Role privileges loaded"
@@ -127,8 +130,9 @@ public class PrivilegeController {
 
     @PostMapping("/assign-role")
     @PrivilegeApi("11010100181")
-    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_ASSIGN)")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_ASSIGN) and @privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<Void>> assignPrivilegesToRole(@RequestBody PrivilegeAssignmentRequestDto requestDto) {
+        userAdminService.getRole(requestDto.getRoleId());
         privilegeService.assignPrivilegesToRole(requestDto);
         return ResponseEntity.ok(ApiResponse.success(null, "Role privileges updated"));
     }

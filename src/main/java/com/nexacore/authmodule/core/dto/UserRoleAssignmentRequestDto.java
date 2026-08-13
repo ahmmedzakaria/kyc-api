@@ -9,4 +9,5 @@ import java.util.Set;
 public class UserRoleAssignmentRequestDto {
     private Long userId;
     private Set<Long> roleIds = new HashSet<>();
+    private String version;
 }

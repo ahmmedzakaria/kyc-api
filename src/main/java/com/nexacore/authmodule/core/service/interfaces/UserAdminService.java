@@ -10,9 +10,12 @@ import com.nexacore.authmodule.core.dto.UserScopeAssignmentRequestDto;
 
 import java.util.List;
 import java.util.Set;
+import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 
 public interface UserAdminService {
     List<UserDto> listUsers();
+    UserDto getUser(Long userId);
+    VersionedAssignmentDto<RoleDto> getUserRoleAssignments(Long userId);
 
     UserDto saveUser(UserRequestDto requestDto);
 
@@ -23,6 +26,7 @@ public interface UserAdminService {
     void replaceScopeAssignments(UserScopeAssignmentRequestDto requestDto);
 
     List<RoleDto> listRoles();
+    RoleDto getRole(Long roleId);
 
     RoleDto saveRole(RoleRequestDto requestDto);
 

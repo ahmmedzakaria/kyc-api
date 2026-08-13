@@ -27,6 +27,8 @@ import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestCont
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
+import com.nexacore.commonmodule.util.AssignmentVersion;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,20 @@ public class UserAdminServiceImpl implements UserAdminService {
         return userRepository.findByTenantIdOrderByNormalizedUsernameAsc(tenantId).stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public UserDto getUser(Long userId) {
+        return toDto(requireScopedUser(userId));
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public VersionedAssignmentDto<RoleDto> getUserRoleAssignments(Long userId) {
+        List<RoleDto> roles = requireScopedUser(userId).getRoles().stream()
+                .sorted(java.util.Comparator.comparing(AuthRole::getId)).map(RoleDto::fromEntity).toList();
+        return new VersionedAssignmentDto<>(AssignmentVersion.of(roles.stream().map(RoleDto::getId).toList()), roles);
     }
 
     @Override
@@ -113,6 +129,9 @@ public class UserAdminServiceImpl implements UserAdminService {
         Long tenantId = dataScopeService.requireEffectiveTenant(null);
         AuthUser user = userRepository.findByIdAndTenantId(requestDto.getUserId(), tenantId)
                 .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
+
+        AssignmentVersion.requireCurrent(requestDto.getVersion(),
+                user.getRoles().stream().map(AuthRole::getId).toList());
 
         Set<AuthRole> roles = new HashSet<>(roleRepository.findAllById(requestDto.getRoleIds()));
         if (roles.size() != requestDto.getRoleIds().size()) {
@@ -183,6 +202,17 @@ public class UserAdminServiceImpl implements UserAdminService {
         return roleRepository.findByTenantIdIsNullOrTenantIdOrderByNameAsc(tenantId).stream()
                 .map(RoleDto::fromEntity)
                 .toList();
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public RoleDto getRole(Long roleId) {
+        if (roleId == null) throw new IllegalArgumentException("roleId is required");
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        AuthRole role = roleRepository.findByIdAndTenantId(roleId, tenantId)
+                .or(() -> roleRepository.findByIdAndTenantIdIsNull(roleId))
+                .orElseThrow(() -> new DataScopeAccessDeniedException("Role not found in the effective tenant"));
+        return RoleDto.fromEntity(role);
     }
 
     @Override

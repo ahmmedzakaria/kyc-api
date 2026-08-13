@@ -12,6 +12,7 @@ import com.nexacore.authmodule.core.dto.SidebarMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuDto;
 import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.authmodule.core.service.implementations.AuthApplicationContextService;
+import com.nexacore.commonmodule.util.AssignmentVersion;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationContextDto;
@@ -290,6 +291,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         }
 
         authModuleGateway.requireRoleExists(requestDto.getRoleId());
+
+        AssignmentVersion.requireCurrent(requestDto.getVersion(), getRolePrivilegeCodes(requestDto.getRoleId()));
 
         Set<SysPrivPrivilege> privileges = loadPrivileges(requestDto.getPrivilegeCodes());
         rolePrivilegeRepository.deleteByIdRoleId(requestDto.getRoleId());

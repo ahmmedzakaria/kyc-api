@@ -18,6 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Set;
+import com.nexacore.commonmodule.dto.IdRequestDto;
+import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
+import com.nexacore.authmodule.core.dto.RoleDto;
 
 @RestController
 @RequiredArgsConstructor
@@ -31,6 +34,21 @@ public class UserController {
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).USER_ADMINISTRATION_VIEW)")
     public ResponseEntity<ApiResponse<List<UserDto>>> listUsers() {
         return ResponseEntity.ok(ApiResponse.success(userAdminService.listUsers(), "Users loaded"));
+    }
+
+    @PostMapping("/detail")
+    @PrivilegeApi("11020100701")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).USER_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<UserDto>> userDetail(@RequestBody IdRequestDto request) {
+        return ResponseEntity.ok(ApiResponse.success(userAdminService.getUser(Long.valueOf(request.getId())), "User loaded"));
+    }
+
+    @PostMapping("/role-assignments")
+    @PrivilegeApi("11020100701")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).USER_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<VersionedAssignmentDto<RoleDto>>> roleAssignments(@RequestBody IdRequestDto request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                userAdminService.getUserRoleAssignments(Long.valueOf(request.getId())), "User role assignments loaded"));
     }
 
     @PostMapping("/save")

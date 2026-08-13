@@ -10,4 +10,5 @@ public class PrivilegeAssignmentRequestDto {
     private Long roleId;
     private Long userId;
     private Set<String> privilegeCodes = new HashSet<>();
+    private String version;
 }
