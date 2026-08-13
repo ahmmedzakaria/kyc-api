@@ -441,6 +441,7 @@ public class DataSeeder {
         synchronizeAction(service, "client-applications.assign-scope", BootstrapAdministrationPrivileges.CLIENT_TENANT_ASSIGN);
         synchronizeAction(service, "api-registry.manage", BootstrapAdministrationPrivileges.API_REGISTRY_MANAGE);
         synchronizeAction(service, "api-registry.synchronize", BootstrapAdministrationPrivileges.API_REGISTRY_SYNCHRONIZE);
+        synchronizeAction(service, "privileges.manage", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_SYNCHRONIZE);
         synchronizeAction(service, "privileges.assign", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_ASSIGN);
         synchronizeAction(service, "users.manage", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_MANAGE);
         synchronizeAction(service, "users.assign", BootstrapAdministrationPrivileges.USER_ADMINISTRATION_ASSIGN);
