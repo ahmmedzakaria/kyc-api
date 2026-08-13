@@ -54,6 +54,14 @@ public class PersonController {
         return ResponseEntity.ok(ApiResponse.success(service.search(searchText, pageable),""));
     }
 
+    @Operation(summary = "Get a scoped person profile by profile ID")
+    @PostMapping("/profile")
+    @PrivilegeApi(value = "01010200101", dataScope = ApiDataScope.TENANT)
+    public ResponseEntity<ApiResponse<PersonDto>> profile(@RequestBody IdRequestDto idRequestDto) {
+        return ResponseEntity.ok(ApiResponse.success(
+                service.getProfile(Long.valueOf(idRequestDto.getId())), "Person profile loaded"));
+    }
+
     @Operation(summary = "Delete person by ID")
     @PostMapping("/delete")
     @PrivilegeApi(value = "01010200140", dataScope = ApiDataScope.TENANT)

@@ -5,8 +5,11 @@ import com.nexacore.authmodule.core.dto.RoleRequestDto;
 import com.nexacore.authmodule.core.dto.UserDto;
 import com.nexacore.authmodule.core.dto.UserRequestDto;
 import com.nexacore.authmodule.core.dto.UserRoleAssignmentRequestDto;
+import com.nexacore.authmodule.core.dto.UserScopeAssignmentDto;
+import com.nexacore.authmodule.core.dto.UserScopeAssignmentRequestDto;
 
 import java.util.List;
+import java.util.Set;
 
 public interface UserAdminService {
     List<UserDto> listUsers();
@@ -14,6 +17,10 @@ public interface UserAdminService {
     UserDto saveUser(UserRequestDto requestDto);
 
     void assignRoles(UserRoleAssignmentRequestDto requestDto);
+
+    Set<UserScopeAssignmentDto> getScopeAssignments(Long userId);
+
+    void replaceScopeAssignments(UserScopeAssignmentRequestDto requestDto);
 
     List<RoleDto> listRoles();
 

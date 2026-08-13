@@ -56,6 +56,8 @@ class SystemDatabaseMigrationTest {
         assertThat(regclass("sys_tenant_domains")).isEqualTo("sys_tenant_domains");
         assertThat(regclass("sys_layout_assignment_tenant_quarantine"))
                 .isEqualTo("sys_layout_assignment_tenant_quarantine");
+        assertThat(regclass("sys_acc_client_scope_quarantine"))
+                .isEqualTo("sys_acc_client_scope_quarantine");
         assertThat(regclass("sys_platform_admin_audit_events"))
                 .isEqualTo("sys_platform_admin_audit_events");
         assertThat(count("SELECT count(*) FROM information_schema.columns WHERE table_name = 'sys_client_layout_profiles' "
@@ -83,6 +85,18 @@ class SystemDatabaseMigrationTest {
         assertThat(count("SELECT count(*) FROM sys_priv_privileges WHERE privilege_code LIKE '110601001%'")).isEqualTo(5);
         assertThat(count("SELECT count(*) FROM sys_acc_client_applications WHERE client_code IN ('WEB', 'SYSTEM_ADMIN_WEB')"))
                 .isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM information_schema.columns "
+                + "WHERE table_name='sys_acc_client_application_tenants' AND column_name='branch_id'"))
+                .isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM sys_layout_route_policies policy "
+                + "JOIN sys_acc_client_applications client ON client.id=policy.client_application_id "
+                + "WHERE policy.active=true AND client.client_code='WEB' "
+                + "AND policy.route_url IN ('/person','/person/create','/person/:id/edit','/person/:id/preview')"))
+                .isEqualTo(4);
+        assertThat(count("SELECT count(*) FROM sys_layout_route_policies policy "
+                + "JOIN sys_acc_client_applications client ON client.id=policy.client_application_id "
+                + "WHERE policy.active=true AND client.client_code='SYSTEM_ADMIN_WEB'"))
+                .isGreaterThanOrEqualTo(12);
         assertThat(count("SELECT count(*) FROM sys_acc_client_applications "
                 + "WHERE client_code IN ('WEB', 'SYSTEM_ADMIN_WEB') AND created_by IS NOT NULL AND updated_by IS NOT NULL"))
                 .isEqualTo(2);

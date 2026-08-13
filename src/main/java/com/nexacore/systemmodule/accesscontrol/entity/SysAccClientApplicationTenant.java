@@ -36,6 +36,7 @@ public class SysAccClientApplicationTenant {
 
     private Long tenantId;
     private Long businessId;
+    private Long branchId;
     private boolean active;
     private Long createdBy;
     private Long updatedBy;

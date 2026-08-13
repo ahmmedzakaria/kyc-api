@@ -50,6 +50,8 @@ public class AuthApplicationContextService {
         return ApplicationContextDto.builder()
                 .clientCode(policyClientCode)
                 .clientType(context.getClientType())
+                .effectiveTenant(context.getEffectiveTenant())
+                .authorizationVersion(context.getAuthorizationVersion())
                 .registrationMode(registrationProperties.getMode())
                 .enabledRegistrationCredentialModels(new LinkedHashSet<>(authClientPolicyService.resolveRegistrationCredentialModels(policyClientCode)))
                 .enabledLoginMethods(new LinkedHashSet<>(authClientPolicyService.resolveLoginMethods(policyClientCode)))

@@ -24,6 +24,8 @@ import java.util.Set;
 public class ApplicationContextDto {
     private String clientCode;
     private String clientType;
+    private EffectiveTenantContextDto effectiveTenant;
+    private String authorizationVersion;
     private RegistrationMode registrationMode;
     private UserActivationMode userActivationMode;
     private SsoContextDto sso;

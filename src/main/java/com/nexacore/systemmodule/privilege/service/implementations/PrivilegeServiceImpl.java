@@ -1,6 +1,8 @@
 package com.nexacore.systemmodule.privilege.service.implementations;
 
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
+import com.nexacore.authmodule.core.dto.EffectiveScopeAssignmentDto;
+import com.nexacore.authmodule.core.dto.EffectiveTenantContextDto;
 import com.nexacore.authmodule.core.dto.PrivilegeAssignmentRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
@@ -15,6 +17,7 @@ import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationContextDto;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.systemmodule.accesscontrol.security.EffectiveTenantAccessContextHolder;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
@@ -188,9 +191,25 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     public ApplicationContextDto getApplicationContext(String username) {
         Set<String> privilegeCodes = getUserPrivilegeCodes(username);
         ClientApplicationContextDto clientContext = clientApplicationContextService.getCurrentClientContext().orElse(null);
+        var effectiveTenant = EffectiveTenantAccessContextHolder.get()
+                .orElseThrow(() -> new IllegalStateException("Effective tenant context is required"));
+        Set<EffectiveScopeAssignmentDto> scopeAssignments = effectiveTenant.effectiveScopes().stream()
+                .map(scope -> new EffectiveScopeAssignmentDto(scope.tenantId(), scope.businessId(), scope.branchId()))
+                .collect(Collectors.toUnmodifiableSet());
+        String authorizationVersion = Integer.toHexString(Objects.hash(
+                clientContext == null ? null : clientContext.getClientCode(),
+                privilegeCodes.stream().sorted().toList(),
+                scopeAssignments.stream()
+                        .sorted(Comparator.comparing(EffectiveScopeAssignmentDto::tenantId)
+                                .thenComparing(EffectiveScopeAssignmentDto::businessId, Comparator.nullsFirst(Long::compareTo))
+                                .thenComparing(EffectiveScopeAssignmentDto::branchId, Comparator.nullsFirst(Long::compareTo)))
+                        .toList()));
         ApplicationContextDto context = ApplicationContextDto.builder()
                 .clientCode(clientContext == null ? null : clientContext.getClientCode())
                 .clientType(clientContext == null ? null : clientContext.getClientType().name())
+                .effectiveTenant(new EffectiveTenantContextDto(
+                        effectiveTenant.tenantId(), effectiveTenant.tenantCode(), effectiveTenant.hostname(), scopeAssignments))
+                .authorizationVersion(authorizationVersion)
                 .privilegeCodes(privilegeCodes)
                 .enabledModules(resolveEnabledModules(privilegeCodes))
                 .enabledSubmodules(resolveEnabledSubmodules(privilegeCodes))

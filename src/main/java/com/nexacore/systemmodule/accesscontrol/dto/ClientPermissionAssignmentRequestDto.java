@@ -12,4 +12,5 @@ public class ClientPermissionAssignmentRequestDto {
     private Set<String> privilegeCodes;
     private Set<Long> tenantIds;
     private Set<Long> businessIds;
+    private Set<ClientScopeAssignmentDto> scopeAssignments;
 }

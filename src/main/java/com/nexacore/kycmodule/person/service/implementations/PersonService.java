@@ -46,6 +46,11 @@ public class PersonService {
     private final DataScopeService dataScopeService;
     private final GlobalPersonIdentityGateway globalPersonGateway;
 
+    @Transactional(transactionManager = "kycTransactionManager", readOnly = true)
+    public PersonDto getProfile(Long profileId) {
+        return toDto(ensureProfile(profileId));
+    }
+
     @Transactional(transactionManager = "kycTransactionManager", rollbackFor = IOException.class)
     public PersonDto create(PersonDto dto, MultipartFile photo) throws IOException {
         UserScopeAssignment scope = dataScopeService.requireWritableScope(

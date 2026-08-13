@@ -2,6 +2,7 @@ package com.nexacore.systemmodule.privilege.service.implementations;
 
 import com.nexacore.authmodule.core.service.implementations.AuthApplicationContextService;
 import com.nexacore.authmodule.core.dto.SidebarMenuDto;
+import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
@@ -25,6 +26,12 @@ import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationContextDto;
+import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationType;
+import com.nexacore.systemmodule.accesscontrol.security.EffectiveTenantAccessContext;
+import com.nexacore.systemmodule.accesscontrol.security.EffectiveTenantAccessContextHolder;
+import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
 
 import java.util.List;
 import java.util.Set;
@@ -32,6 +39,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 class PrivilegeServiceImplTest {
 
@@ -74,6 +82,36 @@ class PrivilegeServiceImplTest {
     {
         when(authorizationDataCache.userPrivileges(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
                 ((java.util.function.Supplier<Set<String>>) invocation.getArgument(2)).get());
+    }
+
+    @AfterEach
+    void clearEffectiveTenant() {
+        EffectiveTenantAccessContextHolder.clear();
+    }
+
+    @Test
+    void applicationContextIncludesServerValidatedTenantScopesAndVersion() {
+        when(authModuleGateway.getUserAccess("operator")).thenReturn(AuthUserAccessDto.builder()
+                .userId(10L).roleIds(Set.of()).admin(false).build());
+        when(privilegeRepository.findActivePrivilegeCodesByUserId(10L)).thenReturn(List.of("01010200101"));
+        when(clientApplicationContextService.getCurrentClientPrivilegeCodes(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(clientApplicationContextService.getCurrentClientContext()).thenReturn(java.util.Optional.of(
+                ClientApplicationContextDto.builder().clientApplicationId(3L).clientCode("WEB")
+                        .clientType(ClientApplicationType.WEB).build()));
+        when(authApplicationContextService.applyAuthPolicy(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
+        EffectiveTenantAccessContextHolder.set(new EffectiveTenantAccessContext(
+                7L, "TENANT_7", "tenant.example.test", 10L, 3L,
+                Set.of(new UserScopeAssignment(7L, 8L, 9L))));
+
+        ApplicationContextDto context = service.getApplicationContext("operator");
+
+        assertThat(context.getEffectiveTenant().tenantId()).isEqualTo(7L);
+        assertThat(context.getEffectiveTenant().scopeAssignments())
+                .singleElement().satisfies(scope -> {
+                    assertThat(scope.businessId()).isEqualTo(8L);
+                    assertThat(scope.branchId()).isEqualTo(9L);
+                });
+        assertThat(context.getAuthorizationVersion()).isNotBlank();
     }
 
     @Test

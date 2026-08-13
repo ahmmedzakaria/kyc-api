@@ -51,6 +51,9 @@ class PersonServiceObjectAuthorizationTest {
 
     @Test
     void tenantACannotReadTenantBProfileOrPhoto() {
+        assertThatThrownBy(() -> service.getProfile(9002L))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("KYC person profile not found");
         assertThatThrownBy(() -> service.getPhoto(9002L))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessageContaining("KYC person profile not found");

@@ -2,6 +2,8 @@ package com.nexacore.systemmodule.accesscontrol.service.implementations;
 
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.dto.ClientPermissionAssignmentRequestDto;
+import com.nexacore.systemmodule.accesscontrol.dto.ClientAdministrationDetailDto;
+import com.nexacore.systemmodule.accesscontrol.dto.ClientScopeAssignmentDto;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccApiRegistry;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApiPermission;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
@@ -129,28 +131,66 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     public void assignTenants(ClientPermissionAssignmentRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
         SysAccClientApplication application = resolveClient(requestDto);
+        Set<ClientScopeAssignmentDto> assignments = normalizedScopes(requestDto);
+        if (getScopeAssignments(application.getId(), null).equals(assignments)) return;
         clientApplicationTenantRepository.deleteByClientApplicationId(application.getId());
-        Set<Long> tenantIds = requestDto.getTenantIds() == null ? Set.of() : requestDto.getTenantIds();
-        Set<Long> businessIds = requestDto.getBusinessIds() == null ? Set.of() : requestDto.getBusinessIds();
+        clientApplicationTenantRepository.saveAll(assignments.stream()
+                .map(scope -> SysAccClientApplicationTenant.builder()
+                        .clientApplication(application)
+                        .tenantId(scope.tenantId())
+                        .businessId(scope.businessId())
+                        .branchId(scope.branchId())
+                        .active(true)
+                        .createdBy(actorId)
+                        .updatedBy(actorId)
+                        .build())
+                .toList());
+        authorizationDataCache.invalidateClientAfterCommit(application.getId());
+    }
 
-        clientApplicationTenantRepository.saveAll(tenantIds.stream()
-                .map(tenantId -> SysAccClientApplicationTenant.builder()
-                        .clientApplication(application)
-                        .tenantId(tenantId)
-                        .active(true)
-                        .createdBy(actorId)
-                        .updatedBy(actorId)
-                        .build())
-                .toList());
-        clientApplicationTenantRepository.saveAll(businessIds.stream()
-                .map(businessId -> SysAccClientApplicationTenant.builder()
-                        .clientApplication(application)
-                        .businessId(businessId)
-                        .active(true)
-                        .createdBy(actorId)
-                        .updatedBy(actorId)
-                        .build())
-                .toList());
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode) {
+        SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);
+        return ClientAdministrationDetailDto.builder()
+                .client(com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationDto.fromEntity(application))
+                .apiRegistryIds(getApiPermissions(application.getId(), null))
+                .privilegeCodes(getFeaturePermissions(application.getId(), null))
+                .scopeAssignments(getScopeAssignments(application.getId(), null))
+                .build();
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public Set<Long> getApiPermissions(Long clientApplicationId, String clientCode) {
+        SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);
+        return Set.copyOf(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(application.getId()));
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public Set<String> getFeaturePermissions(Long clientApplicationId, String clientCode) {
+        SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);
+        return Set.copyOf(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(application.getId()));
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public Set<ClientScopeAssignmentDto> getScopeAssignments(Long clientApplicationId, String clientCode) {
+        SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);
+        return clientApplicationTenantRepository.findByClientApplicationIdAndActiveTrue(application.getId()).stream()
+                .map(scope -> new ClientScopeAssignmentDto(scope.getTenantId(), scope.getBusinessId(), scope.getBranchId()))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    private Set<ClientScopeAssignmentDto> normalizedScopes(ClientPermissionAssignmentRequestDto requestDto) {
+        if (requestDto.getScopeAssignments() != null) return Set.copyOf(requestDto.getScopeAssignments());
+        if (requestDto.getBusinessIds() != null && !requestDto.getBusinessIds().isEmpty()) {
+            throw new IllegalArgumentException("scopeAssignments must be used for business or branch scope replacement");
+        }
+        return requestDto.getTenantIds() == null ? Set.of() : requestDto.getTenantIds().stream()
+                .map(tenantId -> new ClientScopeAssignmentDto(tenantId, null, null))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     private SysAccClientApplication resolveClient(ClientPermissionAssignmentRequestDto requestDto) {

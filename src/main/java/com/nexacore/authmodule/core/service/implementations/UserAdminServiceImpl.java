@@ -5,6 +5,9 @@ import com.nexacore.authmodule.core.dto.RoleRequestDto;
 import com.nexacore.authmodule.core.dto.UserDto;
 import com.nexacore.authmodule.core.dto.UserRequestDto;
 import com.nexacore.authmodule.core.dto.UserRoleAssignmentRequestDto;
+import com.nexacore.authmodule.core.dto.UserScopeAssignmentDto;
+import com.nexacore.authmodule.core.dto.UserScopeAssignmentRequestDto;
+import com.nexacore.authmodule.core.entity.AuthUserScopeAssignment;
 import com.nexacore.authmodule.core.entity.AuthRole;
 import com.nexacore.authmodule.core.entity.AuthUser;
 import com.nexacore.authmodule.core.repository.RoleRepository;
@@ -127,6 +130,50 @@ public class UserAdminServiceImpl implements UserAdminService {
 
         user.setRoles(roles);
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(transactionManager = "authTransactionManager", readOnly = true)
+    public Set<UserScopeAssignmentDto> getScopeAssignments(Long userId) {
+        AuthUser user = requireScopedUser(userId);
+        return user.getScopeAssignments().stream()
+                .map(scope -> new UserScopeAssignmentDto(
+                        scope.getTenantId(), scope.getBusinessId(), scope.getBranchId(), scope.isActive()))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    @Override
+    public void replaceScopeAssignments(UserScopeAssignmentRequestDto requestDto) {
+        AuthUser user = requireScopedUser(requestDto.getUserId());
+        Set<UserScopeAssignmentDto> requested = requestDto.getScopeAssignments() == null
+                ? Set.of() : Set.copyOf(requestDto.getScopeAssignments());
+        if (requested.isEmpty()) {
+            throw new IllegalArgumentException("At least one active scope assignment is required");
+        }
+        if (requested.stream().anyMatch(scope -> !scope.active() || !user.getTenantId().equals(scope.tenantId()))) {
+            throw new DataScopeAccessDeniedException("User scopes must be active and belong to the account tenant");
+        }
+        long actorId = AuthenticatedRequestContextHolder.get()
+                .map(context -> context.userId() == null ? 0L : context.userId()).orElse(0L);
+        user.getScopeAssignments().clear();
+        requested.forEach(scope -> user.getScopeAssignments().add(AuthUserScopeAssignment.builder()
+                .user(user)
+                .userId(user.getId())
+                .tenantId(scope.tenantId())
+                .businessId(scope.businessId())
+                .branchId(scope.branchId())
+                .active(true)
+                .createdBy(actorId)
+                .updatedBy(actorId)
+                .build()));
+        userRepository.save(user);
+    }
+
+    private AuthUser requireScopedUser(Long userId) {
+        if (userId == null) throw new IllegalArgumentException("userId is required");
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        return userRepository.findByIdAndTenantId(userId, tenantId)
+                .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
     }
 
     @Override
