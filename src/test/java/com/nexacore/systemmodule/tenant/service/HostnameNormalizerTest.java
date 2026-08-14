@@ -18,4 +18,10 @@ class HostnameNormalizerTest {
     @Test void rejectsMissingHost() {
         assertThatThrownBy(() -> normalizer.normalize(" ")).isInstanceOf(IllegalArgumentException.class);
     }
+
+    /** Characterizes the candidate-to-candidate collision V62 must handle safely. */
+    @Test void differentUrlFormsCanNormalizeToTheSameTenantHostname() {
+        assertThat(normalizer.normalize("http://example.localhost:5300"))
+                .isEqualTo(normalizer.normalize("https://example.localhost:5301"));
+    }
 }

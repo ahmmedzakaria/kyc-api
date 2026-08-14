@@ -71,6 +71,37 @@ class TenantResolutionFilterTest {
         assertThat(insideChain.get().hostname()).isEqualTo("bdcom.localhost");
     }
 
+    /**
+     * Phase 1 characterization: Origin is currently treated as a tenant-host candidate
+     * before it has been bound to an authenticated client. Phase 2 must replace this
+     * contract with a client/origin/tenant binding and a stable denial code.
+     */
+    @Test void currentBehaviorAcceptsCallerSuppliedOriginAsTenantCandidate() throws Exception {
+        resolved.set(tenant(TenantStatus.ACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/config");
+        request.setServerName("localhost");
+        request.addHeader("Origin", "https://caller-selected.example:5443");
+        AtomicReference<ResolvedTenantContext> insideChain = new AtomicReference<>();
+
+        filter.doFilter(request, new MockHttpServletResponse(),
+                (req, res) -> insideChain.set(ResolvedTenantContextHolder.get().orElseThrow()));
+
+        assertThat(insideChain.get().hostname()).isEqualTo("caller-selected.example");
+    }
+
+    /** Phase 1 characterization for non-browser centralized API requests. */
+    @Test void currentBehaviorFallsBackToApiServerHostWhenOriginIsMissing() throws Exception {
+        resolved.set(tenant(TenantStatus.ACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/config");
+        request.setServerName("localhost");
+        AtomicReference<ResolvedTenantContext> insideChain = new AtomicReference<>();
+
+        filter.doFilter(request, new MockHttpServletResponse(),
+                (req, res) -> insideChain.set(ResolvedTenantContextHolder.get().orElseThrow()));
+
+        assertThat(insideChain.get().hostname()).isEqualTo("localhost");
+    }
+
     private TenantDomainResolver.ResolvedTenant tenant(TenantStatus status) {
         return new TenantDomainResolver.ResolvedTenant(1L, "system", status);
     }

@@ -64,7 +64,7 @@ class UserAdminServiceObjectAuthorizationTest {
     }
 
     @Test
-    void platformAdministratorCreatesTenantAccountWithInitialTenantScope() {
+    void currentTenantViewBypassCreatesCrossTenantAccountWithInitialTenantScope() {
         UserRepository users = mock(UserRepository.class);
         DataScopeService scope = mock(DataScopeService.class);
         PersonModuleGateway people = mock(PersonModuleGateway.class);

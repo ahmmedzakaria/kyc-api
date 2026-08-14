@@ -241,9 +241,11 @@ Platform authority should be represented centrally, for example by an `Administr
 
 ### Phase 1 — Freeze and characterize current behavior
 
-1. Record all modified and untracked files in backend and active system frontend.
-2. Separate unrelated staged root/legacy frontend files from this change-set without deleting user work.
-3. Add failing tests that demonstrate:
+Status: **Completed on 2026-08-15.** Phase 1 intentionally keeps the normal build green. Unsafe current behavior is captured by executable characterization tests; the inverse security expectations below are release gates that must replace those characterizations during Phases 2 and 3.
+
+1. [x] Record all modified and untracked files in backend and active system frontend.
+2. [x] Identify unrelated staged root/legacy frontend files without deleting, resetting, or otherwise changing user work.
+3. [x] Add characterization and release-gate contracts for:
    - Spoofed Origin cannot select an arbitrary tenant.
    - Missing Origin does not silently select the system tenant for a tenant request.
    - Client origin and tenant assignment must agree.
@@ -251,9 +253,63 @@ Platform authority should be represented centrally, for example by an `Administr
    - `TENANT_VIEW` alone cannot administer another tenant.
    - `TENANT_VIEW` alone cannot create a global role.
    - Two URL-form domain rows can normalize to the same hostname.
-4. Capture current public-route behavior for auth config, password login, SSO initiation, callback, refresh, logout, and session status.
+4. [x] Capture current public-route behavior for auth config, password login, SSO initiation/callback, refresh, logout, and session status.
 
-Deliverable: regression tests that fail against the unsafe behavior and document expected error codes.
+Deliverable: a reproducible green baseline plus explicit security contracts and expected error codes for the next phases.
+
+#### Phase 1 change inventory
+
+The functional change-set is confined to the backend and `frontendApplications/system-frontend-21`. The backend contains tenant resolution/CORS changes, tenant-aware user and role administration, additive client bootstrap behavior, migration V62, the person-list sort correction, and related tests. The active system frontend contains tenant-aware role/user controls and locked client-scope replacement behavior.
+
+The following are deliberately excluded from the functional change-set:
+
+- Legacy root `frontend-libs/`.
+- Root `layout/` staged additions and Angular compiler cache files.
+- Staged-then-deleted files in the legacy `frontend/` and `privilege-frontend/` repositories.
+- Generated `.angular/` and `dist/` output.
+- Unrelated nested repositories and existing user work.
+
+Phase 1 did not mutate the Git index because unstaging unrelated user work is outside the authorization of an analysis/baseline phase.
+
+#### Current authentication route classification
+
+| Route | Current classification | Current consequence |
+| --- | --- | --- |
+| `/api/v1/auth/login` | Public | Normal client/JWT enforcement is skipped |
+| `/api/v1/auth/authenticate` | Public | Normal client/JWT enforcement is skipped |
+| `/api/v1/auth/config` | Public | Pre-login configuration is available after tenant filter resolution |
+| `/api/v1/auth/application-context/public` | Public | Public application context uses pre-auth tenant resolution |
+| `/api/v1/auth/sso/authenticate` | Public | SSO token exchange is pre-authentication |
+| `/api/v1/auth/login-status` | Public | Login-status check is pre-authentication |
+| `/api/v1/auth/refresh-token` | Public | Refresh token is validated by the auth service rather than bearer JWT filter |
+| `/oauth2/**` | Public | SSO initiation/callback paths are permitted by wildcard |
+| `/api/v1/auth/logout` | Protected | Requires authenticated request processing |
+| `/api/v1/auth/session-status` | Protected | Requires authenticated request processing |
+| `/api/v1/auth/application-context` | Protected | Requires authenticated request processing |
+
+#### Executable characterization tests
+
+- `TenantResolutionFilterTest` proves that a syntactically valid caller-supplied Origin currently overrides the centralized API hostname and that missing Origin falls back to the API server hostname.
+- `PublicAuthenticationRouteCharacterizationTest` freezes the public/protected route matrix.
+- `AdministrativePrivilegeCharacterizationTest` records that global-role and cross-tenant administration are currently coupled to `TENANT_VIEW`.
+- `UserAdminServiceObjectAuthorizationTest` records that `TENANT_VIEW` currently permits cross-tenant user creation.
+- `HostnameNormalizerTest` proves that distinct URL-form rows can normalize to one hostname, establishing the V62 collision case.
+
+#### Pending security contracts
+
+The following expectations are intentionally not asserted as passing behavior until their enforcement exists:
+
+| Contract | Expected denial |
+| --- | --- |
+| Unvalidated Origin selects another tenant | 403 `TENANT_ORIGIN_MISMATCH` |
+| Tenant context is absent on a centralized tenant request | 400/403 `TENANT_CONTEXT_REQUIRED` |
+| Valid client is not assigned to resolved tenant | 403 `TENANT_CLIENT_NOT_ASSIGNED` |
+| Access-token tenant differs from resolved tenant | 403 `TOKEN_TENANT_MISMATCH` |
+| `TENANT_VIEW` actor attempts cross-tenant mutation | 403 data-scope denial |
+| Role manager without global authority creates global template | 403 privilege denial |
+| Multiple domain rows normalize to one hostname | Migration reports/quarantines conflict without unique-key startup failure |
+
+Phases 2, 3, and 5 must invert or replace the corresponding current-behavior tests when these contracts are implemented.
 
 ### Phase 2 — Replace Origin-as-authority tenant resolution
 
