@@ -297,6 +297,8 @@ Public responses should not reveal whether a specific tenant, username, or inact
 
 **Administration UI implemented on 2026-08-14.** The active System Angular 21 application now provides `/access-control/auth-policies`, reached from Client Applications, for tenant selection and tenant/client policy listing and editing. Its Auth-backed administration API enforces authenticated tenant scope, validates the active System client-to-tenant assignment through a module gateway, rejects `MFA` as a primary method, validates method/identifier compatibility, and records the authenticated actor. System route, UI-action, and API grants are provisioned by V61 and startup reconciliation. The legacy `frontend-libs` repository remains unchanged.
 
+System user creation now includes an explicit active-tenant selector for authorized platform administrators. A cross-tenant target is accepted only for `ROLE_SYSTEM_ADMIN`, validated through a System-to-Auth tenant provisioning gateway, and receives its mandatory tenant-level `AuthUserScopeAssignment` in the same Auth transaction. Tenant administrators continue to create accounts only inside their effective tenant.
+
 Replace global client-only seeding with tenant/client seeding. Seeder inputs must include a trusted tenant ID and must be idempotent on `(tenant_id, client_code)`.
 
 Administration APIs must:

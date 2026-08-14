@@ -30,6 +30,8 @@ import java.util.Set;
 import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 import com.nexacore.commonmodule.util.AssignmentVersion;
 import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
+import com.nexacore.gatewaymodule.tenant.service.interfaces.TenantProvisioningGateway;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -43,11 +45,12 @@ public class UserAdminServiceImpl implements UserAdminService {
     private final UsernameNormalizer usernameNormalizer;
     private final DataScopeService dataScopeService;
     private final AuthorizedScopeLookupService scopeLookupService;
+    private final TenantProvisioningGateway tenantProvisioningGateway;
 
     @Override
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
-    public List<UserDto> listUsers() {
-        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+    public List<UserDto> listUsers(Long requestedTenantId) {
+        Long tenantId = resolveAdministrationTenant(requestedTenantId);
         return userRepository.findByTenantIdOrderByNormalizedUsernameAsc(tenantId).stream()
                 .map(this::toDto)
                 .toList();
@@ -77,7 +80,7 @@ public class UserAdminServiceImpl implements UserAdminService {
 
         AuthUser user;
         if (requestDto.getId() == null) {
-            Long tenantId = dataScopeService.requireEffectiveTenant(requestDto.getTenantId());
+            Long tenantId = resolveCreationTenant(requestDto.getTenantId());
             userRepository.findByTenantIdAndNormalizedUsername(tenantId, normalizedUsername)
                     .ifPresent(existing -> {
                         throw new IllegalArgumentException("Username already in use for the tenant: " + requestDto.getUsername());
@@ -98,8 +101,13 @@ public class UserAdminServiceImpl implements UserAdminService {
             user.setUsername(requestDto.getUsername().trim());
             user.setNormalizedUsername(normalizedUsername);
             user.setPassword(passwordEncoder.encode(requestDto.getPassword()));
+            long actorId = AuthenticatedRequestContextHolder.get()
+                    .map(context -> context.userId() == null ? 0L : context.userId()).orElse(0L);
+            user.getScopeAssignments().add(AuthUserScopeAssignment.builder()
+                    .user(user).tenantId(tenantId).active(true)
+                    .createdBy(actorId).updatedBy(actorId).build());
         } else {
-            Long effectiveTenantId = dataScopeService.requireEffectiveTenant(requestDto.getTenantId());
+            Long effectiveTenantId = resolveAdministrationTenant(requestDto.getTenantId());
             user = userRepository.findByIdAndTenantId(requestDto.getId(), effectiveTenantId)
                     .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
             userRepository.findByTenantIdAndNormalizedUsername(effectiveTenantId, normalizedUsername)
@@ -122,15 +130,37 @@ public class UserAdminServiceImpl implements UserAdminService {
         return toDto(userRepository.save(user));
     }
 
+    private Long resolveCreationTenant(Long requestedTenantId) {
+        return resolveAdministrationTenant(requestedTenantId);
+    }
+
+    private Long resolveAdministrationTenant(Long requestedTenantId) {
+        if (requestedTenantId == null) {
+            return dataScopeService.requireEffectiveTenant(null);
+        }
+        try {
+            return dataScopeService.requireEffectiveTenant(requestedTenantId);
+        } catch (DataScopeAccessDeniedException exception) {
+            if (!isPlatformAdministrator()) throw exception;
+            tenantProvisioningGateway.requireActiveTenant(requestedTenantId);
+            return requestedTenantId;
+        }
+    }
+
+    private boolean isPlatformAdministrator() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream().anyMatch(authority ->
+                "ROLE_SYSTEM_ADMIN".equals(authority.getAuthority()));
+    }
+
     @Override
     public void assignRoles(UserRoleAssignmentRequestDto requestDto) {
         if (requestDto.getUserId() == null) {
             throw new IllegalArgumentException("userId is required");
         }
 
-        Long tenantId = dataScopeService.requireEffectiveTenant(null);
-        AuthUser user = userRepository.findByIdAndTenantId(requestDto.getUserId(), tenantId)
-                .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
+        AuthUser user = requireScopedUser(requestDto.getUserId());
 
         AssignmentVersion.requireCurrent(requestDto.getVersion(),
                 user.getRoles().stream().map(AuthRole::getId).toList());
@@ -212,8 +242,15 @@ public class UserAdminServiceImpl implements UserAdminService {
     private AuthUser requireScopedUser(Long userId) {
         if (userId == null) throw new IllegalArgumentException("userId is required");
         Long tenantId = dataScopeService.requireEffectiveTenant(null);
-        return userRepository.findByIdAndTenantId(userId, tenantId)
-                .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found in the effective tenant"));
+        var scoped = userRepository.findByIdAndTenantId(userId, tenantId);
+        if (scoped.isPresent()) return scoped.get();
+        if (isPlatformAdministrator()) {
+            AuthUser target = userRepository.findById(userId)
+                    .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found"));
+            tenantProvisioningGateway.requireActiveTenant(target.getTenantId());
+            return target;
+        }
+        throw new DataScopeAccessDeniedException("User account not found in the effective tenant");
     }
 
     private String scopeKey(Long tenantId,Long businessId,Long branchId) {

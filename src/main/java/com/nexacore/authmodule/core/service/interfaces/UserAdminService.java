@@ -13,7 +13,7 @@ import java.util.Set;
 import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 
 public interface UserAdminService {
-    List<UserDto> listUsers();
+    List<UserDto> listUsers(Long tenantId);
     UserDto getUser(Long userId);
     VersionedAssignmentDto<RoleDto> getUserRoleAssignments(Long userId);
 

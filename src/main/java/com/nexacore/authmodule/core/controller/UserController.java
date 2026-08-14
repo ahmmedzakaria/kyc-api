@@ -21,6 +21,7 @@ import java.util.Set;
 import com.nexacore.commonmodule.dto.IdRequestDto;
 import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 import com.nexacore.authmodule.core.dto.RoleDto;
+import com.nexacore.authmodule.core.dto.UserListRequestDto;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,8 +33,8 @@ public class UserController {
     @PostMapping("/list")
     @PrivilegeApi("11020100701")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).USER_ADMINISTRATION_VIEW)")
-    public ResponseEntity<ApiResponse<List<UserDto>>> listUsers() {
-        return ResponseEntity.ok(ApiResponse.success(userAdminService.listUsers(), "Users loaded"));
+    public ResponseEntity<ApiResponse<List<UserDto>>> listUsers(@RequestBody(required = false) UserListRequestDto request) {
+        return ResponseEntity.ok(ApiResponse.success(userAdminService.listUsers(request == null ? null : request.tenantId()), "Users loaded"));
     }
 
     @PostMapping("/detail")
