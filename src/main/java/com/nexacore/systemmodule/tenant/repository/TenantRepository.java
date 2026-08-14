@@ -10,6 +10,7 @@ import com.nexacore.systemmodule.tenant.entity.TenantStatus;
 public interface TenantRepository extends JpaRepository<SysTenant, Long> {
     Optional<SysTenant> findByTenantCodeIgnoreCase(String tenantCode);
     List<SysTenant> findAllByOrderByTenantCodeAsc();
+    List<SysTenant> findByStatusOrderByTenantCodeAsc(TenantStatus status);
     List<SysTenant> findByIdInAndStatusOrderByTenantCodeAsc(java.util.Collection<Long> ids, TenantStatus status);
     long countByStatus(TenantStatus status);
 }
