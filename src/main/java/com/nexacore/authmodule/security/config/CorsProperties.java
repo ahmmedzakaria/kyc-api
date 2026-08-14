@@ -15,7 +15,8 @@ public class CorsProperties {
     private List<String> allowedOrigins = List.of();
     private List<String> allowedMethods = List.of("GET", "POST", "PUT", "DELETE", "OPTIONS");
     private List<String> allowedHeaders = List.of(
-            "Authorization", "Content-Type", "X-Silent", "X-Client-Code", "X-API-Key", "X-Trace-Id"
+            "Authorization", "Content-Type", "X-Silent", "X-Client-Code", "X-API-Key", "X-Trace-Id",
+            "X-Step-Up-Authentication"
     );
     private List<String> exposedHeaders = List.of("X-Trace-Id");
     private boolean allowCredentials;
