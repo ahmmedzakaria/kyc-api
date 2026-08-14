@@ -40,6 +40,51 @@ class AuthDatabaseMigrationTest {
     }
 
     @Test
+    void preparesClientAuthenticationPoliciesForTrustedTenantReconciliation() throws SQLException {
+        migrateTo("16");
+        execute("INSERT INTO auth_client_auth_policy "
+                + "(client_code, login_method, login_identifier_type, enabled, created_by, updated_by) VALUES "
+                + "('  SYSTEM_ADMIN_WEB  ', 'PASSWORD', 'USERNAME', true, NULL, NULL),"
+                + "('WEB', 'PASSWORD', 'USERNAME', true, 0, 0)");
+
+        migrateTo("17");
+
+        assertThat(count("SELECT count(*) FROM information_schema.columns "
+                + "WHERE table_schema='public' AND table_name='auth_client_auth_policy' "
+                + "AND column_name='tenant_id' AND is_nullable='YES'")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM auth_client_auth_policy "
+                + "WHERE client_code IN ('SYSTEM_ADMIN_WEB','WEB') AND tenant_id IS NULL "
+                + "AND created_by=0 AND updated_by=0 AND created_at IS NOT NULL AND updated_at IS NOT NULL"))
+                .isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM auth_client_auth_policy_reconciliation "
+                + "WHERE NOT resolved AND reason='TRUSTED_TENANT_REQUIRED' "
+                + "AND candidate_tenant_ids='{}'::bigint[]")).isEqualTo(2);
+        migrateTo("18");
+        execute("INSERT INTO auth_client_auth_policy "
+                + "(client_code, login_method, login_identifier_type, enabled) "
+                + "VALUES ('POST_MIGRATION_CLIENT', 'OTP', 'MOBILE', true)");
+        assertThat(count("SELECT count(*) FROM auth_client_auth_policy_reconciliation "
+                + "WHERE client_code='POST_MIGRATION_CLIENT' AND NOT resolved "
+                + "AND reason='TRUSTED_TENANT_REQUIRED'")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND indexname IN "
+                + "('ux_auth_client_auth_policy_tenant_client',"
+                + "'idx_auth_client_auth_policy_tenant_client_enabled',"
+                + "'idx_auth_client_auth_policy_unresolved',"
+                + "'idx_auth_client_policy_reconciliation_unresolved')")).isEqualTo(4);
+
+        execute("UPDATE auth_client_auth_policy SET tenant_id=10 WHERE client_code='WEB'");
+        execute("UPDATE auth_client_auth_policy SET tenant_id=10 WHERE client_code='SYSTEM_ADMIN_WEB'");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "INSERT INTO auth_client_auth_policy "
+                                + "(tenant_id, client_code, login_method, login_identifier_type, enabled) "
+                                + "VALUES (10, 'web', 'SSO', 'USERNAME', true)"))
+                .isInstanceOf(SQLException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> execute(
+                        "UPDATE auth_client_auth_policy SET tenant_id=0 WHERE client_code='SYSTEM_ADMIN_WEB'"))
+                .isInstanceOf(SQLException.class);
+    }
+
+    @Test
     void upgradesLegacyAuthSchemaToAdditiveTenantAccountFoundation() throws SQLException {
         migrateTo("10");
         execute("INSERT INTO auth_users (username, person_id, enabled) VALUES ('Legacy.User', 101, true)");

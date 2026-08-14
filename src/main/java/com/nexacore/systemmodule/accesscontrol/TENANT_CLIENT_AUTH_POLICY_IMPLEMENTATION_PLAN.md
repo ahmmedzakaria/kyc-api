@@ -151,6 +151,8 @@ Do not infer tenant from username alone when duplicate usernames may exist acros
 
 ### Phase 1: Schema and migration
 
+**Status: Additive preparation implemented in V17.** The migration adds nullable tenant ownership, normalizes audit data, replaces client-only indexes with tenant-aware resolved/unresolved indexes, and creates a reconciliation queue maintained for both migrated and post-migration unresolved rows. Trusted backfill and the final `tenant_id NOT NULL` cutover remain intentionally pending because authoritative client-to-tenant assignments live in `system_db` and cannot be inferred safely inside the Auth Flyway migration.
+
 1. Add the next immutable Auth Flyway migration; do not edit `V7__add_client_auth_registration_policy.sql`.
 2. Add nullable `tenant_id` initially.
 3. Backfill tenant IDs only from trusted client-to-tenant assignments obtained through an explicit migration input or reconciliation job.
