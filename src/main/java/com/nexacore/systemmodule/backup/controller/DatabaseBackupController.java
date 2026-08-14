@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
 import com.nexacore.systemmodule.backup.dto.*;
 import com.nexacore.systemmodule.backup.enums.BackupTrigger;
 import com.nexacore.systemmodule.backup.service.BackupJobService;
+import com.nexacore.systemmodule.backup.service.BackupOperationsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
@@ -20,6 +21,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class DatabaseBackupController {
     private final BackupJobService service;
+    private final BackupOperationsService operations;
 
     @PostMapping("/run")
     @PrivilegeApi("11060100113")
@@ -58,4 +60,24 @@ public class DatabaseBackupController {
                 .contentLength(resource.contentLength())
                 .body(resource);
     }
+
+    @PostMapping("/delivery/retry") @PrivilegeApi("11060100180")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).DATABASE_BACKUP_DELIVER)")
+    public ApiResponse<BackupDeliveryAttemptDto> retry(@Valid @RequestBody BackupDeliveryRetryRequestDto request,Authentication authentication){return ApiResponse.successCode(operations.retryDelivery(request.backupId(),authentication.getName()),"system.backup.delivery.retried","Backup delivery completed");}
+
+    @PostMapping("/delivery/history") @PrivilegeApi("11060100180")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).DATABASE_BACKUP_DELIVER)")
+    public ApiResponse<java.util.List<BackupDeliveryAttemptDto>> deliveryHistory(@Valid @RequestBody BackupIdRequestDto request){return ApiResponse.successCode(operations.deliveryHistory(request.backupId()),"system.backup.delivery.history","Backup delivery history loaded");}
+
+    @PostMapping("/configuration") @PrivilegeApi("11060100187")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).DATABASE_BACKUP_MANAGE)")
+    public ApiResponse<BackupConfigurationDto> configuration(){return ApiResponse.successCode(operations.configuration(),"system.backup.configuration","Backup configuration loaded");}
+
+    @PostMapping("/readiness") @PrivilegeApi("11060100187")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).DATABASE_BACKUP_MANAGE)")
+    public ApiResponse<BackupReadinessDto> readiness(){return ApiResponse.successCode(operations.readiness(),"system.backup.readiness","Backup readiness loaded");}
+
+    @PostMapping("/restore-verification/list") @PrivilegeApi("11060100187")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).DATABASE_BACKUP_MANAGE)")
+    public ApiResponse<java.util.List<BackupRestoreVerificationDto>> verifications(){return ApiResponse.successCode(operations.verificationHistory(),"system.backup.restore.verification.listed","Restore verification evidence loaded");}
 }
