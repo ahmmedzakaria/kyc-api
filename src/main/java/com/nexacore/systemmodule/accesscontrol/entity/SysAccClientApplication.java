@@ -48,6 +48,15 @@ public class SysAccClientApplication {
     @Column(columnDefinition = "TEXT")
     private String allowedOrigins;
 
+    @Column(length = 150)
+    private String oauthClientId;
+
+    @Column(columnDefinition = "TEXT")
+    private String allowedRedirectUris;
+
+    @Column(columnDefinition = "TEXT")
+    private String allowedLogoutRedirectUris;
+
     @Column(columnDefinition = "TEXT")
     private String allowedIps;
 

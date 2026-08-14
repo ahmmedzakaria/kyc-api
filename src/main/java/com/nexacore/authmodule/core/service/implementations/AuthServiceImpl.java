@@ -4,7 +4,6 @@ package com.nexacore.authmodule.core.service.implementations;
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
-import com.nexacore.authmodule.security.config.KeycloakProperties;
 import com.nexacore.authmodule.core.dto.AuthConfigResponse;
 import com.nexacore.authmodule.core.dto.AuthRequest;
 import com.nexacore.authmodule.core.dto.AuthResponse;
@@ -47,7 +46,6 @@ public class AuthServiceImpl implements AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtUtil jwtUtil;
 	private final AuthenticationProperties authenticationProperties;
-	private final KeycloakProperties keycloakProperties;
 	private final LogoutSessionService logoutSessionService;
 	private final RefreshTokenSessionService refreshTokenSessionService;
 	private final AuthApplicationContextService authApplicationContextService;
@@ -94,7 +92,6 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthConfigResponse>> getAuthConfig(String origin, String clientCode) {
-		String redirectUri = authApplicationContextService.buildRedirectUri(origin);
 		ApplicationContextDto applicationContext = authApplicationContextService.buildPublicContext(origin, clientCode);
 		applicationContext.setLayout(layoutModuleGateway.getPublicLayout(applicationContext.getClientCode(), origin));
 		AuthConfigResponse response = AuthConfigResponse.builder()
@@ -110,9 +107,9 @@ public class AuthServiceImpl implements AuthService {
 				.enabledLoginMethods(applicationContext.getEnabledLoginMethods())
 				.loginIdentifierTypes(applicationContext.getLoginIdentifierTypes())
 				.userActivationMode(applicationContext.getUserActivationMode())
-				.issuerUri(keycloakProperties.getIssuerUri())
-				.clientId(authApplicationContextService.resolveClientId(origin))
-				.redirectUri(redirectUri)
+				.issuerUri(applicationContext.getSso().issuerUri())
+				.clientId(applicationContext.getSso().clientId())
+				.redirectUri(applicationContext.getSso().redirectUri())
 				.sso(applicationContext.getSso())
 				.registration(applicationContext.getRegistration())
 				.securityPolicy(applicationContext.getSecurityPolicy())

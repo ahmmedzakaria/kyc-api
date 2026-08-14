@@ -20,7 +20,7 @@ public class ClientOriginPolicy {
             return false;
         }
         try {
-            String normalizedRequestOrigin = normalize(requestOrigin);
+            String normalizedRequestOrigin = normalizeOrigin(requestOrigin);
             return parse(application.getAllowedOrigins()).contains(normalizedRequestOrigin);
         } catch (IllegalArgumentException ignored) {
             return false;
@@ -42,13 +42,13 @@ public class ClientOriginPolicy {
         Set<String> normalized = new LinkedHashSet<>();
         for (String configuredOrigin : configuredOrigins.split(",")) {
             if (StringUtils.hasText(configuredOrigin)) {
-                normalized.add(normalize(configuredOrigin));
+                normalized.add(normalizeOrigin(configuredOrigin));
             }
         }
         return normalized;
     }
 
-    private String normalize(String origin) {
+    public String normalizeOrigin(String origin) {
         if (!StringUtils.hasText(origin) || "null".equalsIgnoreCase(origin.trim()) || "*".equals(origin.trim())) {
             throw new IllegalArgumentException("Opaque and wildcard origins are not allowed");
         }

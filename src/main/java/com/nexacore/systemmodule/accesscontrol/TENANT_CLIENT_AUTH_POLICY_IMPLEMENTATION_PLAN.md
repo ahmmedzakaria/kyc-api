@@ -262,6 +262,8 @@ Consolidate duplicated top-level and `applicationContext` authentication propert
 
 ### Phase 5: Client and SSO configuration
 
+**Status: Implemented on 2026-08-14.** OAuth client IDs and exact login/logout redirect URI allowlists are persisted on each System client application and exposed through the administration contract. Auth resolves this configuration through a module gateway, validates the request origin, and returns only a registered URI; raw origins are never concatenated into redirects. The active Angular 21 platform uses the server-returned OAuth values, including logout redirects, and sends `X-Client-Code` independently of API-key configuration. The legacy `frontend-libs` repository remains unchanged.
+
 Replace port-based OAuth client selection with configuration stored against the resolved client application:
 
 ```text

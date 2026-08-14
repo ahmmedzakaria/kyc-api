@@ -15,6 +15,9 @@ public class ClientApplicationDto {
     private ClientApplicationType clientType;
     private ClientApplicationStatus status;
     private String allowedOrigins;
+    private String oauthClientId;
+    private String allowedRedirectUris;
+    private String allowedLogoutRedirectUris;
     private String allowedIps;
     private Integer rateLimitPerMinute;
     private String description;
@@ -27,6 +30,9 @@ public class ClientApplicationDto {
                 .clientType(application.getClientType())
                 .status(application.getStatus())
                 .allowedOrigins(application.getAllowedOrigins())
+                .oauthClientId(application.getOauthClientId())
+                .allowedRedirectUris(application.getAllowedRedirectUris())
+                .allowedLogoutRedirectUris(application.getAllowedLogoutRedirectUris())
                 .allowedIps(application.getAllowedIps())
                 .rateLimitPerMinute(application.getRateLimitPerMinute())
                 .description(application.getDescription())

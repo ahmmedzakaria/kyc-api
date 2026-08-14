@@ -209,6 +209,9 @@ public class DataSeeder {
         requestDto.setClientType(ClientApplicationType.WEB);
         requestDto.setStatus(ClientApplicationStatus.ACTIVE);
         requestDto.setAllowedOrigins("http://localhost:4200,http://localhost:4300,http://localhost:5300");
+        requestDto.setOauthClientId("nexacore-client");
+        requestDto.setAllowedRedirectUris("http://localhost:4200/sso/callback,http://localhost:4300/sso/callback,http://localhost:5300/sso/callback");
+        requestDto.setAllowedLogoutRedirectUris("http://localhost:4200/login,http://localhost:4300/login,http://localhost:5300/login");
         requestDto.setDescription("Default first-party web frontend client.");
         clientApplicationService.save(requestDto, "system_admin");
 

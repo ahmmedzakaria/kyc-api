@@ -11,6 +11,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepos
 import com.nexacore.systemmodule.accesscontrol.repository.ClientCredentialRepository;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.accesscontrol.security.ClientOriginPolicy;
+import com.nexacore.systemmodule.accesscontrol.security.ClientRedirectUriPolicy;
 import com.nexacore.systemmodule.accesscontrol.security.ClientIpPolicy;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
     private final AuthModuleGateway authModuleGateway;
     private final PasswordEncoder passwordEncoder;
     private final ClientOriginPolicy clientOriginPolicy;
+    private final ClientRedirectUriPolicy clientRedirectUriPolicy;
     private final ClientIpPolicy clientIpPolicy;
     private final AuthorizationDataCache authorizationDataCache;
 
@@ -50,6 +52,9 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
         application.setClientType(requestDto.getClientType());
         application.setStatus(requestDto.getStatus() == null ? ClientApplicationStatus.ACTIVE : requestDto.getStatus());
         application.setAllowedOrigins(clientOriginPolicy.normalizeConfiguredOrigins(requestDto.getAllowedOrigins()));
+        application.setOauthClientId(optionalText(requestDto.getOauthClientId()));
+        application.setAllowedRedirectUris(clientRedirectUriPolicy.normalizeConfiguredUris(requestDto.getAllowedRedirectUris()));
+        application.setAllowedLogoutRedirectUris(clientRedirectUriPolicy.normalizeConfiguredUris(requestDto.getAllowedLogoutRedirectUris()));
         application.setAllowedIps(clientIpPolicy.normalizeConfiguredIps(requestDto.getAllowedIps()));
         if (requestDto.getRateLimitPerMinute() != null && requestDto.getRateLimitPerMinute() <= 0) {
             throw new IllegalArgumentException("rateLimitPerMinute must be positive when configured");
@@ -132,5 +137,9 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         return value.trim();
+    }
+
+    private String optionalText(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

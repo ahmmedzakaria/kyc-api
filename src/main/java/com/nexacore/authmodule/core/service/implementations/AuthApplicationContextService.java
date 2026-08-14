@@ -9,13 +9,15 @@ import com.nexacore.authmodule.core.dto.SsoContextDto;
 import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.core.enums.RegistrationMode;
 import com.nexacore.authmodule.core.enums.UserActivationMode;
+import com.nexacore.authmodule.core.exception.AuthPolicyException;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import com.nexacore.authmodule.security.config.KeycloakProperties;
 import com.nexacore.authmodule.security.config.RegistrationProperties;
 import com.nexacore.authmodule.security.service.TenantAccountResolver;
+import com.nexacore.gatewaymodule.client.dto.ClientSsoConfigurationDto;
+import com.nexacore.gatewaymodule.client.service.interfaces.ClientConfigurationGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -32,6 +34,7 @@ public class AuthApplicationContextService {
     private final KeycloakProperties keycloakProperties;
     private final AuthClientPolicyService authClientPolicyService;
     private final TenantAccountResolver tenantAccountResolver;
+    private final ClientConfigurationGateway clientConfigurationGateway;
 
     public ApplicationContextDto buildPublicContext(String origin) {
         return buildPublicContext(origin, null);
@@ -48,8 +51,8 @@ public class AuthApplicationContextService {
     }
 
     public ApplicationContextDto applyAuthPolicy(ApplicationContextDto context, String origin, String requestedClientCode) {
-        String redirectUri = buildRedirectUri(origin);
         String policyClientCode = resolvePolicyClientCode(origin, requestedClientCode, context.getClientCode());
+        ClientSsoConfigurationDto clientConfiguration = resolveClientConfiguration(policyClientCode, origin);
         long tenantId = context.getEffectiveTenant() != null && context.getEffectiveTenant().tenantId() != null
                 ? context.getEffectiveTenant().tenantId()
                 : tenantAccountResolver.resolveRequiredTenant(policyClientCode);
@@ -71,7 +74,7 @@ public class AuthApplicationContextService {
                 .enabledRegistrationCredentialModels(new LinkedHashSet<>(List.of(policy.registrationCredentialModel())))
                 .enabledLoginMethods(new LinkedHashSet<>(List.of(policy.loginMethod())))
                 .loginIdentifierTypes(new LinkedHashSet<>(List.of(policy.loginIdentifierType())))
-                .sso(buildSsoContext(origin, redirectUri, policy))
+                .sso(buildSsoContext(clientConfiguration, policy))
                 .registration(buildRegistrationContext())
                 .securityPolicy(buildSecurityPolicyContext(policy))
                 .privilegeCodes(context.getPrivilegeCodes())
@@ -84,13 +87,13 @@ public class AuthApplicationContextService {
                 .build();
     }
 
-    public SsoContextDto buildSsoContext(String origin, String redirectUri, ResolvedAuthPolicy policy) {
+    public SsoContextDto buildSsoContext(ClientSsoConfigurationDto clientConfiguration, ResolvedAuthPolicy policy) {
         return SsoContextDto.builder()
                 .enabled(policy.loginMethod() == LoginMethod.SSO)
                 .issuerUri(keycloakProperties.getIssuerUri())
-                .clientId(resolveClientId(origin))
-                .redirectUri(redirectUri)
-                .logoutRedirectUri(buildLogoutRedirectUri(origin))
+                .clientId(clientConfiguration.oauthClientId())
+                .redirectUri(clientConfiguration.redirectUri())
+                .logoutRedirectUri(clientConfiguration.logoutRedirectUri())
                 .scopes(new ArrayList<>(DEFAULT_SSO_SCOPES))
                 .pkceRequired(true)
                 .build();
@@ -127,30 +130,24 @@ public class AuthApplicationContextService {
                 .build();
     }
 
-    public String buildRedirectUri(String origin) {
-        String baseOrigin = StringUtils.hasText(origin) ? origin : "http://localhost:4200";
-        return baseOrigin + "/sso/callback";
-    }
-
-    public String buildLogoutRedirectUri(String origin) {
-        String baseOrigin = StringUtils.hasText(origin) ? origin : "http://localhost:4200";
-        return baseOrigin + "/login";
-    }
-
-    public String resolveClientId(String origin) {
-        if (StringUtils.hasText(origin) && origin.contains(":4300")) {
-            return "privilege-frontend";
-        }
-        return keycloakProperties.getClientId();
-    }
-
     public String resolvePolicyClientCode(String origin, String requestedClientCode, String contextClientCode) {
-        if (StringUtils.hasText(contextClientCode)) {
+        if (contextClientCode != null && !contextClientCode.isBlank()) {
             return contextClientCode;
         }
-        if (StringUtils.hasText(requestedClientCode)) {
+        if (requestedClientCode != null && !requestedClientCode.isBlank()) {
             return requestedClientCode.trim();
         }
-        return resolveClientId(origin);
+        throw AuthPolicyException.clientContextRequired();
+    }
+
+    private ClientSsoConfigurationDto resolveClientConfiguration(String clientCode, String origin) {
+        try {
+            return clientConfigurationGateway.resolveSsoConfiguration(clientCode, origin);
+        } catch (IllegalArgumentException exception) {
+            if ("CLIENT_CONTEXT_REQUIRED".equals(exception.getMessage())) {
+                throw AuthPolicyException.clientContextRequired();
+            }
+            throw AuthPolicyException.clientContextNotAllowed();
+        }
     }
 }

@@ -28,4 +28,14 @@ public class AuthPolicyException extends RuntimeException {
         return new AuthPolicyException(HttpStatus.INTERNAL_SERVER_ERROR, "AUTH_POLICY_INTEGRITY_ERROR",
                 "Authentication policy integrity validation failed");
     }
+
+    public static AuthPolicyException clientContextRequired() {
+        return new AuthPolicyException(HttpStatus.BAD_REQUEST, "CLIENT_CONTEXT_REQUIRED",
+                "Client context is required");
+    }
+
+    public static AuthPolicyException clientContextNotAllowed() {
+        return new AuthPolicyException(HttpStatus.FORBIDDEN, "CLIENT_CONTEXT_NOT_ALLOWED",
+                "Client context is not allowed");
+    }
 }
