@@ -2,6 +2,8 @@ package com.nexacore.authmodule.core.service.implementations;
 
 import com.nexacore.authmodule.core.dto.ApplicationContextDto;
 import com.nexacore.authmodule.core.dto.RegistrationContextDto;
+import com.nexacore.authmodule.core.dto.ResolvedAuthPolicy;
+import com.nexacore.authmodule.core.dto.SecondFactorPolicyDto;
 import com.nexacore.authmodule.core.dto.SecurityPolicyContextDto;
 import com.nexacore.authmodule.core.dto.SsoContextDto;
 import com.nexacore.authmodule.core.enums.LoginMethod;
@@ -10,6 +12,7 @@ import com.nexacore.authmodule.core.enums.UserActivationMode;
 import com.nexacore.authmodule.security.config.AuthenticationProperties;
 import com.nexacore.authmodule.security.config.KeycloakProperties;
 import com.nexacore.authmodule.security.config.RegistrationProperties;
+import com.nexacore.authmodule.security.service.TenantAccountResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -28,6 +31,7 @@ public class AuthApplicationContextService {
     private final RegistrationProperties registrationProperties;
     private final KeycloakProperties keycloakProperties;
     private final AuthClientPolicyService authClientPolicyService;
+    private final TenantAccountResolver tenantAccountResolver;
 
     public ApplicationContextDto buildPublicContext(String origin) {
         return buildPublicContext(origin, null);
@@ -46,20 +50,30 @@ public class AuthApplicationContextService {
     public ApplicationContextDto applyAuthPolicy(ApplicationContextDto context, String origin, String requestedClientCode) {
         String redirectUri = buildRedirectUri(origin);
         String policyClientCode = resolvePolicyClientCode(origin, requestedClientCode, context.getClientCode());
+        long tenantId = context.getEffectiveTenant() != null && context.getEffectiveTenant().tenantId() != null
+                ? context.getEffectiveTenant().tenantId()
+                : tenantAccountResolver.resolveRequiredTenant(policyClientCode);
+        ResolvedAuthPolicy policy = authClientPolicyService.resolveRequiredPolicy(tenantId, policyClientCode);
 
         return ApplicationContextDto.builder()
-                .clientCode(policyClientCode)
+                .tenantId(tenantId)
+                .clientCode(policy.clientCode())
                 .clientType(context.getClientType())
                 .effectiveTenant(context.getEffectiveTenant())
                 .authorizationVersion(context.getAuthorizationVersion())
                 .registrationMode(registrationProperties.getMode())
-                .enabledRegistrationCredentialModels(new LinkedHashSet<>(authClientPolicyService.resolveRegistrationCredentialModels(policyClientCode)))
-                .enabledLoginMethods(new LinkedHashSet<>(authClientPolicyService.resolveLoginMethods(policyClientCode)))
-                .loginIdentifierTypes(new LinkedHashSet<>(authClientPolicyService.resolveLoginIdentifierTypes(policyClientCode)))
                 .userActivationMode(registrationProperties.getActivationMode())
-                .sso(buildSsoContext(origin, redirectUri, policyClientCode))
+                .loginMethod(policy.loginMethod())
+                .loginIdentifierType(policy.loginIdentifierType())
+                .registrationCredentialModel(policy.registrationCredentialModel())
+                .secondFactorPolicy(SecondFactorPolicyDto.disabled())
+                .authPolicyVersion(policy.policyVersion())
+                .enabledRegistrationCredentialModels(new LinkedHashSet<>(List.of(policy.registrationCredentialModel())))
+                .enabledLoginMethods(new LinkedHashSet<>(List.of(policy.loginMethod())))
+                .loginIdentifierTypes(new LinkedHashSet<>(List.of(policy.loginIdentifierType())))
+                .sso(buildSsoContext(origin, redirectUri, policy))
                 .registration(buildRegistrationContext())
-                .securityPolicy(buildSecurityPolicyContext(policyClientCode))
+                .securityPolicy(buildSecurityPolicyContext(policy))
                 .privilegeCodes(context.getPrivilegeCodes())
                 .enabledModules(context.getEnabledModules())
                 .enabledSubmodules(context.getEnabledSubmodules())
@@ -70,13 +84,9 @@ public class AuthApplicationContextService {
                 .build();
     }
 
-    public SsoContextDto buildSsoContext(String origin, String redirectUri) {
-        return buildSsoContext(origin, redirectUri, resolvePolicyClientCode(origin, null, null));
-    }
-
-    public SsoContextDto buildSsoContext(String origin, String redirectUri, String clientCode) {
+    public SsoContextDto buildSsoContext(String origin, String redirectUri, ResolvedAuthPolicy policy) {
         return SsoContextDto.builder()
-                .enabled(authClientPolicyService.isLoginMethodEnabled(LoginMethod.SSO, clientCode))
+                .enabled(policy.loginMethod() == LoginMethod.SSO)
                 .issuerUri(keycloakProperties.getIssuerUri())
                 .clientId(resolveClientId(origin))
                 .redirectUri(redirectUri)
@@ -105,15 +115,11 @@ public class AuthApplicationContextService {
                 .build();
     }
 
-    public SecurityPolicyContextDto buildSecurityPolicyContext() {
-        return buildSecurityPolicyContext(null);
-    }
-
-    public SecurityPolicyContextDto buildSecurityPolicyContext(String clientCode) {
+    public SecurityPolicyContextDto buildSecurityPolicyContext(ResolvedAuthPolicy policy) {
         return SecurityPolicyContextDto.builder()
-                .passwordLoginEnabled(authClientPolicyService.isLoginMethodEnabled(LoginMethod.PASSWORD, clientCode))
-                .otpLoginEnabled(authClientPolicyService.isLoginMethodEnabled(LoginMethod.OTP, clientCode))
-                .ssoLoginEnabled(authClientPolicyService.isLoginMethodEnabled(LoginMethod.SSO, clientCode))
+                .passwordLoginEnabled(policy.loginMethod() == LoginMethod.PASSWORD)
+                .otpLoginEnabled(policy.loginMethod() == LoginMethod.OTP)
+                .ssoLoginEnabled(policy.loginMethod() == LoginMethod.SSO)
                 .sessionTimeoutSeconds(authenticationProperties.getSessionTimeoutSeconds())
                 .refreshTokenEnabled(authenticationProperties.isRefreshTokenEnabled())
                 .maxLoginAttempts(authenticationProperties.getMaxLoginAttempts())

@@ -95,15 +95,6 @@ public class AuthenticationProperties {
         this.passwordPolicyCode = passwordPolicyCode;
     }
 
-    public boolean isLoginMethodEnabled(LoginMethod loginMethod) {
-        return loginMethods != null && loginMethods.contains(loginMethod);
-    }
-
-    public boolean isLoginMethodEnabled(LoginMethod loginMethod, String clientCode) {
-        Set<LoginMethod> resolvedLoginMethods = getLoginMethods(clientCode);
-        return resolvedLoginMethods != null && resolvedLoginMethods.contains(loginMethod);
-    }
-
     private ClientAuthenticationPolicy resolveClientPolicy(String clientCode) {
         if (clientCode == null || clientCode.isBlank() || clients == null || clients.isEmpty()) {
             return null;

@@ -56,13 +56,10 @@ public class AuthServiceImpl implements AuthService {
 
 	@Override
 	public ResponseEntity<ApiResponse<AuthResponse>> authenticate(AuthRequest request, String clientCode) {
-		if (!authClientPolicyService.isLoginMethodEnabled(LoginMethod.PASSWORD, clientCode)) {
-			return ResponseEntity.status(HttpStatus.FORBIDDEN)
-					.body(ApiResponse.error(HttpStatus.FORBIDDEN.value(), "LOCAL_LOGIN_DISABLED"));
-		}
-
 		try {
 			Long tenantId = tenantAccountResolver.resolveRequiredTenant(clientCode);
+			authClientPolicyService.requireLoginMethod(
+					authClientPolicyService.resolveRequiredPolicy(tenantId, clientCode), LoginMethod.PASSWORD);
 			TenantAccountUserDetails userDetails = userDetailsService.loadTenantUser(tenantId, request.username());
 			if (!passwordEncoder.matches(request.password(), userDetails.getPassword())) {
 				throw new org.springframework.security.authentication.BadCredentialsException("Invalid credentials");
@@ -86,6 +83,8 @@ public class AuthServiceImpl implements AuthService {
 				return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body(ApiResponse.error(HttpStatus.PRECONDITION_FAILED.value(),"User authentication Failed"));
 			}
 
+		} catch (com.nexacore.authmodule.core.exception.AuthPolicyException e) {
+			throw e;
 		} catch (org.springframework.security.core.AuthenticationException | IllegalArgumentException e) {
 			return unauthorized("AUTHENTICATION_REQUIRED", "Invalid credentials or tenant context");
 		} catch (Exception e) {
@@ -99,6 +98,13 @@ public class AuthServiceImpl implements AuthService {
 		ApplicationContextDto applicationContext = authApplicationContextService.buildPublicContext(origin, clientCode);
 		applicationContext.setLayout(layoutModuleGateway.getPublicLayout(applicationContext.getClientCode(), origin));
 		AuthConfigResponse response = AuthConfigResponse.builder()
+				.tenantId(applicationContext.getTenantId())
+				.clientCode(applicationContext.getClientCode())
+				.loginMethod(applicationContext.getLoginMethod())
+				.loginIdentifierType(applicationContext.getLoginIdentifierType())
+				.registrationCredentialModel(applicationContext.getRegistrationCredentialModel())
+				.secondFactorPolicy(applicationContext.getSecondFactorPolicy())
+				.authPolicyVersion(applicationContext.getAuthPolicyVersion())
 				.registrationMode(applicationContext.getRegistrationMode())
 				.enabledRegistrationCredentialModels(applicationContext.getEnabledRegistrationCredentialModels())
 				.enabledLoginMethods(applicationContext.getEnabledLoginMethods())
@@ -110,7 +116,7 @@ public class AuthServiceImpl implements AuthService {
 				.sso(applicationContext.getSso())
 				.registration(applicationContext.getRegistration())
 				.securityPolicy(applicationContext.getSecurityPolicy())
-				.applicationContext(applicationContext)
+				.layout(applicationContext.getLayout())
 				.build();
 
 		return ResponseEntity.ok(ApiResponse.success(response, "Authentication config loaded"));
@@ -152,8 +158,11 @@ public class AuthServiceImpl implements AuthService {
 		if (request != null && StringUtils.hasText(request.username())) {
 			try {
 				Long tenantId = tenantAccountResolver.resolveRequiredTenant(clientCode);
+				authClientPolicyService.resolveRequiredPolicy(tenantId, clientCode);
 				TenantAccountUserDetails details = userDetailsService.loadTenantUser(tenantId, request.username());
 				loggedIn = logoutSessionService.isLoggedIn(details.sessionKey());
+			} catch (com.nexacore.authmodule.core.exception.AuthPolicyException exception) {
+				throw exception;
 			} catch (RuntimeException ignored) {
 				// Public status checks deliberately do not disclose account or tenant existence.
 			}

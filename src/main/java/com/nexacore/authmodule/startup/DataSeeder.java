@@ -390,11 +390,13 @@ public class DataSeeder {
 
     private void seedDefaultAuthPolicies(AuthClientAuthPolicyRepository authPolicyRepository,
                                          AuthenticationProperties authenticationProperties) {
-        seedClientAuthPolicy(authPolicyRepository, "WEB", authenticationProperties);
+        seedClientAuthPolicy(authPolicyRepository, bootstrapTenantId, "WEB", authenticationProperties);
 
-        seedClientAuthPolicy(authPolicyRepository, "nexacore-client", authenticationProperties);
+        seedClientAuthPolicy(authPolicyRepository, bootstrapTenantId, "SYSTEM_ADMIN_WEB", authenticationProperties);
 
-        seedClientAuthPolicy(authPolicyRepository, "privilege-frontend", authenticationProperties);
+        seedClientAuthPolicy(authPolicyRepository, bootstrapTenantId, "nexacore-client", authenticationProperties);
+
+        seedClientAuthPolicy(authPolicyRepository, bootstrapTenantId, "privilege-frontend", authenticationProperties);
     }
 
     private void seedPersonRoutePolicies(LayoutRoutePolicyService routePolicyService) {
@@ -482,6 +484,7 @@ public class DataSeeder {
     }
 
     private void seedClientAuthPolicy(AuthClientAuthPolicyRepository authPolicyRepository,
+                                      long tenantId,
                                       String clientCode,
                                       AuthenticationProperties authenticationProperties) {
         LoginMethod enabledLoginMethod = authenticationProperties.getLoginMethods(clientCode).stream()
@@ -491,39 +494,27 @@ public class DataSeeder {
                 .findFirst()
                 .orElse(LoginIdentifierType.USERNAME);
 
-        seedClientAuthPolicy(authPolicyRepository, clientCode, enabledLoginMethod, loginIdentifierType);
+        seedClientAuthPolicy(authPolicyRepository, tenantId, clientCode, enabledLoginMethod, loginIdentifierType);
     }
 
     private void seedClientAuthPolicy(AuthClientAuthPolicyRepository authPolicyRepository,
+                                      long tenantId,
                                       String clientCode,
                                       LoginMethod enabledLoginMethod,
                                       LoginIdentifierType loginIdentifierType) {
-        List<AuthClientAuthPolicy> policies = authPolicyRepository.findByClientCodeIgnoreCase(clientCode);
-        AuthClientAuthPolicy selectedPolicy = null;
-
-        for (AuthClientAuthPolicy policy : policies) {
-            boolean selected = enabledLoginMethod.equals(policy.getLoginMethod())
-                    && loginIdentifierType.equals(policy.getLoginIdentifierType());
-            policy.setEnabled(selected);
-            policy.setUpdatedBy(0L);
-            if (selected) {
-                selectedPolicy = policy;
-            }
-        }
-
-        if (selectedPolicy == null) {
-            selectedPolicy = AuthClientAuthPolicy.builder()
+        AuthClientAuthPolicy selectedPolicy = authPolicyRepository
+                .findByTenantIdAndClientCodeIgnoreCase(tenantId, clientCode)
+                .orElseGet(() -> AuthClientAuthPolicy.builder()
+                    .tenantId(tenantId)
                     .clientCode(clientCode)
-                    .loginMethod(enabledLoginMethod)
-                    .loginIdentifierType(loginIdentifierType)
-                    .enabled(true)
                     .createdBy(0L)
                     .updatedBy(0L)
-                    .build();
-            policies.add(selectedPolicy);
-        }
-
-        authPolicyRepository.saveAll(policies);
+                    .build());
+        selectedPolicy.setLoginMethod(enabledLoginMethod);
+        selectedPolicy.setLoginIdentifierType(loginIdentifierType);
+        selectedPolicy.setEnabled(true);
+        selectedPolicy.setUpdatedBy(0L);
+        authPolicyRepository.save(selectedPolicy);
     }
 
     private Set<String> seedModulePrivileges(SystemPrivilegeRegistryService systemPrivilegeRegistryService,

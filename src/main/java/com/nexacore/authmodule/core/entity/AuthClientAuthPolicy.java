@@ -31,6 +31,9 @@ public class AuthClientAuthPolicy {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "tenant_id")
+    private Long tenantId;
+
     @Column(name = "client_code", nullable = false, length = 100)
     private String clientCode;
 

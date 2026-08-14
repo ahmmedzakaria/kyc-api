@@ -36,14 +36,11 @@ public class SsoAuthService {
     private final AuthClientPolicyService authClientPolicyService;
 
     public ResponseEntity<ApiResponse<AuthResponse>> authenticate(SsoAuthenticateRequest request, String clientCode) {
-        if (!authClientPolicyService.isLoginMethodEnabled(LoginMethod.SSO, clientCode)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SSO_LOGIN_DISABLED"));
-        }
-
         try {
-            var profile = keycloakSsoService.verifyToken(request.accessToken());
             Long tenantId = tenantAccountResolver.resolveRequiredTenant(clientCode);
+            authClientPolicyService.requireLoginMethod(
+                    authClientPolicyService.resolveRequiredPolicy(tenantId, clientCode), LoginMethod.SSO);
+            var profile = keycloakSsoService.verifyToken(request.accessToken());
             var user = keycloakSsoService.syncUser(profile, tenantId);
             var userDetails = userDetailsService.loadTenantUser(tenantId, user.getUsername());
 
@@ -59,6 +56,8 @@ public class SsoAuthService {
 
             log.info("SSO login successful for username={}, keycloakSubject={}", user.getUsername(), profile.subject());
             return ResponseEntity.ok(ApiResponse.success(response, "SSO authentication successful. Token generated"));
+        } catch (com.nexacore.authmodule.core.exception.AuthPolicyException e) {
+            throw e;
         } catch (JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error(HttpStatus.UNAUTHORIZED.value(), List.of(e.getMessage())));

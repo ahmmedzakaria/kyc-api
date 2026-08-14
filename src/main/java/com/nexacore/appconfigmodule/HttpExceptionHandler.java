@@ -16,6 +16,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.systemmodule.accesscontrol.security.AccessControlError;
 import com.nexacore.systemmodule.backup.exception.BackupApiException;
+import com.nexacore.authmodule.core.exception.AuthPolicyException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +26,13 @@ import java.util.Map;
 public class HttpExceptionHandler {
 
     private final MessageLocalizationService localizationService;
+
+    @ExceptionHandler(AuthPolicyException.class)
+    public ResponseEntity<ApiResponse<?>> handleAuthPolicyException(AuthPolicyException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.errorCode(
+                ex.getStatus().value(), ex.getCode(), ex.getMessage()
+        ));
+    }
 
     @ExceptionHandler(BackupApiException.class)
     public ResponseEntity<ApiResponse<?>> handleBackupApiException(BackupApiException ex) {

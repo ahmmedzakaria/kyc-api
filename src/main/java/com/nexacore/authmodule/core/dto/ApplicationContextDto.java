@@ -22,6 +22,7 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class ApplicationContextDto {
+    private Long tenantId;
     private String clientCode;
     private String clientType;
     private EffectiveTenantContextDto effectiveTenant;
@@ -31,14 +32,22 @@ public class ApplicationContextDto {
     private SsoContextDto sso;
     private RegistrationContextDto registration;
     private SecurityPolicyContextDto securityPolicy;
+    private LoginMethod loginMethod;
+    private LoginIdentifierType loginIdentifierType;
+    private RegistrationCredentialModel registrationCredentialModel;
+    private SecondFactorPolicyDto secondFactorPolicy;
+    private String authPolicyVersion;
 
     @Builder.Default
+    @Deprecated(forRemoval = true)
     private Set<RegistrationCredentialModel> enabledRegistrationCredentialModels = new HashSet<>();
 
     @Builder.Default
+    @Deprecated(forRemoval = true)
     private Set<LoginMethod> enabledLoginMethods = new HashSet<>();
 
     @Builder.Default
+    @Deprecated(forRemoval = true)
     private Set<LoginIdentifierType> loginIdentifierTypes = new HashSet<>();
 
     @Builder.Default

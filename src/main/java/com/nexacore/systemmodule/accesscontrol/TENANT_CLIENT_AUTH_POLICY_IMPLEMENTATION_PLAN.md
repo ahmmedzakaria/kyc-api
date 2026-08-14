@@ -175,6 +175,8 @@ HAVING COUNT(*) <> 1;
 
 ### Phase 2: Entity and repository
 
+**Status: Implemented on 2026-08-14.** `AuthClientAuthPolicy` now carries `tenantId`; repository reads require tenant plus normalized client code and return a singular optional policy. The Flyway functional unique index remains authoritative because JPA table metadata cannot accurately express `LOWER(client_code)` plus the resolved-row predicate.
+
 Update `AuthClientAuthPolicy` with `tenantId` and explicit table-level uniqueness metadata for documentation. Keep the Flyway constraint authoritative.
 
 Replace list-returning active lookup methods with a singular repository contract:
@@ -189,6 +191,8 @@ Optional<AuthClientAuthPolicy> findByTenantIdAndClientCodeIgnoreCaseAndEnabledTr
 For defense in depth, the service should still detect non-unique results during the compatibility rollout. Do not use `.findFirst()`, stream `.limit(1)`, or unspecified ordering to resolve duplicates.
 
 ### Phase 3: Policy service
+
+**Status: Implemented on 2026-08-14.** Runtime property fallback and first-row selection were removed. `ResolvedAuthPolicy` is the canonical result, unresolved/missing policies fail with `AUTH_POLICY_NOT_CONFIGURED`, method mismatch fails with `LOGIN_METHOD_NOT_ALLOWED`, invalid/MFA primary policies fail integrity validation, and password, SSO, configuration, application-context, and login-status paths resolve the same tenant/client policy after trusted tenant resolution. Bootstrap properties are now used only to seed tenant-owned policy rows.
 
 Replace collection-based policy resolution with a required singular result:
 
@@ -221,6 +225,8 @@ All enforcement points must call the same resolver:
 The config endpoint and the authentication endpoint must resolve the same tenant/client policy so the UI cannot advertise a method the server later evaluates under a different context.
 
 ### Phase 4: DTO and API contract
+
+**Status: Implemented on 2026-08-14.** Public and authenticated context DTOs expose singular login method, identifier, registration credential model, disabled second-factor policy, and policy version. Compatibility collections are deprecated and generated as exactly one item from the singular policy. `/auth/config` now returns one canonical top-level configuration with layout rather than embedding a duplicate `applicationContext`; the active Angular 21 platform client prefers singular fields and normalizes legacy one-item arrays during rollout. The legacy `frontend-libs` repository is intentionally unchanged.
 
 Introduce singular canonical fields:
 
