@@ -302,6 +302,7 @@ public class DataSeeder {
                 .filter(ApiRegistryDto::isActive)
                 .filter(api -> api.getPathPattern() != null)
                 .filter(api -> api.getPathPattern().startsWith("/api/v1/system/client-app")
+                        || api.getPathPattern().startsWith("/api/v1/system/auth-policy")
                         || api.getPathPattern().startsWith("/api/v1/system/api-registry")
                         || api.getPathPattern().startsWith("/api/v1/system/privilege")
                         || api.getPathPattern().startsWith("/api/v1/system/layout")
@@ -422,6 +423,7 @@ public class DataSeeder {
         synchronizeRoute(service, "/access-control/client-applications/create", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
         synchronizeRoute(service, "/access-control/client-applications/:id/edit", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
         synchronizeRoute(service, "/access-control/client-applications/:id", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW);
+        synchronizeRoute(service, "/access-control/auth-policies", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW);
         synchronizeRoute(service, "/access-control/api-registry", BootstrapAdministrationPrivileges.API_REGISTRY_VIEW);
         synchronizeRoute(service, "/access-control/privileges", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_VIEW);
         synchronizeRoute(service, "/access-control/tenants", BootstrapAdministrationPrivileges.TENANT_VIEW);
@@ -446,6 +448,7 @@ public class DataSeeder {
         synchronizeAction(service, "client-applications.assign-api", BootstrapAdministrationPrivileges.CLIENT_API_PERMISSION_ASSIGN);
         synchronizeAction(service, "client-applications.assign-feature", BootstrapAdministrationPrivileges.CLIENT_FEATURE_PERMISSION_ASSIGN);
         synchronizeAction(service, "client-applications.assign-scope", BootstrapAdministrationPrivileges.CLIENT_TENANT_ASSIGN);
+        synchronizeAction(service, "auth-policies.manage", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
         synchronizeAction(service, "api-registry.manage", BootstrapAdministrationPrivileges.API_REGISTRY_MANAGE);
         synchronizeAction(service, "api-registry.synchronize", BootstrapAdministrationPrivileges.API_REGISTRY_SYNCHRONIZE);
         synchronizeAction(service, "privileges.manage", BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_SYNCHRONIZE);

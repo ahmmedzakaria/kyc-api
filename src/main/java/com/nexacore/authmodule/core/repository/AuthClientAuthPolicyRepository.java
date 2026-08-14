@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface AuthClientAuthPolicyRepository extends JpaRepository<AuthClientAuthPolicy, Long> {
     Optional<AuthClientAuthPolicy> findByTenantIdAndClientCodeIgnoreCase(Long tenantId, String clientCode);
     Optional<AuthClientAuthPolicy> findByTenantIdAndClientCodeIgnoreCaseAndEnabledTrue(Long tenantId, String clientCode);
+    List<AuthClientAuthPolicy> findAllByTenantIdOrderByClientCodeAsc(Long tenantId);
 }
