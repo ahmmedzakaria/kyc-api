@@ -10,15 +10,17 @@ import com.nexacore.gatewaymodule.person.service.interfaces.PersonModuleGateway;
 import com.nexacore.gatewaymodule.tenant.service.interfaces.TenantProvisioningGateway;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContext;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
+import com.nexacore.systemmodule.accesscontrol.security.UserScopeAssignment;
+import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges;
 import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.AfterEach;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -28,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 
 class UserAdminServiceObjectAuthorizationTest {
-    @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+    @AfterEach void clearSecurity() { AuthenticatedRequestContextHolder.clear(); }
 
     @Test
     void directRoleReadFailsClosedOutsideEffectiveTenant() {
@@ -74,8 +76,9 @@ class UserAdminServiceObjectAuthorizationTest {
         PersonSummaryDto person = new PersonSummaryDto(); person.setId(22L);
         when(people.ensurePersonForUser(any(), any(), any(), any(), any())).thenReturn(person);
         when(users.save(any())).thenAnswer(invocation -> { AuthUser user = invocation.getArgument(0); user.setId(8L); return user; });
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                "platform", "", java.util.List.of(new SimpleGrantedAuthority("ROLE_SYSTEM_ADMIN"))));
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(1L, "platform", 2L,
+                "SYSTEM_ADMIN_WEB", Set.of(new UserScopeAssignment(1L, null, null)), "trace",
+                Set.of(BootstrapAdministrationPrivileges.TENANT_VIEW)));
         UserAdminServiceImpl service = new UserAdminServiceImpl(users, mock(RoleRepository.class), people, encoder,
                 new UsernameNormalizer(), scope, mock(AuthorizedScopeLookupService.class), tenants);
         UserRequestDto request = new UserRequestDto(); request.setTenantId(5L); request.setUsername("Tenant.Admin");

@@ -7,8 +7,10 @@ import com.nexacore.authmodule.core.enums.LoginIdentifierType;
 import com.nexacore.authmodule.core.enums.LoginMethod;
 import com.nexacore.authmodule.core.repository.AuthClientAuthPolicyRepository;
 import com.nexacore.gatewaymodule.client.service.interfaces.ClientTenantAssignmentGateway;
+import com.nexacore.gatewaymodule.tenant.service.interfaces.TenantProvisioningGateway;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContext;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
+import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -20,11 +22,14 @@ import java.util.Set;
 public class AuthPolicyAdministrationService {
     private final AuthClientAuthPolicyRepository repository;
     private final ClientTenantAssignmentGateway assignmentGateway;
+    private final TenantProvisioningGateway tenantProvisioningGateway;
 
     public AuthPolicyAdministrationService(AuthClientAuthPolicyRepository repository,
-                                           ClientTenantAssignmentGateway assignmentGateway) {
+                                           ClientTenantAssignmentGateway assignmentGateway,
+                                           TenantProvisioningGateway tenantProvisioningGateway) {
         this.repository = repository;
         this.assignmentGateway = assignmentGateway;
+        this.tenantProvisioningGateway = tenantProvisioningGateway;
     }
 
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
@@ -61,8 +66,15 @@ public class AuthPolicyAdministrationService {
         AuthenticatedRequestContext context = AuthenticatedRequestContextHolder.get()
                 .orElseThrow(() -> new IllegalArgumentException("Authenticated request context is required"));
         boolean allowed = context.scopeAssignments().stream().anyMatch(scope -> tenantId.equals(scope.tenantId()));
-        if (!allowed) throw new IllegalArgumentException("Tenant scope is not allowed");
+        if (!allowed) {
+            if (!canAdministerTenants(context)) throw new IllegalArgumentException("Tenant scope is not allowed");
+            tenantProvisioningGateway.requireActiveTenant(tenantId);
+        }
         return context;
+    }
+
+    private boolean canAdministerTenants(AuthenticatedRequestContext context) {
+        return context.effectivePrivilegeCodes().contains(BootstrapAdministrationPrivileges.TENANT_VIEW);
     }
 
     private void validateCompatibility(LoginMethod method, LoginIdentifierType identifier) {

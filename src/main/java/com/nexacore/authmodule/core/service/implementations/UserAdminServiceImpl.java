@@ -31,7 +31,6 @@ import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 import com.nexacore.commonmodule.util.AssignmentVersion;
 import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import com.nexacore.gatewaymodule.tenant.service.interfaces.TenantProvisioningGateway;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -141,17 +140,17 @@ public class UserAdminServiceImpl implements UserAdminService {
         try {
             return dataScopeService.requireEffectiveTenant(requestedTenantId);
         } catch (DataScopeAccessDeniedException exception) {
-            if (!isPlatformAdministrator()) throw exception;
+            if (!canAdministerTenants()) throw exception;
             tenantProvisioningGateway.requireActiveTenant(requestedTenantId);
             return requestedTenantId;
         }
     }
 
-    private boolean isPlatformAdministrator() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated()
-                && authentication.getAuthorities().stream().anyMatch(authority ->
-                "ROLE_SYSTEM_ADMIN".equals(authority.getAuthority()));
+    private boolean canAdministerTenants() {
+        return AuthenticatedRequestContextHolder.get()
+                .map(context -> context.effectivePrivilegeCodes().contains(
+                        com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges.TENANT_VIEW))
+                .orElse(false);
     }
 
     @Override
@@ -244,7 +243,7 @@ public class UserAdminServiceImpl implements UserAdminService {
         Long tenantId = dataScopeService.requireEffectiveTenant(null);
         var scoped = userRepository.findByIdAndTenantId(userId, tenantId);
         if (scoped.isPresent()) return scoped.get();
-        if (isPlatformAdministrator()) {
+        if (canAdministerTenants()) {
             AuthUser target = userRepository.findById(userId)
                     .orElseThrow(() -> new DataScopeAccessDeniedException("User account not found"));
             tenantProvisioningGateway.requireActiveTenant(target.getTenantId());

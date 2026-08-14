@@ -9,7 +9,8 @@ import com.nexacore.systemmodule.tenant.repository.TenantBranchRepository;
 import com.nexacore.systemmodule.tenant.repository.TenantBusinessRepository;
 import com.nexacore.systemmodule.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
+import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +27,7 @@ public class AuthorizedScopeLookupService {
 
     @Transactional(transactionManager="systemTransactionManager",readOnly=true)
     public List<ScopeLookupDto> tenants() {
-        if (isPlatformAdministrator()) {
+        if (canAdministerTenants()) {
             return tenants.findByStatusOrderByTenantCodeAsc(TenantStatus.ACTIVE).stream()
                     .map(t->new ScopeLookupDto(t.getId(),t.getTenantCode(),t.getDisplayName(),t.getId(),null)).toList();
         }
@@ -38,7 +39,7 @@ public class AuthorizedScopeLookupService {
 
     @Transactional(transactionManager="systemTransactionManager",readOnly=true)
     public List<ScopeLookupDto> businesses(Long tenantId) {
-        if (isPlatformAdministrator()) {
+        if (canAdministerTenants()) {
             requireActiveTenant(tenantId);
             return businesses.findByTenantIdAndActiveTrueOrderByDisplayNameAsc(tenantId).stream()
                     .map(b->new ScopeLookupDto(b.getId(),b.getBusinessCode(),b.getDisplayName(),tenantId,b.getId())).toList();
@@ -54,7 +55,7 @@ public class AuthorizedScopeLookupService {
     @Transactional(transactionManager="systemTransactionManager",readOnly=true)
     public List<ScopeLookupDto> branches(Long tenantId,Long businessId) {
         if(businessId==null) throw new IllegalArgumentException("businessId is required");
-        if (isPlatformAdministrator()) {
+        if (canAdministerTenants()) {
             requireActiveTenant(tenantId);
             if(businesses.findByIdAndTenantIdAndActiveTrue(businessId,tenantId).isEmpty())
                 throw new IllegalArgumentException("Business does not belong to the tenant");
@@ -74,7 +75,7 @@ public class AuthorizedScopeLookupService {
     }
 
     public void validateAssignment(Long tenantId,Long businessId,Long branchId) {
-        if (isPlatformAdministrator()) requireActiveTenant(tenantId);
+        if (canAdministerTenants()) requireActiveTenant(tenantId);
         else dataScopes.requireWritableScope(tenantId,businessId,branchId);
         if(businessId==null) { if(branchId!=null) throw new IllegalArgumentException("branchId requires businessId"); return; }
         if(businesses.findByIdAndTenantIdAndActiveTrue(businessId,tenantId).isEmpty())
@@ -84,7 +85,7 @@ public class AuthorizedScopeLookupService {
     }
 
     public boolean canManageAssignment(Long tenantId, Long businessId, Long branchId) {
-        if (isPlatformAdministrator()) {
+        if (canAdministerTenants()) {
             try {
                 validateAssignment(tenantId,businessId,branchId);
                 return true;
@@ -113,10 +114,9 @@ public class AuthorizedScopeLookupService {
             throw new DataScopeAccessDeniedException("Tenant is not active or does not exist");
     }
 
-    private boolean isPlatformAdministrator() {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null && authentication.isAuthenticated()
-                && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_SYSTEM_ADMIN".equals(authority.getAuthority()));
+    private boolean canAdministerTenants() {
+        return AuthenticatedRequestContextHolder.get()
+                .map(context -> context.effectivePrivilegeCodes().contains(BootstrapAdministrationPrivileges.TENANT_VIEW))
+                .orElse(false);
     }
 }
