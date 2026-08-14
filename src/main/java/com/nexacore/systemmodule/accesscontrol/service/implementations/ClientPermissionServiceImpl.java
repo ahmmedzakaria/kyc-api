@@ -165,6 +165,31 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     }
 
     @Override
+    @Transactional(transactionManager = "systemTransactionManager")
+    public void grantTenants(ClientPermissionAssignmentRequestDto requestDto, String username) {
+        Long actorId = authModuleGateway.getUserId(username);
+        SysAccClientApplication application = resolveClient(requestDto);
+        Set<ClientScopeAssignmentDto> requested = normalizedScopes(requestDto);
+        if (requested.stream().anyMatch(scope -> scope.businessId() != null || scope.branchId() != null)) {
+            throw new IllegalArgumentException("Bootstrap tenant grants must be tenant-level assignments");
+        }
+        Set<String> currentKeys = getScopeAssignments(application.getId(), null).stream()
+                .map(this::scopeKey).collect(java.util.stream.Collectors.toSet());
+        var additions = requested.stream().filter(scope -> !currentKeys.contains(scopeKey(scope)))
+                .map(scope -> SysAccClientApplicationTenant.builder()
+                        .clientApplication(application)
+                        .tenantId(scope.tenantId())
+                        .active(true)
+                        .createdBy(actorId)
+                        .updatedBy(actorId)
+                        .build())
+                .toList();
+        if (additions.isEmpty()) return;
+        clientApplicationTenantRepository.saveAll(additions);
+        authorizationDataCache.invalidateClientAfterCommit(application.getId());
+    }
+
+    @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode) {
         SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);

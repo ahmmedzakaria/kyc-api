@@ -16,6 +16,9 @@ public interface ClientPermissionService {
 
     void assignTenants(ClientPermissionAssignmentRequestDto requestDto, String username);
 
+    /** Add bootstrap tenant assignments without replacing administrator-managed assignments. */
+    void grantTenants(ClientPermissionAssignmentRequestDto requestDto, String username);
+
     ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode);
 
     Set<Long> getApiPermissions(Long clientApplicationId, String clientCode);

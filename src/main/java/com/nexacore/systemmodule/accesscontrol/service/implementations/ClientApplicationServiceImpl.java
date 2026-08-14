@@ -40,6 +40,15 @@ public class ClientApplicationServiceImpl implements ClientApplicationService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
+    public ClientApplicationDto createIfAbsent(ClientApplicationRequestDto requestDto, String username) {
+        String clientCode = requireText(requestDto.getClientCode(), "clientCode");
+        return clientApplicationRepository.findByClientCode(clientCode)
+                .map(ClientApplicationDto::fromEntity)
+                .orElseGet(() -> save(requestDto, username));
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager")
     public ClientApplicationDto save(ClientApplicationRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
         SysAccClientApplication application = requestDto.getId() == null

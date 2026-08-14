@@ -25,7 +25,7 @@ class TenantResolutionFilterTest {
         }
     };
     private final TenantResolutionFilter filter = new TenantResolutionFilter(
-            resolver, normalizer, new ApiResponseJsonWriter(new ObjectMapper()));
+            resolver, new RequestTenantHostnameResolver(normalizer), new ApiResponseJsonWriter(new ObjectMapper()));
 
     @AfterEach void clear() { ResolvedTenantContextHolder.clear(); }
 
@@ -56,6 +56,19 @@ class TenantResolutionFilterTest {
         filter.doFilter(request, response, new MockFilterChain());
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(response.getContentAsString()).contains("TENANT_NOT_ACTIVE");
+    }
+
+    @Test void resolvesCentralApiRequestFromBrowserOriginHostname() throws Exception {
+        resolved.set(tenant(TenantStatus.ACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/config");
+        request.setServerName("localhost");
+        request.addHeader("Origin", "http://bdcom.localhost:5301");
+        AtomicReference<ResolvedTenantContext> insideChain = new AtomicReference<>();
+
+        filter.doFilter(request, new MockHttpServletResponse(),
+                (req, res) -> insideChain.set(ResolvedTenantContextHolder.get().orElseThrow()));
+
+        assertThat(insideChain.get().hostname()).isEqualTo("bdcom.localhost");
     }
 
     private TenantDomainResolver.ResolvedTenant tenant(TenantStatus status) {

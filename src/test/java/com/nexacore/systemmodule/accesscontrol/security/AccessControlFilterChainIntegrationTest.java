@@ -317,6 +317,10 @@ class AccessControlFilterChainIntegrationTest {
             return new AuthorizationEventEmitter(Mockito.mock(ApplicationEventPublisher.class), mapper);
         }
         @Bean HostnameNormalizer hostnameNormalizer() { return new HostnameNormalizer(); }
+        @Bean com.nexacore.systemmodule.tenant.security.RequestTenantHostnameResolver requestTenantHostnameResolver(
+                HostnameNormalizer normalizer) {
+            return new com.nexacore.systemmodule.tenant.security.RequestTenantHostnameResolver(normalizer);
+        }
         @Bean TenantDomainResolver tenantDomainResolver(HostnameNormalizer normalizer) {
             return new TenantDomainResolver(null, normalizer) {
                 @Override public Optional<ResolvedTenant> resolveVerified(String rawHost) {
@@ -325,8 +329,9 @@ class AccessControlFilterChainIntegrationTest {
             };
         }
         @Bean TenantResolutionFilter tenantResolutionFilter(TenantDomainResolver resolver,
-                HostnameNormalizer normalizer, ApiResponseJsonWriter writer) {
-            return new TenantResolutionFilter(resolver, normalizer, writer);
+                com.nexacore.systemmodule.tenant.security.RequestTenantHostnameResolver requestHostnameResolver,
+                ApiResponseJsonWriter writer) {
+            return new TenantResolutionFilter(resolver, requestHostnameResolver, writer);
         }
         @Bean ClientApplicationAuthenticationFilter clientAuthenticationFilter(
                 ClientCredentialService credentials, ClientOriginPolicy origins, ClientIpPolicy ips,
@@ -344,8 +349,9 @@ class AccessControlFilterChainIntegrationTest {
         }
         @Bean AuthenticatedRequestContextFilter authenticatedRequestContextFilter(
                 AuthModuleGateway auth, PrivilegeService privileges, EffectiveTenantAccessResolver tenants,
-                ApiResponseJsonWriter writer) {
-            return new AuthenticatedRequestContextFilter(auth, privileges, tenants, writer);
+                ApiResponseJsonWriter writer,
+                com.nexacore.systemmodule.tenant.security.RequestTenantHostnameResolver requestHostnameResolver) {
+            return new AuthenticatedRequestContextFilter(auth, privileges, tenants, writer, requestHostnameResolver);
         }
         @Bean UserPrivilegeApiAccessFilter userPrivilegeApiAccessFilter(ApiResponseJsonWriter writer,
                 AccessControlProperties properties, PublicRoutePolicy routes) {

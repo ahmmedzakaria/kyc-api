@@ -71,6 +71,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
                     config.setAllowedOrigins(corsProperties.getAllowedOrigins());
+                    config.setAllowedOriginPatterns(corsProperties.getAllowedOriginPatterns());
                     config.setAllowedMethods(corsProperties.getAllowedMethods());
                     config.setAllowedHeaders(corsProperties.getAllowedHeaders());
                     config.setExposedHeaders(corsProperties.getExposedHeaders());

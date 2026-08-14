@@ -12,6 +12,7 @@ class HostnameNormalizerTest {
         assertThat(normalizer.normalize(" Example.COM.:5301 ")).isEqualTo("example.com");
         assertThat(normalizer.normalize("bücher.example")).isEqualTo("xn--bcher-kva.example");
         assertThat(normalizer.normalize("[::1]:5301")).isEqualTo("::1");
+        assertThat(normalizer.normalize("http://bdcom.localhost:5301/")).isEqualTo("bdcom.localhost");
     }
 
     @Test void rejectsMissingHost() {

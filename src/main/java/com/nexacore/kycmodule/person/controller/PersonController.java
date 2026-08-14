@@ -49,7 +49,12 @@ public class PersonController {
     @PostMapping("/search")
     @PrivilegeApi(value = "01010200102", dataScope = ApiDataScope.TENANT)
     public ResponseEntity<ApiResponse<Page<PersonDto>>> search(@RequestBody SearchDto dto) {
-        Pageable pageable = PageRequest.of(dto.page(), dto.size(), Sort.by("person.firstName"));
+        // Global person identity lives outside the KYC profile aggregate/database, so it
+        // cannot be referenced as a JPA sort path (for example, "person.firstName").
+        // Keep pagination deterministic using profile-owned columns; names are enriched
+        // through GlobalPersonIdentityGateway after the scoped profile query completes.
+        Pageable pageable = PageRequest.of(dto.page(), dto.size(),
+                Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")));
         String searchText = dto.searchText() == null ? "" : dto.searchText();
         return ResponseEntity.ok(ApiResponse.success(service.search(searchText, pageable),""));
     }

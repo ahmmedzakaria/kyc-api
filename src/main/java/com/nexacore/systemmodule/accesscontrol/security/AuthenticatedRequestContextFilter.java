@@ -18,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Set;
 import com.nexacore.authmodule.security.service.TenantAccountUserDetails;
+import com.nexacore.systemmodule.tenant.security.RequestTenantHostnameResolver;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
     private final PrivilegeService privilegeService;
     private final EffectiveTenantAccessResolver effectiveTenantAccessResolver;
     private final ApiResponseJsonWriter responseWriter;
+    private final RequestTenantHostnameResolver requestHostnameResolver;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -52,7 +54,7 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
                         .map(scope -> new UserScopeAssignment(scope.tenantId(), scope.businessId(), scope.branchId()))
                         .collect(java.util.stream.Collectors.toUnmodifiableSet());
                 EffectiveTenantAccessContext effectiveTenant = effectiveTenantAccessResolver.resolve(
-                        request.getServerName(), principal.accountId(), principal.tenantId(), client, scopes);
+                        requestHostnameResolver.resolve(request), principal.accountId(), principal.tenantId(), client, scopes);
                 EffectiveTenantAccessContextHolder.set(effectiveTenant);
 
                 AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(

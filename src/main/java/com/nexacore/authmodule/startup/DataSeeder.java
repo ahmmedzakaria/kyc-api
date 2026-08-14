@@ -213,7 +213,7 @@ public class DataSeeder {
         requestDto.setAllowedRedirectUris("http://localhost:4200/sso/callback,http://localhost:4300/sso/callback,http://localhost:5300/sso/callback");
         requestDto.setAllowedLogoutRedirectUris("http://localhost:4200/login,http://localhost:4300/login,http://localhost:5300/login");
         requestDto.setDescription("Default first-party web frontend client.");
-        clientApplicationService.save(requestDto, "system_admin");
+        clientApplicationService.createIfAbsent(requestDto, "system_admin");
 
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("WEB");
@@ -240,12 +240,12 @@ public class DataSeeder {
         ClientPermissionAssignmentRequestDto webTenants = new ClientPermissionAssignmentRequestDto();
         webTenants.setClientCode("WEB");
         webTenants.setTenantIds(Set.of(bootstrapTenantId));
-        clientPermissionService.assignTenants(webTenants, "system_admin");
+        clientPermissionService.grantTenants(webTenants, "system_admin");
 
         ClientPermissionAssignmentRequestDto systemAdminTenants = new ClientPermissionAssignmentRequestDto();
         systemAdminTenants.setClientCode("SYSTEM_ADMIN_WEB");
         systemAdminTenants.setTenantIds(Set.of(bootstrapTenantId));
-        clientPermissionService.assignTenants(systemAdminTenants, "system_admin");
+        clientPermissionService.grantTenants(systemAdminTenants, "system_admin");
 
         seedSystemAdminBackupPermissions(clientPermissionService, syncReport);
         seedSystemAdminUserRolePermissions(clientPermissionService, syncReport);

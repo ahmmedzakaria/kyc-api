@@ -258,8 +258,8 @@ public class UserAdminServiceImpl implements UserAdminService {
 
     @Override
     @Transactional(transactionManager = "authTransactionManager", readOnly = true)
-    public List<RoleDto> listRoles() {
-        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+    public List<RoleDto> listRoles(Long requestedTenantId) {
+        Long tenantId = resolveAdministrationTenant(requestedTenantId);
         return roleRepository.findByTenantIdIsNullOrTenantIdOrderByNameAsc(tenantId).stream()
                 .map(RoleDto::fromEntity)
                 .toList();
@@ -272,13 +272,19 @@ public class UserAdminServiceImpl implements UserAdminService {
         Long tenantId = dataScopeService.requireEffectiveTenant(null);
         AuthRole role = roleRepository.findByIdAndTenantId(roleId, tenantId)
                 .or(() -> roleRepository.findByIdAndTenantIdIsNull(roleId))
-                .orElseThrow(() -> new DataScopeAccessDeniedException("Role not found in the effective tenant"));
+                .orElseGet(() -> {
+                    if (!canAdministerTenants()) throw new DataScopeAccessDeniedException("Role not found in the effective tenant");
+                    AuthRole target = roleRepository.findById(roleId)
+                            .orElseThrow(() -> new DataScopeAccessDeniedException("Role not found"));
+                    if (target.getTenantId() != null) tenantProvisioningGateway.requireActiveTenant(target.getTenantId());
+                    return target;
+                });
         return RoleDto.fromEntity(role);
     }
 
     @Override
     public RoleDto saveRole(RoleRequestDto requestDto) {
-        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        Long tenantId = resolveAdministrationTenant(requestDto.getTenantId());
         return saveRole(requestDto, tenantId, false);
     }
 

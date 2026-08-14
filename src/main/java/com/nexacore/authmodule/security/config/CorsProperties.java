@@ -13,6 +13,7 @@ import java.util.List;
 @Setter
 public class CorsProperties {
     private List<String> allowedOrigins = List.of();
+    private List<String> allowedOriginPatterns = List.of();
     private List<String> allowedMethods = List.of("GET", "POST", "PUT", "DELETE", "OPTIONS");
     private List<String> allowedHeaders = List.of(
             "Authorization", "Content-Type", "X-Silent", "X-Client-Code", "X-API-Key", "X-Trace-Id",

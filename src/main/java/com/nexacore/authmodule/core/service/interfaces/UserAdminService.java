@@ -25,7 +25,7 @@ public interface UserAdminService {
 
     void replaceScopeAssignments(UserScopeAssignmentRequestDto requestDto);
 
-    List<RoleDto> listRoles();
+    List<RoleDto> listRoles(Long tenantId);
     RoleDto getRole(Long roleId);
 
     RoleDto saveRole(RoleRequestDto requestDto);

@@ -10,6 +10,9 @@ import java.util.List;
 public interface ClientApplicationService {
     ClientApplicationDto save(ClientApplicationRequestDto requestDto, String username);
 
+    /** Creates a bootstrap client when missing and never overwrites administrator-managed configuration. */
+    ClientApplicationDto createIfAbsent(ClientApplicationRequestDto requestDto, String username);
+
     List<ClientApplicationDto> list();
 
     SysAccClientApplication requireClientApplication(Long clientApplicationId, String clientCode);

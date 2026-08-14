@@ -9,13 +9,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Set;
 import com.nexacore.commonmodule.dto.IdRequestDto;
+import com.nexacore.authmodule.core.dto.UserListRequestDto;
+import org.springframework.web.bind.annotation.RequestBody;
 import com.nexacore.commonmodule.dto.VersionedAssignmentDto;
 import com.nexacore.commonmodule.util.AssignmentVersion;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
@@ -31,8 +32,10 @@ public class RoleController {
     @PostMapping("/list")
     @PrivilegeApi("11020100801")
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_VIEW)")
-    public ResponseEntity<ApiResponse<List<RoleDto>>> listRoles() {
-        return ResponseEntity.ok(ApiResponse.success(userAdminService.listRoles(), "Roles loaded"));
+    public ResponseEntity<ApiResponse<List<RoleDto>>> listRoles(
+            @RequestBody(required = false) UserListRequestDto request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                userAdminService.listRoles(request == null ? null : request.tenantId()), "Roles loaded"));
     }
 
     @PostMapping("/detail")
@@ -63,7 +66,7 @@ public class RoleController {
 
     @PostMapping("/global/save")
     @PrivilegeApi("11020100887")
-    @PreAuthorize("hasRole('SYSTEM_ADMIN') and @privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_MANAGE)")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).TENANT_VIEW) and @privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).ROLE_ADMINISTRATION_MANAGE)")
     public ResponseEntity<ApiResponse<RoleDto>> saveGlobalRole(@RequestBody RoleRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(userAdminService.saveGlobalRole(requestDto), "Global role template saved"));
     }

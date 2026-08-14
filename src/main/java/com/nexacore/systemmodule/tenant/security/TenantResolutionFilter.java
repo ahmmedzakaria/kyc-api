@@ -2,7 +2,6 @@ package com.nexacore.systemmodule.tenant.security;
 
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import com.nexacore.systemmodule.tenant.entity.TenantStatus;
-import com.nexacore.systemmodule.tenant.service.HostnameNormalizer;
 import com.nexacore.systemmodule.tenant.service.TenantDomainResolver;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,7 +20,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     private static final String TENANT_CODE_HEADER = "X-Tenant-Code";
 
     private final TenantDomainResolver tenantDomainResolver;
-    private final HostnameNormalizer hostnameNormalizer;
+    private final RequestTenantHostnameResolver requestHostnameResolver;
     private final ApiResponseJsonWriter responseWriter;
 
     @Override
@@ -36,7 +35,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
-            String hostname = hostnameNormalizer.normalize(request.getServerName());
+            String hostname = requestHostnameResolver.resolve(request);
             var tenant = tenantDomainResolver.resolveVerified(hostname).orElse(null);
             if (tenant == null) {
                 deny(response, 403, "TENANT_DOMAIN_NOT_RECOGNIZED", "The request domain is not assigned to a verified tenant");
