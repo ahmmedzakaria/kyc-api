@@ -14,4 +14,5 @@ public interface LicenseKeyService {
     boolean validateLicenseKey(LicenseKeyRequestDto request);
 
     List<LicenseKeySummaryDto> listKeys(String subscriptionCode);
+    LicenseKeySummaryDto revoke(Long keyId, String reason, Long actorUserId);
 }

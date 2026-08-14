@@ -15,4 +15,5 @@ public interface LicensePlanEntitlementRepository extends JpaRepository<SysLicen
     );
 
     List<SysLicensePlanEntitlement> findByLicensePlan_PlanCodeAndActiveTrue(String planCode);
+    java.util.Optional<SysLicensePlanEntitlement> findByIdAndLicensePlanPlanCode(Long id, String planCode);
 }

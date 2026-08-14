@@ -13,4 +13,5 @@ public interface LicenseKeyRepository extends JpaRepository<SysLicenseKey, Long>
             String subscriptionCode,
             Long tenantId
     );
+    Optional<SysLicenseKey> findByIdAndLicenseSubscriptionTenantId(Long id, Long tenantId);
 }

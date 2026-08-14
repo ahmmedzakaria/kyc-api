@@ -20,6 +20,8 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
+import com.nexacore.systemmodule.license.entity.SysLicenseAuditEvent;
+import com.nexacore.systemmodule.license.repository.LicenseAuditEventRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
     private final LicenseKeyRepository licenseKeyRepository;
     private final LicenseSubscriptionRepository subscriptionRepository;
     private final DataScopeService dataScopeService;
+    private final LicenseAuditEventRepository auditRepository;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -97,6 +100,29 @@ public class LicenseKeyServiceImpl implements LicenseKeyService {
                 .map(this::toSummary)
                 .toList();
     }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager")
+    public LicenseKeySummaryDto revoke(Long keyId, String reason, Long actorUserId) {
+        Long tenantId = dataScopeService.requireEffectiveTenant(null);
+        SysLicenseKey key = licenseKeyRepository.findByIdAndLicenseSubscriptionTenantId(keyId, tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("License key not found"));
+        if (key.getRevokedAt() == null) {
+            key.setActive(false);
+            key.setRevokedAt(LocalDateTime.now());
+            licenseKeyRepository.saveAndFlush(key);
+            SysLicenseSubscription subscription = key.getLicenseSubscription();
+            auditRepository.save(SysLicenseAuditEvent.builder().licenseSubscription(subscription)
+                    .eventType("KEY_REVOKED").eventMessageCode("system.license.key.revoked")
+                    .actorUserId(actorUserId).tenantId(subscription.getTenantId()).businessId(subscription.getBusinessId())
+                    .clientApplicationId(subscription.getClientApplication() == null ? null : subscription.getClientApplication().getId())
+                    .safeContextJson("{\"keyId\":" + keyId + ",\"reason\":\"" + safe(reason) + "\"}")
+                    .createdBy(actorUserId).updatedBy(actorUserId).build());
+        }
+        return toSummary(key);
+    }
+
+    private String safe(String value) { return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\""); }
 
     private LicenseKeySummaryDto toSummary(SysLicenseKey key) {
         return LicenseKeySummaryDto.builder()

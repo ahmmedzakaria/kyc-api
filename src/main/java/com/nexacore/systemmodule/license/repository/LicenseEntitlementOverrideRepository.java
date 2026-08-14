@@ -12,4 +12,5 @@ public interface LicenseEntitlementOverrideRepository extends JpaRepository<SysL
             String subscriptionCode,
             Long tenantId
     );
+    java.util.Optional<SysLicenseEntitlementOverride> findByIdAndLicenseSubscriptionTenantId(Long id, Long tenantId);
 }

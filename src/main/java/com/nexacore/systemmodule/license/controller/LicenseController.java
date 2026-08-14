@@ -8,6 +8,10 @@ import com.nexacore.systemmodule.license.dto.LicenseEntitlementRequestDto;
 import com.nexacore.systemmodule.license.dto.LicenseEntitlementResponseDto;
 import com.nexacore.systemmodule.license.dto.LicenseKeyRequestDto;
 import com.nexacore.systemmodule.license.dto.LicenseKeySummaryDto;
+import com.nexacore.systemmodule.license.dto.LicenseKeyRevokeRequestDto;
+import com.nexacore.systemmodule.license.dto.LicenseUsageSnapshotDto;
+import com.nexacore.systemmodule.license.dto.LicenseAuditEventDto;
+import com.nexacore.systemmodule.license.dto.LicenseRenewalSummaryDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanRequestDto;
 import com.nexacore.systemmodule.license.dto.LicensePlanResponseDto;
 import com.nexacore.systemmodule.license.dto.LicenseSubscriptionRequestDto;
@@ -27,6 +31,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
+import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
+import com.nexacore.systemmodule.license.service.LicenseAdministrationQueryService;
 
 @RestController
 @RequestMapping("/api/v1/system/license")
@@ -37,6 +45,8 @@ public class LicenseController {
     private final LicenseSubscriptionService licenseSubscriptionService;
     private final LicenseKeyService licenseKeyService;
     private final LicenseDecisionService licenseDecisionService;
+    private final LicenseAdministrationQueryService administrationQueryService;
+    private final AuthModuleGateway authModuleGateway;
 
     @PostMapping("/plan/save")
     @PrivilegeApi("11030199987")
@@ -194,6 +204,35 @@ public class LicenseController {
                 "system.license.key.listed",
                 "License keys listed"
         );
+    }
+
+    @PostMapping("/key/revoke")
+    @PrivilegeApi("11030199987")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_MANAGE)")
+    public ApiResponse<LicenseKeySummaryDto> revokeKey(@Valid @RequestBody LicenseKeyRevokeRequestDto request, Authentication authentication) {
+        return ApiResponse.successCode(licenseKeyService.revoke(request.keyId(), request.reason(), authModuleGateway.getUserId(authentication.getName())),
+                "system.license.key.revoked", "License key revoked");
+    }
+
+    @PostMapping("/usage/list")
+    @PrivilegeApi("11030199901")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
+    public ApiResponse<List<LicenseUsageSnapshotDto>> usage(@RequestBody SubscriptionCodeRequest request) {
+        return ApiResponse.successCode(administrationQueryService.usage(request.subscriptionCode()), "system.license.usage.listed", "License usage listed");
+    }
+
+    @PostMapping("/audit/list")
+    @PrivilegeApi("11030199901")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
+    public ApiResponse<List<LicenseAuditEventDto>> audit(@RequestBody SubscriptionCodeRequest request) {
+        return ApiResponse.successCode(administrationQueryService.audit(request.subscriptionCode()), "system.license.audit.listed", "License audit listed");
+    }
+
+    @PostMapping("/renewal/summary")
+    @PrivilegeApi("11030199901")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LICENSE_ADMINISTRATION_VIEW)")
+    public ApiResponse<LicenseRenewalSummaryDto> renewal(@RequestBody SubscriptionCodeRequest request) {
+        return ApiResponse.successCode(administrationQueryService.renewal(request.subscriptionCode()), "system.license.renewal.summarized", "License renewal summarized");
     }
 
     @PostMapping("/decision/check")

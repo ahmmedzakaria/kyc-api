@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Builder
 public record LicenseSubscriptionRequestDto(
         Long id,
+        Long version,
         String subscriptionCode,
         String planCode,
         Long tenantId,

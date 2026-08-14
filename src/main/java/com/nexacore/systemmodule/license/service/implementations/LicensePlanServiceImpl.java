@@ -21,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import org.springframework.dao.OptimisticLockingFailureException;
+import com.nexacore.systemmodule.license.service.LicenseEntitlementValidator;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class LicensePlanServiceImpl implements LicensePlanService {
 
     private final LicensePlanRepository licensePlanRepository;
     private final LicensePlanEntitlementRepository entitlementRepository;
+    private final LicenseEntitlementValidator entitlementValidator;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -50,21 +53,26 @@ public class LicensePlanServiceImpl implements LicensePlanService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public void savePlanEntitlement(LicenseEntitlementRequestDto request) {
+        entitlementValidator.validate(request);
         SysLicensePlan plan = licensePlanRepository.findByPlanCode(request.planCode())
                 .orElseThrow(() -> new IllegalArgumentException("License plan not found: " + request.planCode()));
 
-        entitlementRepository.save(SysLicensePlanEntitlement.builder()
-                .licensePlan(plan)
-                .entitlementType(request.entitlementType())
-                .module(referenceModule(request.moduleId()))
-                .submodule(referenceSubmodule(request.submoduleId()))
-                .feature(referenceFeature(request.featureId()))
-                .privilege(referencePrivilege(request.privilegeId()))
-                .apiRegistry(referenceApi(request.apiRegistryId()))
-                .limitCode(normalizeCode(request.limitCode()))
-                .limitValue(request.limitValue())
-                .active(request.active() == null || request.active())
-                .build());
+        SysLicensePlanEntitlement entitlement = request.id() == null ? new SysLicensePlanEntitlement()
+                : entitlementRepository.findByIdAndLicensePlanPlanCode(request.id(), request.planCode())
+                .orElseThrow(() -> new IllegalArgumentException("License plan entitlement not found"));
+        if (request.id() != null && (request.version() == null || entitlement.getVersion() != request.version()))
+            throw new OptimisticLockingFailureException("License entitlement was modified by another administrator");
+        entitlement.setLicensePlan(plan);
+        entitlement.setEntitlementType(request.entitlementType());
+        entitlement.setModule(referenceModule(request.moduleId()));
+        entitlement.setSubmodule(referenceSubmodule(request.submoduleId()));
+        entitlement.setFeature(referenceFeature(request.featureId()));
+        entitlement.setPrivilege(referencePrivilege(request.privilegeId()));
+        entitlement.setApiRegistry(referenceApi(request.apiRegistryId()));
+        entitlement.setLimitCode(normalizeCode(request.limitCode()));
+        entitlement.setLimitValue(request.limitValue());
+        entitlement.setActive(request.active() == null || request.active());
+        entitlementRepository.save(entitlement);
     }
 
     @Override
@@ -78,6 +86,7 @@ public class LicensePlanServiceImpl implements LicensePlanService {
     private LicenseEntitlementResponseDto toResponse(SysLicensePlanEntitlement entitlement) {
         return LicenseEntitlementResponseDto.builder()
                 .id(entitlement.getId())
+                .version(entitlement.getVersion())
                 .ownerCode(entitlement.getLicensePlan().getPlanCode())
                 .entitlementType(entitlement.getEntitlementType())
                 .moduleId(entitlement.getModule() == null ? null : entitlement.getModule().getId())

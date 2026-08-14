@@ -28,6 +28,8 @@ import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.dao.OptimisticLockingFailureException;
+import com.nexacore.systemmodule.license.service.LicenseEntitlementValidator;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +40,7 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     private final LicenseEntitlementOverrideRepository overrideRepository;
     private final DataScopeService dataScopeService;
     private final AuthorizedScopeLookupService scopeLookupService;
+    private final LicenseEntitlementValidator entitlementValidator;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
@@ -52,6 +55,8 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
                     .orElseGet(SysLicenseSubscription::new)
                 : subscriptionRepository.findByIdAndTenantId(request.id(), scope.tenantId())
                     .orElseThrow(() -> new IllegalArgumentException("License subscription not found: " + request.id()));
+        if (request.id() != null && (request.version() == null || subscription.getVersion() != request.version()))
+            throw new OptimisticLockingFailureException("License subscription was modified by another administrator");
 
         subscription.setSubscriptionCode(request.subscriptionCode());
         subscription.setLicensePlan(plan);
@@ -72,6 +77,8 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     @Transactional(transactionManager = "systemTransactionManager")
     public LicenseSubscriptionResponseDto suspend(String subscriptionCode, String reason) {
         SysLicenseSubscription subscription = getByCode(subscriptionCode);
+        if (!java.util.Set.of(LicenseStatus.ACTIVE, LicenseStatus.TRIAL, LicenseStatus.GRACE_PERIOD).contains(subscription.getStatus()))
+            throw new IllegalStateException("Only active, trial, or grace-period subscriptions can be suspended");
         subscription.setStatus(LicenseStatus.SUSPENDED);
         subscription.setSuspendedAt(LocalDateTime.now());
         subscription.setSuspensionReason(reason);
@@ -82,6 +89,8 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     @Transactional(transactionManager = "systemTransactionManager")
     public LicenseSubscriptionResponseDto reactivate(String subscriptionCode) {
         SysLicenseSubscription subscription = getByCode(subscriptionCode);
+        if (subscription.getStatus() != LicenseStatus.SUSPENDED)
+            throw new IllegalStateException("Only suspended subscriptions can be reactivated");
         subscription.setStatus(LicenseStatus.ACTIVE);
         subscription.setSuspendedAt(null);
         subscription.setSuspensionReason(null);
@@ -92,6 +101,8 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     @Transactional(transactionManager = "systemTransactionManager")
     public LicenseSubscriptionResponseDto cancel(String subscriptionCode) {
         SysLicenseSubscription subscription = getByCode(subscriptionCode);
+        if (java.util.Set.of(LicenseStatus.CANCELLED, LicenseStatus.REVOKED, LicenseStatus.EXPIRED).contains(subscription.getStatus()))
+            throw new IllegalStateException("Terminal subscriptions cannot be cancelled");
         subscription.setStatus(LicenseStatus.CANCELLED);
         subscription.setCancelledAt(LocalDateTime.now());
         return toResponse(subscriptionRepository.save(subscription));
@@ -100,20 +111,26 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public void saveEntitlementOverride(LicenseEntitlementRequestDto request) {
+        entitlementValidator.validate(request);
         SysLicenseSubscription subscription = getByCode(request.subscriptionCode());
-        overrideRepository.save(SysLicenseEntitlementOverride.builder()
-                .licenseSubscription(subscription)
-                .entitlementType(request.entitlementType())
-                .module(referenceModule(request.moduleId()))
-                .submodule(referenceSubmodule(request.submoduleId()))
-                .feature(referenceFeature(request.featureId()))
-                .privilege(referencePrivilege(request.privilegeId()))
-                .apiRegistry(referenceApi(request.apiRegistryId()))
-                .limitCode(normalizeCode(request.limitCode()))
-                .limitValue(request.limitValue())
-                .overrideMode(request.overrideMode() == null ? LicenseOverrideMode.ALLOW : request.overrideMode())
-                .active(request.active() == null || request.active())
-                .build());
+        SysLicenseEntitlementOverride override = request.id() == null ? new SysLicenseEntitlementOverride()
+                : overrideRepository.findByIdAndLicenseSubscriptionTenantId(request.id(), subscription.getTenantId())
+                .filter(row -> row.getLicenseSubscription().getId().equals(subscription.getId()))
+                .orElseThrow(() -> new IllegalArgumentException("License entitlement override not found"));
+        if (request.id() != null && (request.version() == null || override.getVersion() != request.version()))
+            throw new OptimisticLockingFailureException("License entitlement was modified by another administrator");
+        override.setLicenseSubscription(subscription);
+        override.setEntitlementType(request.entitlementType());
+        override.setModule(referenceModule(request.moduleId()));
+        override.setSubmodule(referenceSubmodule(request.submoduleId()));
+        override.setFeature(referenceFeature(request.featureId()));
+        override.setPrivilege(referencePrivilege(request.privilegeId()));
+        override.setApiRegistry(referenceApi(request.apiRegistryId()));
+        override.setLimitCode(normalizeCode(request.limitCode()));
+        override.setLimitValue(request.limitValue());
+        override.setOverrideMode(request.overrideMode() == null ? LicenseOverrideMode.ALLOW : request.overrideMode());
+        override.setActive(request.active() == null || request.active());
+        overrideRepository.save(override);
     }
 
     @Override
@@ -130,6 +147,7 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     private LicenseEntitlementResponseDto toResponse(SysLicenseEntitlementOverride override) {
         return LicenseEntitlementResponseDto.builder()
                 .id(override.getId())
+                .version(override.getVersion())
                 .ownerCode(override.getLicenseSubscription().getSubscriptionCode())
                 .entitlementType(override.getEntitlementType())
                 .moduleId(override.getModule() == null ? null : override.getModule().getId())
@@ -161,6 +179,7 @@ public class LicenseSubscriptionServiceImpl implements LicenseSubscriptionServic
     private LicenseSubscriptionResponseDto toResponse(SysLicenseSubscription subscription) {
         return LicenseSubscriptionResponseDto.builder()
                 .id(subscription.getId())
+                .version(subscription.getVersion())
                 .subscriptionCode(subscription.getSubscriptionCode())
                 .planCode(subscription.getLicensePlan().getPlanCode())
                 .tenantId(subscription.getTenantId())

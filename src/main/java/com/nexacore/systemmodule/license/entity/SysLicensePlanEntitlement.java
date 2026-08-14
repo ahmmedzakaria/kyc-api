@@ -19,6 +19,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -80,6 +81,9 @@ public class SysLicensePlanEntitlement {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Version
+    private long version;
 
     private Long createdBy;
     private Long updatedBy;

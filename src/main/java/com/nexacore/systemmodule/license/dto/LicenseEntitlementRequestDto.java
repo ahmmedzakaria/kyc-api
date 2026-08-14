@@ -6,6 +6,8 @@ import lombok.Builder;
 
 @Builder
 public record LicenseEntitlementRequestDto(
+        Long id,
+        Long version,
         String planCode,
         String subscriptionCode,
         LicenseEntitlementType entitlementType,

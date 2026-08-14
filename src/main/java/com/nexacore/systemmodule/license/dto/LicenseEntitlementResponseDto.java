@@ -7,6 +7,7 @@ import lombok.Builder;
 @Builder
 public record LicenseEntitlementResponseDto(
         Long id,
+        long version,
         String ownerCode,
         LicenseEntitlementType entitlementType,
         Long moduleId,
