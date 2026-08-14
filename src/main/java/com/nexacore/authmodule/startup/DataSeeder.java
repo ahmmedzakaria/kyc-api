@@ -303,6 +303,7 @@ public class DataSeeder {
                         || api.getPathPattern().startsWith("/api/v1/system/privilege")
                         || api.getPathPattern().startsWith("/api/v1/system/layout")
                         || api.getPathPattern().startsWith("/api/v1/system/workflow")
+                        || api.getPathPattern().startsWith("/api/v1/system/dashboard")
                         || api.getPathPattern().startsWith("/api/v1/system/license"))
                 .map(ApiRegistryDto::getId)
                 .collect(Collectors.toSet());

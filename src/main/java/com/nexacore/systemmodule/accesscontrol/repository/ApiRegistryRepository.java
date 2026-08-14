@@ -12,4 +12,6 @@ public interface ApiRegistryRepository extends JpaRepository<SysAccApiRegistry, 
     List<SysAccApiRegistry> findByHttpMethodAndActiveTrue(String httpMethod);
 
     List<SysAccApiRegistry> findBySource(String source);
+    @org.springframework.data.jpa.repository.Query("select max(api.lastSynchronizedAt) from SysAccApiRegistry api")
+    java.time.LocalDateTime findLatestSynchronizationAt();
 }

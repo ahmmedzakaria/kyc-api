@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface ClientApplicationRepository extends JpaRepository<SysAccClientApplication, Long> {
     Optional<SysAccClientApplication> findByClientCode(String clientCode);
+    long countByStatus(com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus status);
 }

@@ -11,4 +11,5 @@ public interface TenantRepository extends JpaRepository<SysTenant, Long> {
     Optional<SysTenant> findByTenantCodeIgnoreCase(String tenantCode);
     List<SysTenant> findAllByOrderByTenantCodeAsc();
     List<SysTenant> findByIdInAndStatusOrderByTenantCodeAsc(java.util.Collection<Long> ids, TenantStatus status);
+    long countByStatus(TenantStatus status);
 }

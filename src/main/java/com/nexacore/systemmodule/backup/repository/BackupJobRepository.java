@@ -21,6 +21,7 @@ public interface BackupJobRepository extends JpaRepository<SysBackupJob, UUID> {
     Page<SysBackupJob> findAllByOrderByRequestedAtDesc(Pageable pageable);
 
     boolean existsByStatusIn(Collection<BackupJobStatus> statuses);
+    long countByStatusIn(Collection<BackupJobStatus> statuses);
 
     List<SysBackupJob> findByStatusOrderByCompletedAtDesc(BackupJobStatus status);
 

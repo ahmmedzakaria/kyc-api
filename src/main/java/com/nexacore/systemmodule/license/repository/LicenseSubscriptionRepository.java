@@ -14,6 +14,8 @@ public interface LicenseSubscriptionRepository extends JpaRepository<SysLicenseS
     Optional<SysLicenseSubscription> findByIdAndTenantId(Long id, Long tenantId);
     List<SysLicenseSubscription> findByTenantIdOrderByIdDesc(Long tenantId);
     long countByTenantId(Long tenantId);
+    long countByTenantIdAndStatusInAndExpiresAtBetween(Long tenantId, Collection<LicenseStatus> statuses,
+                                                       java.time.LocalDateTime from, java.time.LocalDateTime to);
 
     @Query("""
             select subscription
