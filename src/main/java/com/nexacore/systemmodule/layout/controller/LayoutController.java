@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.layout.controller;
 
 import com.nexacore.commonmodule.dto.ApiResponse;
+import com.nexacore.commonmodule.dto.RoutePrivilegePolicyDto;
 import com.nexacore.commonmodule.dto.UiPrivilegePolicyDto;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentDto;
 import com.nexacore.systemmodule.layout.dto.ClientLayoutAssignmentRequestDto;
@@ -9,6 +10,7 @@ import com.nexacore.systemmodule.layout.dto.LayoutNavigationCategoryOrderRequest
 import com.nexacore.systemmodule.layout.dto.LayoutNavigationNodeRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutProfileDto;
 import com.nexacore.systemmodule.layout.dto.LayoutProfileRequestDto;
+import com.nexacore.systemmodule.layout.dto.LayoutRoutePolicyRequestDto;
 import com.nexacore.systemmodule.layout.dto.NavNodeDto;
 import com.nexacore.systemmodule.layout.dto.LayoutUiPolicyRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutTenantReconciliationDto;
@@ -17,10 +19,12 @@ import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmen
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutProfileService;
+import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
 import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
+import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +48,29 @@ public class LayoutController {
     private final LayoutNavigationService layoutNavigationService;
     private final PrivilegeService privilegeService;
     private final LayoutUiPolicyService layoutUiPolicyService;
+    private final LayoutRoutePolicyService layoutRoutePolicyService;
+    private final AuthModuleGateway authModuleGateway;
+
+    @PostMapping("/route-policy/save")
+    @PrivilegeApi("11040100187")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_MANAGE)")
+    public ResponseEntity<ApiResponse<Void>> saveRoutePolicy(@RequestBody LayoutRoutePolicyRequestDto request,
+                                                              Authentication authentication) {
+        Long actorId = authModuleGateway.getUserId(authentication.getName());
+        layoutRoutePolicyService.synchronizePolicy(
+                request.getClientCode(), request.getRouteUrl(), request.getMatchMode(), request.getPrivilegeCodes(), actorId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Route policy saved"));
+    }
+
+    @PostMapping("/route-policy/list")
+    @PrivilegeApi("11040100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).LAYOUT_ADMINISTRATION_VIEW)")
+    public ResponseEntity<ApiResponse<List<RoutePrivilegePolicyDto>>> listRoutePolicies(@RequestBody LayoutContextRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                layoutRoutePolicyService.getEffectivePolicies(request.getClientCode()),
+                "Route policies loaded"
+        ));
+    }
 
     @PostMapping("/ui-policy/save")
     @PrivilegeApi("11040100187")
