@@ -3,6 +3,7 @@ package com.nexacore.systemmodule.workflow.engine.interfaces;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowActionRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowDecisionResponseDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceDto;
+import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceListRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowStartRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowTaskDto;
@@ -24,4 +25,6 @@ public interface WorkflowEngine {
     WorkflowTaskDto getTask(WorkflowTaskDetailRequestDto request);
 
     WorkflowInstanceDto getInstance(WorkflowInstanceRequestDto request);
+
+    List<WorkflowInstanceDto> listInstances(WorkflowInstanceListRequestDto request);
 }

@@ -5,6 +5,7 @@ import com.nexacore.gatewaymodule.workflow.dto.WorkflowActionRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowDecisionResponseDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowHistoryDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceDto;
+import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceListRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowStartRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowTaskDetailRequestDto;
@@ -17,6 +18,8 @@ import com.nexacore.systemmodule.workflow.service.interfaces.WorkflowTaskService
 import lombok.RequiredArgsConstructor;
 import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedApi;
 import com.nexacore.systemmodule.accesscontrol.security.ApiDataScope;
+import com.nexacore.systemmodule.accesscontrol.security.PrivilegeApi;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -100,6 +103,17 @@ public class WorkflowRuntimeController {
                 workflowHistoryService.getHistory(request.workflowInstanceId()),
                 "system.workflow.instance.history",
                 "Workflow instance history loaded"
+        );
+    }
+
+    @PostMapping("/instance/list")
+    @PrivilegeApi("11050100101")
+    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).WORKFLOW_ADMINISTRATION_VIEW)")
+    public ApiResponse<List<WorkflowInstanceDto>> listInstances(@RequestBody(required = false) WorkflowInstanceListRequestDto request) {
+        return ApiResponse.successCode(
+                workflowRuntimeService.listInstances(request == null ? WorkflowInstanceListRequestDto.builder().build() : request),
+                "system.workflow.instance.listed",
+                "Workflow instances listed"
         );
     }
 }

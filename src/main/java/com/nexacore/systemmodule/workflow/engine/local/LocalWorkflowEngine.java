@@ -4,6 +4,7 @@ import com.nexacore.gatewaymodule.privilege.service.interfaces.PrivilegeModuleGa
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowActionRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowDecisionResponseDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceDto;
+import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceListRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowInstanceRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowStartRequestDto;
 import com.nexacore.gatewaymodule.workflow.dto.WorkflowTaskDto;
@@ -181,6 +182,35 @@ public class LocalWorkflowEngine implements WorkflowEngine {
                 ? findScopedInstance(request.workflowInstanceId())
                 : findScopedInstanceBySubject(required(request.subjectType(), "subjectType"), required(request.subjectId(), "subjectId"));
         return toInstanceDto(instance);
+    }
+
+    @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
+    public List<WorkflowInstanceDto> listInstances(WorkflowInstanceListRequestDto request) {
+        Specification<SysWorkflowInstance> filters = (root, query, cb) -> cb.conjunction();
+        if (request.workflowCode() != null && !request.workflowCode().isBlank()) {
+            String code = request.workflowCode().toUpperCase();
+            filters = filters.and((root, query, cb) -> cb.equal(root.get("workflowCode"), code));
+        }
+        if (request.subjectType() != null && !request.subjectType().isBlank()) {
+            String type = request.subjectType().toUpperCase();
+            filters = filters.and((root, query, cb) -> cb.equal(root.get("subjectType"), type));
+        }
+        if (request.status() != null) {
+            filters = filters.and((root, query, cb) -> cb.equal(root.get("status"), request.status()));
+        }
+        if (request.businessId() != null) {
+            filters = filters.and((root, query, cb) -> cb.equal(root.get("businessId"), request.businessId()));
+        }
+        if (request.branchId() != null) {
+            filters = filters.and((root, query, cb) -> cb.equal(root.get("branchId"), request.branchId()));
+        }
+        return instanceRepository.findAll(
+                        dataScopeService.<SysWorkflowInstance>restrictToCurrentScopes("tenantId", "businessId", "branchId").and(filters),
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"))
+                .stream()
+                .map(this::toInstanceDto)
+                .toList();
     }
 
     private SysWorkflowDefinition findDefinition(String workflowCode, String subjectType, Long tenantId, Long businessId) {
