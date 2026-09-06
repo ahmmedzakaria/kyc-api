@@ -23,6 +23,11 @@ public final class BootstrapAdministrationPrivileges {
     public static final String TENANT_REGISTER = "11020100910";
     public static final String TENANT_DOMAIN_VERIFY = "11020100980";
     public static final String TENANT_LIFECYCLE_MANAGE = "11020100987";
+    // Dedicated per-client "own dashboard" privileges — SYS_ADMIN_DASHBOARD/LOG_ADMIN_DASHBOARD
+    // were previously left with zero privilege links, which LayoutNavigationServiceImpl.isVisible()
+    // treats as "visible to every client unconditionally" rather than "visible to this client only".
+    // Linking each Dashboard feature to one of these (granted only to its own client) closes that leak.
+    public static final String SYSTEM_DASHBOARD_VIEW = "11020101001";
 
     public static final String PRIVILEGE_CATALOG_VIEW = "11010100101";
     public static final String PRIVILEGE_CATALOG_SYNCHRONIZE = "11010100180";
@@ -43,4 +48,5 @@ public final class BootstrapAdministrationPrivileges {
     public static final String LOG_ERROR_VIEW = "09010100101";
     public static final String LOG_ACCESS_VIEW = "09010100201";
     public static final String LOG_AUDIT_VIEW = "09010100301";
+    public static final String LOG_DASHBOARD_VIEW = "09010100401";
 }

@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("52");
+                .isEqualTo("65");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(52);
+                .isEqualTo(65);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_acc_api_registry")).isEqualTo("sys_acc_api_registry");
         assertThat(regclass("sys_acc_client_applications")).isEqualTo("sys_acc_client_applications");
@@ -83,8 +83,9 @@ class SystemDatabaseMigrationTest {
                 + "AND privilege.privilege_code = '11020100901' AND link.active"))
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM sys_priv_privileges WHERE privilege_code LIKE '110601001%'")).isEqualTo(5);
-        assertThat(count("SELECT count(*) FROM sys_acc_client_applications WHERE client_code IN ('WEB', 'SYSTEM_ADMIN_WEB')"))
-                .isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM sys_acc_client_applications "
+                + "WHERE client_code IN ('WEB', 'SYSTEM_ADMIN_WEB', 'LOG_ADMIN_WEB')"))
+                .isEqualTo(3);
         assertThat(count("SELECT count(*) FROM information_schema.columns "
                 + "WHERE table_name='sys_acc_client_application_tenants' AND column_name='branch_id'"))
                 .isEqualTo(1);
@@ -113,6 +114,25 @@ class SystemDatabaseMigrationTest {
                 + "AND privilege.privilege_code IN ('11020100901','11020100910','11020100980','11020100987') "
                 + "AND permission.active"))
                 .isEqualTo(4);
+        assertThat(count("SELECT count(*) FROM sys_layout_feature_privileges link "
+                + "JOIN sys_layout_features feature ON feature.id = link.layout_feature_id "
+                + "JOIN sys_priv_privileges privilege ON privilege.id = link.privilege_id "
+                + "WHERE link.active AND (feature.t_code, privilege.privilege_code) IN "
+                + "(('SYS_ADMIN_DASHBOARD','11020101001'),('LOG_ADMIN_DASHBOARD','09010100401'))"))
+                .isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM sys_acc_client_feature_permissions permission "
+                + "JOIN sys_acc_client_applications client ON client.id = permission.client_application_id "
+                + "JOIN sys_priv_privileges privilege ON privilege.id = permission.privilege_id "
+                + "WHERE permission.active AND (client.client_code, privilege.privilege_code) IN "
+                + "(('SYSTEM_ADMIN_WEB','11020101001'),('LOG_ADMIN_WEB','09010100401'))"))
+                .isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM sys_acc_client_feature_permissions permission "
+                + "JOIN sys_acc_client_applications client ON client.id = permission.client_application_id "
+                + "JOIN sys_priv_privileges privilege ON privilege.id = permission.privilege_id "
+                + "WHERE permission.active AND (client.client_code, privilege.privilege_code) IN "
+                + "(('SYSTEM_ADMIN_WEB','09010100401'),('LOG_ADMIN_WEB','11020101001'),"
+                + "('WEB','11020101001'),('WEB','09010100401'))"))
+                .isZero();
     }
 
     @Test
@@ -204,7 +224,7 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("45");
+                .isEqualTo("65");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE code = 'ZY' AND created_by = 51 AND updated_by = 52"))
                 .isEqualTo(1);
@@ -219,7 +239,7 @@ class SystemDatabaseMigrationTest {
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM sys_layout_features "
                 + "WHERE feature_code = 'DASHBOARD' AND created_by = 0 AND updated_by = 0"))
-                .isEqualTo(1);
+                .isEqualTo(2);
     }
 
     private void migrateTo(String target) {

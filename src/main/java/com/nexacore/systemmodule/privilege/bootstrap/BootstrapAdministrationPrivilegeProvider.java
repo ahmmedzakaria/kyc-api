@@ -34,6 +34,8 @@ public class BootstrapAdministrationPrivilegeProvider implements ModulePrivilege
                         PrivilegeAction.VIEW, PrivilegeAction.MANAGE),
                 feature(ApplicationSubmodule.SYSTEM_ACCESS_CONTROL, "009", "Tenant Administration",
                         PrivilegeAction.VIEW, PrivilegeAction.CREATE, PrivilegeAction.SYNCHRONIZE, PrivilegeAction.MANAGE),
+                feature(ApplicationSubmodule.SYSTEM_ACCESS_CONTROL, "010", "System Dashboard",
+                        PrivilegeAction.VIEW),
                 feature(ApplicationSubmodule.SYS_PRIVILEGE, "001", "Privilege Catalog",
                         PrivilegeAction.VIEW, PrivilegeAction.SYNCHRONIZE, PrivilegeAction.ASSIGN),
                 feature(ApplicationSubmodule.SYSTEM_LAYOUT, "001", "Layout Administration",
@@ -50,6 +52,8 @@ public class BootstrapAdministrationPrivilegeProvider implements ModulePrivilege
                 feature(ApplicationSubmodule.LOG_ADMINISTRATION, "002", "Access Log",
                         PrivilegeAction.VIEW),
                 feature(ApplicationSubmodule.LOG_ADMINISTRATION, "003", "Audit Log",
+                        PrivilegeAction.VIEW),
+                feature(ApplicationSubmodule.LOG_ADMINISTRATION, "004", "Log Dashboard",
                         PrivilegeAction.VIEW)
         );
     }

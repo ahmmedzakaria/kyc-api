@@ -89,11 +89,17 @@ public class DataSeeder {
             AuthUser systemUser = seedSystemAdministrator(
                     userRepository, personRepository, passwordEncoder, systemAdminRole);
 
+            // WEB is kyc-frontend-21's client — it must only see KYC-module nav/features.
+            // Granting it the full adminPrivilegeCodes union (every module, including
+            // System/Log administration) made its client-level privilege filter a no-op:
+            // any feature gated by a privilege the logged-in user happened to hold from
+            // ANY module leaked into its sidebar, not just KYC's own.
+            Set<String> webPrivilegeCodes = privilegesForModule(adminPrivilegeCodes, ApplicationModule.KYC);
             runAsBootstrapAccount(systemUser.getId(), systemUser.getUsername(), () -> seedDefaultWebClient(
                     clientApplicationService,
                     clientPermissionService,
                     clientApiRegistryService,
-                    adminPrivilegeCodes
+                    webPrivilegeCodes
             ));
 
             seedPersonRoutePolicies(layoutRoutePolicyService);
@@ -286,6 +292,7 @@ public class DataSeeder {
                 BootstrapAdministrationPrivileges.API_REGISTRY_VIEW,
                 BootstrapAdministrationPrivileges.API_REGISTRY_MANAGE,
                 BootstrapAdministrationPrivileges.API_REGISTRY_SYNCHRONIZE,
+                BootstrapAdministrationPrivileges.SYSTEM_DASHBOARD_VIEW,
                 BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_VIEW,
                 BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_SYNCHRONIZE,
                 BootstrapAdministrationPrivileges.PRIVILEGE_CATALOG_ASSIGN,
