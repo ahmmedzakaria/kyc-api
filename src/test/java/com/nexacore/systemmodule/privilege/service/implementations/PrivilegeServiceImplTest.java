@@ -150,6 +150,13 @@ class PrivilegeServiceImplTest {
         when(privilegeRepository.findActivePrivilegeCodesByUserId(10L)).thenReturn(List.copyOf(privilegeCodes));
         when(privilegeRepository.findByPrivilegeCodeIn(privilegeCodes)).thenReturn(List.of(laterPrivilege, earlierPrivilege));
         when(clientApplicationContextService.getCurrentClientPrivilegeCodes(privilegeCodes)).thenReturn(privilegeCodes);
+        when(featureTypeRepository.findByTenantIdIsNullAndFeatureTypeCode(FeatureType.OPERATIONS.getCode()))
+                .thenReturn(java.util.Optional.of(SysPrivFeatureType.builder()
+                        .featureTypeCode(FeatureType.OPERATIONS.getCode())
+                        .featureTypeName(FeatureType.OPERATIONS.getDisplayName())
+                        .icon("fa fa-database")
+                        .active(true)
+                        .build()));
 
         List<SidebarMenuDto> menus = service.getUserSidebarMenu("operator");
 
@@ -159,6 +166,7 @@ class PrivilegeServiceImplTest {
                 .orElseThrow();
 
         assertThat(operationsMenu.getMenuOrder()).isEqualTo(20);
+        assertThat(operationsMenu.getIcon()).isEqualTo("fa fa-database");
         assertThat(operationsMenu.getChildren())
                 .extracting(SidebarMenuDto::getLabel)
                 .containsExactly("Earlier", "Later");

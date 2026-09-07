@@ -36,6 +36,9 @@ public class SysPrivFeatureType extends ActionInfo {
 
     private String description;
 
+    @Column(length = 80)
+    private String icon;
+
     @Column(nullable = false)
     private boolean active;
 

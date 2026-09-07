@@ -285,9 +285,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         Set<String> userPrivilegeCodes = getUserPrivilegeCodes(username);
 
         return List.of(
-                buildMainMenu(FeatureType.SETUP, "fa fa-sliders", userPrivilegeCodes, userAccess.admin()),
-                buildMainMenu(FeatureType.OPERATIONS, "fa fa-briefcase", userPrivilegeCodes, userAccess.admin()),
-                buildMainMenu(FeatureType.REPORT, "fa fa-chart-line", userPrivilegeCodes, userAccess.admin())
+                buildMainMenu(FeatureType.SETUP, userPrivilegeCodes, userAccess.admin()),
+                buildMainMenu(FeatureType.OPERATIONS, userPrivilegeCodes, userAccess.admin()),
+                buildMainMenu(FeatureType.REPORT, userPrivilegeCodes, userAccess.admin())
         ).stream()
                 .sorted(Comparator.comparingInt(menu -> defaultOrder(menu.getMenuOrder())))
                 .toList();
@@ -392,7 +392,6 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     private SidebarMenuDto buildMainMenu(FeatureType featureType,
-                                         String icon,
                                          Set<String> userPrivilegeCodes,
                                          boolean admin) {
         List<SysPrivPrivilege> privileges = admin
@@ -431,10 +430,17 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         return SidebarMenuDto.builder()
                 .label(featureType.getDisplayName())
-                .icon(icon)
+                .icon(resolveFeatureTypeIcon(featureType))
                 .menuOrder(resolveMainMenuOrder(featureMenus))
                 .children(featureMenus)
                 .build();
+    }
+
+    private String resolveFeatureTypeIcon(FeatureType featureType) {
+        return featureTypeRepository.findByTenantIdIsNullAndFeatureTypeCode(featureType.getCode())
+                .map(SysPrivFeatureType::getIcon)
+                .filter(icon -> !icon.isBlank())
+                .orElse(featureType.getDefaultIcon());
     }
 
     private SidebarMenuDto toSidebarMenu(SysPrivSubMenu subMenu) {
@@ -587,6 +593,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 .orElseGet(() -> featureTypeRepository.save(SysPrivFeatureType.builder()
                         .featureTypeCode(code)
                         .featureTypeName(name)
+                        .icon(defaultFeatureTypeIcon(code))
                         .active(true)
                         .createdBy(0L)
                         .updatedBy(0L)
@@ -598,6 +605,14 @@ public class PrivilegeServiceImpl implements PrivilegeService {
             featureType = featureTypeRepository.save(featureType);
         }
         return featureType;
+    }
+
+    private String defaultFeatureTypeIcon(String code) {
+        return Stream.of(FeatureType.values())
+                .filter(featureType -> featureType.getCode().equals(code))
+                .map(FeatureType::getDefaultIcon)
+                .findFirst()
+                .orElse(null);
     }
 
     private SysPrivAction resolveAction(String code, String name) {

@@ -11,6 +11,7 @@ import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
+import com.nexacore.systemmodule.privilege.catalog.enums.FeatureType;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
@@ -29,6 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -211,6 +213,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
                 .orElseGet(() -> featureTypeRepository.save(SysPrivFeatureType.builder()
                         .featureTypeCode(code)
                         .featureTypeName(name)
+                        .icon(defaultFeatureTypeIcon(code))
                         .active(true)
                         .createdBy(0L)
                         .updatedBy(0L)
@@ -222,6 +225,14 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
             featureType = featureTypeRepository.save(featureType);
         }
         return featureType;
+    }
+
+    private String defaultFeatureTypeIcon(String code) {
+        return Stream.of(FeatureType.values())
+                .filter(featureType -> featureType.getCode().equals(code))
+                .map(FeatureType::getDefaultIcon)
+                .findFirst()
+                .orElse(null);
     }
 
     private SysPrivAction resolveAction(String code, String name) {

@@ -4,15 +4,17 @@ import lombok.Getter;
 
 @Getter
 public enum FeatureType {
-    SETUP("01", "Setup"),
-    OPERATIONS("02", "Operations"),
-    REPORT("03", "Report");
+    SETUP("01", "Setup", "fa fa-sliders"),
+    OPERATIONS("02", "Operations", "fa fa-briefcase"),
+    REPORT("03", "Report", "fa fa-chart-line");
 
     private final String code;
     private final String displayName;
+    private final String defaultIcon;
 
-    FeatureType(String code, String displayName) {
+    FeatureType(String code, String displayName, String defaultIcon) {
         this.code = code;
         this.displayName = displayName;
+        this.defaultIcon = defaultIcon;
     }
 }
