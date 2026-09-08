@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.accesscontrol.config.AccessControlProperties;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientCredentialService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -36,7 +37,8 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = requestPath(request);
-        return !accessControlProperties.isDecisionEvaluationEnabled()
+        return request.getDispatcherType() == DispatcherType.ERROR
+                || !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || publicRoutePolicy.isPublic(path);
     }

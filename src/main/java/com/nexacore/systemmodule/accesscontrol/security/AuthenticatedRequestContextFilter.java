@@ -6,6 +6,7 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,7 +32,8 @@ public class AuthenticatedRequestContextFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return "OPTIONS".equalsIgnoreCase(request.getMethod());
+        return request.getDispatcherType() == DispatcherType.ERROR
+                || "OPTIONS".equalsIgnoreCase(request.getMethod());
     }
 
     @Override

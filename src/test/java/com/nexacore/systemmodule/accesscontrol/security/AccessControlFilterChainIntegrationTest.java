@@ -63,6 +63,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import jakarta.servlet.DispatcherType;
 
 import java.time.Instant;
 import java.util.Date;
@@ -195,6 +196,15 @@ class AccessControlFilterChainIntegrationTest {
         mvc.perform(clientRequest("/api/test/private")).andExpect(error(401, "AUTHENTICATION_REQUIRED"));
         mvc.perform(clientRequest("/api/test/private").header("Authorization", "Bearer invalid"))
                 .andExpect(error(401, "AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test void errorDispatchDoesNotOverrideOriginalFailureWithAuthenticationRequired() throws Exception {
+        mvc.perform(get("/error").with(request -> {
+                    request.setDispatcherType(DispatcherType.ERROR);
+                    return request;
+                }))
+                .andExpect(result -> org.assertj.core.api.Assertions.assertThat(result.getResponse().getStatus())
+                        .isNotEqualTo(401));
     }
 
     @Test void refreshTokenCannotBeUsedAsBearerAccessToken() throws Exception {

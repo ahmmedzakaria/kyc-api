@@ -7,6 +7,7 @@ import com.nexacore.authmodule.security.jwt.InvalidTokenTypeException;
 import com.nexacore.authmodule.core.service.implementations.LogoutSessionService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,6 +31,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final LogoutSessionService logoutSessionService;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getDispatcherType() == DispatcherType.ERROR;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

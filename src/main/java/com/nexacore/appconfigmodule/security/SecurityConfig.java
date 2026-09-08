@@ -13,6 +13,7 @@ import com.nexacore.systemmodule.accesscontrol.security.AccessControlError;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import com.nexacore.systemmodule.tenant.security.TenantResolutionFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,6 +55,10 @@ public class SecurityConfig {
                             responseWriter.writeError(response, error.getStatus(), error.name(), error.getMessage());
                         }))
                 .authorizeHttpRequests(auth -> auth
+                        // An exception from an already-authorized API request is rendered through
+                        // a secondary ERROR dispatch. Do not replace that original failure with the
+                        // authentication entry point merely because its SecurityContext is cleared.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(publicRoutePolicy.patterns()).permitAll()
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // expects ROLE_ADMIN
 //                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")

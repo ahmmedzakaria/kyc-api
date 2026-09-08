@@ -4,6 +4,7 @@ import com.nexacore.commonmodule.web.ApiResponseJsonWriter;
 import com.nexacore.systemmodule.tenant.entity.TenantStatus;
 import com.nexacore.systemmodule.tenant.service.TenantDomainResolver;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +27,8 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+        return request.getDispatcherType() == DispatcherType.ERROR
+                || "OPTIONS".equalsIgnoreCase(request.getMethod())
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs");
     }
