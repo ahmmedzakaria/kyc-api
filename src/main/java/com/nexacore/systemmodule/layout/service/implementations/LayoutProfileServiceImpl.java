@@ -35,6 +35,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -93,11 +95,19 @@ public class LayoutProfileServiceImpl implements LayoutProfileService {
     }
 
     private void replaceThemes(SysLayoutProfile profile, List<ThemeConfigEntryDto> themes, Long userId) {
-        for (SysLayoutProfileTheme existing : themeRepository.findByLayoutProfileId(profile.getId())) {
+        validateUniqueThemeIds(themes);
+
+        List<SysLayoutProfileTheme> existingThemes = themeRepository.findByLayoutProfileId(profile.getId());
+        for (SysLayoutProfileTheme existing : existingThemes) {
             primariesRepository.deleteByLayoutProfileThemeId(existing.getId());
             chromeOverridesRepository.deleteByLayoutProfileThemeId(existing.getId());
         }
-        themeRepository.deleteAll(themeRepository.findByLayoutProfileId(profile.getId()));
+        if (!existingThemes.isEmpty()) {
+            themeRepository.deleteAll(existingThemes);
+            // save() below uses an IDENTITY insert. Flush the queued deletes first so
+            // replacement rows may safely reuse the profile/theme unique key.
+            themeRepository.flush();
+        }
 
         for (ThemeConfigEntryDto themeDto : themes) {
             SysLayoutProfileTheme theme = SysLayoutProfileTheme.builder()
@@ -150,6 +160,20 @@ public class LayoutProfileServiceImpl implements LayoutProfileService {
                 overrides.setCreatedBy(userId);
                 overrides.setUpdatedBy(userId);
                 chromeOverridesRepository.save(overrides);
+            }
+        }
+    }
+
+    private void validateUniqueThemeIds(List<ThemeConfigEntryDto> themes) {
+        Set<String> themeIds = new HashSet<>();
+        for (int index = 0; index < themes.size(); index++) {
+            ThemeConfigEntryDto theme = themes.get(index);
+            if (theme == null) {
+                throw new IllegalArgumentException("themes[" + index + "] is required");
+            }
+            String themeId = required(theme.getId(), "themes[" + index + "].id");
+            if (!themeIds.add(themeId)) {
+                throw new IllegalArgumentException("Duplicate theme id: " + themeId);
             }
         }
     }
