@@ -3,7 +3,8 @@ package com.nexacore.systemmodule.privilege.catalog.service.implementations;
 import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilege;
 import com.nexacore.systemmodule.privilege.assignment.entity.SysPrivRolePrivilegeId;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
+import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
+import com.nexacore.systemmodule.layout.repository.LayoutNavigationCategoryRepository;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
@@ -11,7 +12,6 @@ import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
-import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
@@ -44,7 +44,7 @@ class SystemPrivilegeRegistryServiceImplTest {
     private final ModuleRepository moduleRepository = mock(ModuleRepository.class);
     private final SubmoduleRepository submoduleRepository = mock(SubmoduleRepository.class);
     private final FeatureRepository featureRepository = mock(FeatureRepository.class);
-    private final FeatureTypeRepository featureTypeRepository = mock(FeatureTypeRepository.class);
+    private final LayoutNavigationCategoryRepository navigationCategoryRepository = mock(LayoutNavigationCategoryRepository.class);
     private final ActionRepository actionRepository = mock(ActionRepository.class);
     private final com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache authorizationDataCache = mock(com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache.class);
     private final SystemPrivilegeRegistryServiceImpl service = new SystemPrivilegeRegistryServiceImpl(
@@ -54,7 +54,7 @@ class SystemPrivilegeRegistryServiceImplTest {
             moduleRepository,
             submoduleRepository,
             featureRepository,
-            featureTypeRepository,
+            navigationCategoryRepository,
             actionRepository,
             authorizationDataCache
     );
@@ -183,7 +183,7 @@ class SystemPrivilegeRegistryServiceImplTest {
         return SysPrivFeature.builder()
                 .id(1L)
                 .submodule(submodule)
-                .featureType(SysPrivFeatureType.builder().id(1L).featureTypeCode("01").featureTypeName("Setup").active(true).build())
+                .navigationCategory(SysLayoutNavigationCategory.builder().id(1L).featureTypeCode("01").categoryName("Setup").active(true).build())
                 .featureCode("001")
                 .featureName("Person")
                 .active(true)

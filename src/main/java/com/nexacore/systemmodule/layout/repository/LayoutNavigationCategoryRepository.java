@@ -4,9 +4,13 @@ import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface LayoutNavigationCategoryRepository extends JpaRepository<SysLayoutNavigationCategory, Long> {
     List<SysLayoutNavigationCategory> findByNavigationModuleIdAndActiveTrueOrderByDisplayOrderAscCategoryNameAsc(Long navigationModuleId);
 
     List<SysLayoutNavigationCategory> findByActiveTrueOrderByDisplayOrderAscCategoryNameAsc();
+
+    Optional<SysLayoutNavigationCategory> findFirstByNavigationModulePhysicalModuleCodeAndFeatureTypeCodeOrderByIdAsc(
+            String physicalModuleCode, String featureTypeCode);
 }

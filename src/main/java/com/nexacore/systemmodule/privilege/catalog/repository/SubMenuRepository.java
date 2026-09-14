@@ -17,7 +17,7 @@ public interface SubMenuRepository extends JpaRepository<SysPrivSubMenu, Long> {
             JOIN submodule.module module
             WHERE module.code = :moduleCode
               AND submodule.code = :submoduleCode
-              AND feature.featureType.featureTypeCode = :featureTypeCode
+              AND feature.navigationCategory.featureTypeCode = :featureTypeCode
               AND feature.featureCode = :featureCode
               AND menu.url = :url
             """)
@@ -38,7 +38,7 @@ public interface SubMenuRepository extends JpaRepository<SysPrivSubMenu, Long> {
             WHERE menu.active = true
             ORDER BY module.code ASC,
                      submodule.code ASC,
-                     feature.featureType.featureTypeCode ASC,
+                     feature.navigationCategory.featureTypeCode ASC,
                      feature.featureCode ASC,
                      menu.name ASC
             """)

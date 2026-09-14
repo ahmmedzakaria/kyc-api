@@ -1,6 +1,7 @@
 package com.nexacore.systemmodule.privilege.catalog.entity;
 
 import com.nexacore.commonmodule.dto.ActionInfo;
+import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -22,7 +23,7 @@ import lombok.NoArgsConstructor;
         name = "sys_priv_features",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_sys_features_submodule_type_code",
-                columnNames = {"submodule_id", "feature_type_id", "feature_code"}
+                columnNames = {"submodule_id", "navigation_category_id", "feature_code"}
         )
 )
 @Data
@@ -42,9 +43,9 @@ public class SysPrivFeature extends ActionInfo {
     private SysPrivSubmodule submodule;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "feature_type_id", nullable = false)
+    @JoinColumn(name = "navigation_category_id", nullable = false)
     @EqualsAndHashCode.Exclude
-    private SysPrivFeatureType featureType;
+    private SysLayoutNavigationCategory navigationCategory;
 
     @Column(name = "feature_code", nullable = false, length = 3)
     private String featureCode;
@@ -56,10 +57,10 @@ public class SysPrivFeature extends ActionInfo {
     private boolean active;
 
     public String getFeatureTypeCode() {
-        return featureType == null ? null : featureType.getFeatureTypeCode();
+        return navigationCategory == null ? null : navigationCategory.getFeatureTypeCode();
     }
 
     public String getFeatureTypeName() {
-        return featureType == null ? null : featureType.getFeatureTypeName();
+        return navigationCategory == null ? null : navigationCategory.getCategoryName();
     }
 }

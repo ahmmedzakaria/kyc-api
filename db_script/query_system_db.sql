@@ -16,7 +16,7 @@ WHERE rp.role_id = ANY (:'target_role_ids'::bigint[])
     )
 SELECT
     ft.feature_type_code,
-    ft.feature_type_name AS main_menu,
+    ft.category_name     AS main_menu,
     ft.icon             AS main_menu_icon,
     sm.id               AS submenu_id,
     sm.name             AS submenu_name,
@@ -44,8 +44,8 @@ FROM effective_privileges ep
          JOIN sys_priv_features f
               ON f.id = p.feature_id
                   AND f.active = true
-         JOIN sys_priv_feature_types ft
-              ON ft.id = f.feature_type_id
+         JOIN sys_layout_navigation_categories ft
+              ON ft.id = f.navigation_category_id
                   AND ft.active = true
          JOIN sys_priv_submodules s
               ON s.id = f.submodule_id
@@ -55,7 +55,7 @@ FROM effective_privileges ep
                   AND m.active = true
 GROUP BY
     ft.feature_type_code,
-    ft.feature_type_name,
+    ft.category_name,
     ft.icon,
     sm.id,
     sm.name,

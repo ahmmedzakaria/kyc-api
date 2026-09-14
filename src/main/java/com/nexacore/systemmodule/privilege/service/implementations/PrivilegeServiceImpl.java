@@ -21,7 +21,8 @@ import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.accesscontrol.security.EffectiveTenantAccessContextHolder;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeatureType;
+import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
+import com.nexacore.systemmodule.layout.repository.LayoutNavigationCategoryRepository;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
@@ -36,7 +37,6 @@ import com.nexacore.systemmodule.layout.service.interfaces.LayoutContextService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutRoutePolicyService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutUiPolicyService;
 import com.nexacore.systemmodule.privilege.catalog.repository.FeatureRepository;
-import com.nexacore.systemmodule.privilege.catalog.repository.FeatureTypeRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
@@ -82,7 +82,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final ModuleRepository moduleRepository;
     private final SubmoduleRepository submoduleRepository;
     private final FeatureRepository featureRepository;
-    private final FeatureTypeRepository featureTypeRepository;
+    private final LayoutNavigationCategoryRepository navigationCategoryRepository;
     private final ActionRepository actionRepository;
     private final AuthModuleGateway authModuleGateway;
     private final SubMenuRepository subMenuRepository;
@@ -437,9 +437,11 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     private String resolveFeatureTypeIcon(FeatureType featureType) {
-        return featureTypeRepository.findByTenantIdIsNullAndFeatureTypeCode(featureType.getCode())
-                .map(SysPrivFeatureType::getIcon)
+        return navigationCategoryRepository.findByActiveTrueOrderByDisplayOrderAscCategoryNameAsc().stream()
+                .filter(category -> featureType.getCode().equals(category.getFeatureTypeCode()))
+                .map(SysLayoutNavigationCategory::getIcon)
                 .filter(icon -> !icon.isBlank())
+                .findFirst()
                 .orElse(featureType.getDefaultIcon());
     }
 
@@ -564,8 +566,8 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         }
 
         SysPrivSubmodule resolvedSubmodule = submodule;
-        SysPrivFeatureType featureType = resolveFeatureType(featureTypeCode, featureTypeName);
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeFeatureTypeCodeAndFeatureCode(
+        SysLayoutNavigationCategory navigationCategory = resolveNavigationCategory(moduleCode, featureTypeCode);
+        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
                         moduleCode,
                         submoduleCode,
                         featureTypeCode,
@@ -581,38 +583,19 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                 })
                 .orElseGet(() -> featureRepository.save(SysPrivFeature.builder()
                         .submodule(resolvedSubmodule)
-                        .featureType(featureType)
+                        .navigationCategory(navigationCategory)
                         .featureCode(featureCode)
                         .featureName(featureName)
                         .active(true)
                         .build()));
     }
 
-    private SysPrivFeatureType resolveFeatureType(String code, String name) {
-        SysPrivFeatureType featureType = featureTypeRepository.findByTenantIdIsNullAndFeatureTypeCode(code)
-                .orElseGet(() -> featureTypeRepository.save(SysPrivFeatureType.builder()
-                        .featureTypeCode(code)
-                        .featureTypeName(name)
-                        .icon(defaultFeatureTypeIcon(code))
-                        .active(true)
-                        .createdBy(0L)
-                        .updatedBy(0L)
-                        .build()));
-        if (!Objects.equals(name, featureType.getFeatureTypeName()) || !featureType.isActive()) {
-            featureType.setFeatureTypeName(name);
-            featureType.setActive(true);
-            featureType.setUpdatedBy(0L);
-            featureType = featureTypeRepository.save(featureType);
-        }
-        return featureType;
-    }
-
-    private String defaultFeatureTypeIcon(String code) {
-        return Stream.of(FeatureType.values())
-                .filter(featureType -> featureType.getCode().equals(code))
-                .map(FeatureType::getDefaultIcon)
-                .findFirst()
-                .orElse(null);
+    private SysLayoutNavigationCategory resolveNavigationCategory(String moduleCode, String featureTypeCode) {
+        return navigationCategoryRepository
+                .findFirstByNavigationModulePhysicalModuleCodeAndFeatureTypeCodeOrderByIdAsc(moduleCode, featureTypeCode)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No layout navigation category for module " + moduleCode
+                                + " and feature type " + featureTypeCode));
     }
 
     private SysPrivAction resolveAction(String code, String name) {

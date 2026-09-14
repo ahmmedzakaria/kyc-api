@@ -188,7 +188,7 @@ public class LicenseDecisionServiceImpl implements LicenseDecisionService {
                 || request.featureTypeCode() == null || request.featureCode() == null) {
             return null;
         }
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndFeatureTypeFeatureTypeCodeAndFeatureCode(
+        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
                         request.moduleCode(),
                         request.submoduleCode(),
                         request.featureTypeCode(),
