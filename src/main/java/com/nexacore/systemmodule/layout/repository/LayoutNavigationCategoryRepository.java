@@ -13,4 +13,7 @@ public interface LayoutNavigationCategoryRepository extends JpaRepository<SysLay
 
     Optional<SysLayoutNavigationCategory> findFirstByNavigationModulePhysicalModuleCodeAndFeatureTypeCodeOrderByIdAsc(
             String physicalModuleCode, String featureTypeCode);
+
+    Optional<SysLayoutNavigationCategory> findByNavigationModuleIdAndFeatureTypeCode(
+            Long navigationModuleId, String featureTypeCode);
 }

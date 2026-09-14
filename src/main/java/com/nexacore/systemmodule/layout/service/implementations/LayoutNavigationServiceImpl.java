@@ -302,8 +302,13 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     @Transactional(transactionManager = "systemTransactionManager")
     public NavNodeDto saveFeatureGroup(LayoutNavigationNodeRequestDto request, String actor) {
         Long userId = authModuleGateway.getUserId(actor);
-        SysLayoutNavigationCategory parent = categoryRepository.findById(requiredParent(request))
-                .orElseThrow(() -> new IllegalArgumentException("Layout navigation category not found: " + request.getParentId()));
+        Long navigationModuleId = requiredParent(request);
+        String featureTypeCode = requiredFeatureTypeCode(request.getFeatureTypeCode());
+        SysLayoutNavigationCategory parent = categoryRepository
+                .findByNavigationModuleIdAndFeatureTypeCode(navigationModuleId, featureTypeCode)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Layout navigation category not found for navigation module " + navigationModuleId
+                                + " and feature type " + featureTypeCode));
         requireActiveParent(parent.isActive(), request);
         SysLayoutFeatureGroup featureGroup = request.getId() == null
                 ? new SysLayoutFeatureGroup()
@@ -318,6 +323,14 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         SysLayoutFeatureGroup saved = featureGroupRepository.save(featureGroup);
         return node(saved.getId(), parent.getId(), saved.getFeatureGroupCode(), null, saved.getFeatureGroupName(),
                 "featureGroup", null, null, null, saved.isActive(), saved.getDisplayOrder());
+    }
+
+    private String requiredFeatureTypeCode(String value) {
+        String featureTypeCode = required(value, "featureTypeCode");
+        if (!featureTypeCode.matches("\\d{2}")) {
+            throw new IllegalArgumentException("featureTypeCode must contain exactly two digits");
+        }
+        return featureTypeCode;
     }
 
     @Override
