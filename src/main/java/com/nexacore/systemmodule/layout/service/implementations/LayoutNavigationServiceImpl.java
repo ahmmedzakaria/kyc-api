@@ -174,9 +174,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
                                          Map<Long, List<SysLayoutFeatureGroup>> featureGroupsByCategory,
                                          Map<Long, List<SysLayoutFeature>> featuresByFeatureGroup,
                                          Set<String> privilegeCodes, boolean includeAll) {
-        NavNodeDto categoryNode = node(category.getId(), category.getNavigationModule().getId(), category.getCategoryCode(),
-                null, category.getCategoryName(), "category", category.getIcon(), null, null,
-                category.isActive(), category.getDisplayOrder());
+        NavNodeDto categoryNode = categoryNode(category);
         for (SysLayoutFeatureGroup featureGroup : featureGroupsByCategory.getOrDefault(category.getId(), List.of())) {
             NavNodeDto featureGroupNode = buildFeatureGroupNode(featureGroup, featuresByFeatureGroup, privilegeCodes, includeAll);
             if (includeAll || !featureGroupNode.getChildren().isEmpty()) {
@@ -260,22 +258,20 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         category.setCategoryCode(codeGenerationService.normalizeBusinessCode(request.getCode(), request.getName()));
         category.setCategoryName(required(request.getName(), "name"));
         category.setCategoryKind(request.getCategoryKind());
+        category.setFeatureTypeCode(normalizeFeatureTypeCode(request.getFeatureTypeCode()));
         category.setIcon(request.getIcon());
         category.setDisplayOrder(defaultOrder(request.getDisplayOrder()));
         category.setActive(defaultActive(request.getActive()));
         audit(category, userId);
         SysLayoutNavigationCategory saved = categoryRepository.save(category);
-        return node(saved.getId(), parent.getId(), saved.getCategoryCode(), null, saved.getCategoryName(), "category",
-                saved.getIcon(), null, null, saved.isActive(), saved.getDisplayOrder());
+        return categoryNode(saved);
     }
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<NavNodeDto> listCategories() {
         return categoryRepository.findAll().stream()
-                .map(category -> node(category.getId(), category.getNavigationModule().getId(), category.getCategoryCode(),
-                        null, category.getCategoryName(), "category", category.getIcon(), null, null,
-                        category.isActive(), category.getDisplayOrder()))
+                .map(this::categoryNode)
                 .toList();
     }
 
@@ -435,6 +431,26 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
                 .children(new ArrayList<>())
                 .privilegeCodes(new ArrayList<>())
                 .build();
+    }
+
+    private NavNodeDto categoryNode(SysLayoutNavigationCategory category) {
+        NavNodeDto result = node(category.getId(), category.getNavigationModule().getId(), category.getCategoryCode(),
+                null, category.getCategoryName(), "category", category.getIcon(), null, null,
+                category.isActive(), category.getDisplayOrder());
+        result.setCategoryKind(category.getCategoryKind());
+        result.setFeatureTypeCode(category.getFeatureTypeCode());
+        return result;
+    }
+
+    private String normalizeFeatureTypeCode(String value) {
+        String code = value == null ? null : value.trim();
+        if (code == null || code.isEmpty()) {
+            return null;
+        }
+        if (!code.matches("\\d{2}")) {
+            throw new IllegalArgumentException("featureTypeCode must contain exactly two digits");
+        }
+        return code;
     }
 
     private void syncFeaturePrivileges(SysLayoutFeature feature, List<String> privilegeCodes, Long userId) {

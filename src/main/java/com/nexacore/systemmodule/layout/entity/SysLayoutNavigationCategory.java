@@ -40,6 +40,9 @@ public class SysLayoutNavigationCategory extends LayoutAuditInfo {
     @Column(name = "category_kind", length = 80)
     private String categoryKind;
 
+    @Column(name = "feature_type_code", length = 2)
+    private String featureTypeCode;
+
     @Column(length = 80)
     private String icon;
 

@@ -20,6 +20,8 @@ public class NavNodeDto {
     private String tCode;
     private String label;
     private String type;
+    private String categoryKind;
+    private String featureTypeCode;
     private String icon;
     private String moduleGroupIconName;
     private String moduleIconName;
