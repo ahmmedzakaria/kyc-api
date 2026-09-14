@@ -6,9 +6,6 @@ import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
 import com.nexacore.authmodule.core.dto.PrivilegeDto;
 import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
-import com.nexacore.authmodule.core.dto.SidebarMenuDto;
-import com.nexacore.authmodule.core.dto.SubMenuDto;
-import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.commonmodule.dto.ApiResponse;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeImpactDto;
@@ -82,36 +79,6 @@ public class PrivilegeController {
         return ResponseEntity.ok(ApiResponse.success(
                 privilegeService.getApplicationContext(authentication.getName()),
                 "Application context loaded"
-        ));
-    }
-
-    @PostMapping("/sidebar-menu")
-    @AuthenticatedApi
-    public ResponseEntity<ApiResponse<List<SidebarMenuDto>>> sidebarMenu(Authentication authentication) {
-        return ResponseEntity.ok(ApiResponse.success(
-                privilegeService.getUserSidebarMenu(authentication.getName()),
-                "Sidebar menu loaded"
-        ));
-    }
-
-    @PostMapping("/sub-menu/save")
-    @PrivilegeApi("11010100180")
-    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_SYNCHRONIZE)")
-    public ResponseEntity<ApiResponse<SubMenuDto>> saveSubMenu(@RequestBody SubMenuRequestDto requestDto,
-                                                               Authentication authentication) {
-        return ResponseEntity.ok(ApiResponse.success(
-                privilegeService.saveSubMenu(requestDto, authentication.getName()),
-                "Sub menu saved"
-        ));
-    }
-
-    @PostMapping("/sub-menu/list")
-    @PrivilegeApi("11010100101")
-    @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).PRIVILEGE_CATALOG_VIEW)")
-    public ResponseEntity<ApiResponse<List<SubMenuDto>>> listSubMenus() {
-        return ResponseEntity.ok(ApiResponse.success(
-                privilegeService.getAllSubMenus(),
-                "Sub menus loaded"
         ));
     }
 

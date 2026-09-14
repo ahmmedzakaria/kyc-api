@@ -6,9 +6,6 @@ import com.nexacore.authmodule.core.dto.PrivilegeCheckRequestDto;
 import com.nexacore.authmodule.core.dto.PrivilegeCheckResponseDto;
 import com.nexacore.authmodule.core.dto.PrivilegeDto;
 import com.nexacore.authmodule.core.dto.PrivilegeRequestDto;
-import com.nexacore.authmodule.core.dto.SidebarMenuDto;
-import com.nexacore.authmodule.core.dto.SubMenuDto;
-import com.nexacore.authmodule.core.dto.SubMenuRequestDto;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeImpactDto;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeDeactivateRequest;
@@ -26,13 +23,7 @@ public interface PrivilegeService {
 
     List<PrivilegeFeatureDefinitionDto> getModulePrivilegeDefinitions();
 
-    SubMenuDto saveSubMenu(SubMenuRequestDto requestDto, String username);
-
-    List<SubMenuDto> getAllSubMenus();
-
     ApplicationContextDto getApplicationContext(String username);
-
-    List<SidebarMenuDto> getUserSidebarMenu(String username);
 
     Set<String> getUserPrivilegeCodes(String username);
 

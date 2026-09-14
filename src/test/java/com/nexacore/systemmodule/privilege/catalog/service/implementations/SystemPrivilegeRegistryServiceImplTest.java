@@ -16,7 +16,6 @@ import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
-import com.nexacore.systemmodule.privilege.catalog.repository.SubMenuRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.SubmoduleRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -40,7 +39,6 @@ class SystemPrivilegeRegistryServiceImplTest {
 
     private final PrivilegeRepository privilegeRepository = mock(PrivilegeRepository.class);
     private final RolePrivilegeRepository rolePrivilegeRepository = mock(RolePrivilegeRepository.class);
-    private final SubMenuRepository subMenuRepository = mock(SubMenuRepository.class);
     private final ModuleRepository moduleRepository = mock(ModuleRepository.class);
     private final SubmoduleRepository submoduleRepository = mock(SubmoduleRepository.class);
     private final FeatureRepository featureRepository = mock(FeatureRepository.class);
@@ -50,7 +48,6 @@ class SystemPrivilegeRegistryServiceImplTest {
     private final SystemPrivilegeRegistryServiceImpl service = new SystemPrivilegeRegistryServiceImpl(
             privilegeRepository,
             rolePrivilegeRepository,
-            subMenuRepository,
             moduleRepository,
             submoduleRepository,
             featureRepository,

@@ -73,11 +73,6 @@ public class SysPrivPrivilege extends ActionInfo {
     @Transient
     private String actionName;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sub_menu_id")
-    @EqualsAndHashCode.Exclude
-    private SysPrivSubMenu subMenu;
-
     @Column(nullable = false)
     private boolean active;
 

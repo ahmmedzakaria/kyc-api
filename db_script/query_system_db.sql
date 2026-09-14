@@ -18,12 +18,12 @@ SELECT
     ft.feature_type_code,
     ft.category_name     AS main_menu,
     ft.icon             AS main_menu_icon,
-    sm.id               AS submenu_id,
-    sm.name             AS submenu_name,
-    sm.url               AS submenu_url,
-    sm.icon              AS submenu_icon,
-    sm.menu_order,
-    sm.sub_menu_order,
+    lf.id               AS navigation_feature_id,
+    lf.feature_name     AS navigation_feature_name,
+    lf.route            AS navigation_route,
+    lf.icon             AS navigation_icon,
+    lfg.display_order   AS feature_group_order,
+    lf.display_order    AS feature_order,
     m.code               AS module_code,
     m.name               AS module_name,
     s.code               AS submodule_code,
@@ -38,12 +38,18 @@ FROM effective_privileges ep
          JOIN sys_priv_privileges p
               ON p.id = ep.privilege_id
                   AND p.active = true
-         JOIN sys_priv_sub_menus sm
-              ON sm.id = p.sub_menu_id
-                  AND sm.active = true
          JOIN sys_priv_features f
               ON f.id = p.feature_id
                   AND f.active = true
+         JOIN sys_layout_feature_privileges lfp
+              ON lfp.privilege_id = p.id
+                  AND lfp.active = true
+         JOIN sys_layout_features lf
+              ON lf.id = lfp.layout_feature_id
+                  AND lf.active = true
+         JOIN sys_layout_feature_groups lfg
+              ON lfg.id = lf.feature_group_id
+                  AND lfg.active = true
          JOIN sys_layout_navigation_categories ft
               ON ft.id = f.navigation_category_id
                   AND ft.active = true
@@ -57,12 +63,12 @@ GROUP BY
     ft.feature_type_code,
     ft.category_name,
     ft.icon,
-    sm.id,
-    sm.name,
-    sm.url,
-    sm.icon,
-    sm.menu_order,
-    sm.sub_menu_order,
+    lf.id,
+    lf.feature_name,
+    lf.route,
+    lf.icon,
+    lfg.display_order,
+    lf.display_order,
     m.code,
     m.name,
     s.code,
@@ -70,7 +76,7 @@ GROUP BY
     f.feature_code,
     f.feature_name
 ORDER BY
-    sm.menu_order,
+    lfg.display_order,
     ft.feature_type_code,
-    sm.sub_menu_order,
-    sm.name;
+    lf.display_order,
+    lf.feature_name;

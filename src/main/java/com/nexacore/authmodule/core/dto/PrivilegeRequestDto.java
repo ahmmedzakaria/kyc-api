@@ -15,6 +15,5 @@ public class PrivilegeRequestDto {
     private String featureName;
     private String actionCode;
     private String actionName;
-    private Long subMenuId;
     private Boolean active;
 }

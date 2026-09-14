@@ -8,7 +8,6 @@ import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
 import com.nexacore.systemmodule.layout.repository.LayoutNavigationCategoryRepository;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubmodule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationSubmodule;
@@ -18,7 +17,6 @@ import com.nexacore.systemmodule.privilege.catalog.repository.ActionRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.ModuleRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
-import com.nexacore.systemmodule.privilege.catalog.repository.SubMenuRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
@@ -38,7 +36,6 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
     private final PrivilegeRepository privilegeRepository;
     private final RolePrivilegeRepository rolePrivilegeRepository;
-    private final SubMenuRepository subMenuRepository;
     private final ModuleRepository moduleRepository;
     private final SubmoduleRepository submoduleRepository;
     private final FeatureRepository featureRepository;
@@ -109,40 +106,6 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     }
 
     @Override
-    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<SysPrivSubMenu> findSubMenu(String moduleCode,
-                                         String submoduleCode,
-                                         String featureTypeCode,
-                                         String featureCode,
-                                         String url) {
-        return subMenuRepository.findFirstByFeatureAndUrl(
-                moduleCode,
-                submoduleCode,
-                featureTypeCode,
-                featureCode,
-                url
-        );
-    }
-
-    @Override
-    @Transactional(transactionManager = "systemTransactionManager")
-    public SysPrivSubMenu saveSubMenu(SysPrivSubMenu subMenu) {
-        if (subMenu.getFeature() == null) {
-            subMenu.setFeature(resolveFeature(
-                    subMenu.getModuleCode(),
-                    subMenu.getModuleName(),
-                    subMenu.getSubmoduleCode(),
-                    subMenu.getSubmoduleName(),
-                    subMenu.getFeatureTypeCode(),
-                    subMenu.getFeatureTypeName(),
-                    subMenu.getFeatureCode(),
-                    subMenu.getFeatureName()
-            ));
-        }
-        return subMenuRepository.save(subMenu);
-    }
-
-    @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public void assignRolePrivileges(Long roleId, Collection<String> privilegeCodes) {
         rolePrivilegeRepository.deleteByIdRoleId(roleId);
@@ -164,12 +127,6 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public long countRolePrivileges(Long roleId) {
         return rolePrivilegeRepository.countByIdRoleId(roleId);
-    }
-
-    @Override
-    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public long countSubMenus() {
-        return subMenuRepository.count();
     }
 
     private SysPrivFeature resolveFeature(String moduleCode,

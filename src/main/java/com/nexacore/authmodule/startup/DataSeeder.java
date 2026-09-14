@@ -23,7 +23,6 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApiRegis
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissionService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
-import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivSubMenu;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.catalog.service.interfaces.SystemPrivilegeRegistryService;
 import com.nexacore.systemmodule.privilege.catalog.enums.ApplicationModule;
@@ -536,63 +535,21 @@ public class DataSeeder {
         modulePrivilegeProviders.stream()
                 .flatMap(provider -> provider.getPrivilegeFeatures().stream())
                 .forEach(feature -> feature.getActions().forEach(action -> {
-                    SysPrivSubMenu subMenu = seedSubMenuIfMissing(systemPrivilegeRegistryService, feature);
                     SysPrivPrivilege privilege = savePrivilegeIfMissing(
                             systemPrivilegeRegistryService,
                             feature,
                             action.getActionCode(),
-                            action.getActionName(),
-                            subMenu
+                            action.getActionName()
                     );
                     privilegeCodes.add(privilege.getPrivilegeCode());
                 }));
         return privilegeCodes;
     }
 
-    private SysPrivSubMenu seedSubMenuIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
-                                         PrivilegeFeatureDefinitionDto feature) {
-        PrivilegeMenuItemDto menuItem = feature.getMenuItems().stream()
-                .findFirst()
-                .orElse(null);
-
-        String name = menuItem == null ? feature.getMenuLabel() : menuItem.getLabel();
-        String url = menuItem == null ? "/" + feature.getFeatureName().toLowerCase().replace(" ", "-") : menuItem.getPath();
-        String icon = menuItem == null ? feature.getIcon() : menuItem.getIcon();
-
-        SysPrivSubMenu subMenu = systemPrivilegeRegistryService.findSubMenu(
-                        feature.getModuleCode(),
-                        feature.getSubmoduleCode(),
-                        feature.getFeatureTypeCode(),
-                        feature.getFeatureCode(),
-                        url
-                )
-                .orElseGet(SysPrivSubMenu::new);
-
-        subMenu.setName(name == null ? feature.getFeatureName() : name);
-        subMenu.setUrl(url);
-        subMenu.setIcon(icon);
-        subMenu.setModuleCode(feature.getModuleCode());
-        subMenu.setModuleName(feature.getModuleName());
-        subMenu.setSubmoduleCode(feature.getSubmoduleCode());
-        subMenu.setSubmoduleName(feature.getSubmoduleName());
-        subMenu.setFeatureTypeCode(feature.getFeatureTypeCode());
-        subMenu.setFeatureTypeName(feature.getFeatureTypeName());
-        subMenu.setFeatureCode(feature.getFeatureCode());
-        subMenu.setFeatureName(feature.getFeatureName());
-        subMenu.setActive(true);
-        if (subMenu.getCreatedBy() == null) {
-            subMenu.setCreatedBy(0L);
-        }
-        subMenu.setUpdatedBy(0L);
-
-        return systemPrivilegeRegistryService.saveSubMenu(subMenu);
-    }
-
     private SysPrivPrivilege savePrivilegeIfMissing(SystemPrivilegeRegistryService systemPrivilegeRegistryService,
                                              PrivilegeFeatureDefinitionDto feature,
                                              String actionCode,
-                                             String actionName,
-                                             SysPrivSubMenu subMenu) {
+                                             String actionName) {
         String privilegeCode = feature.getModuleCode() + feature.getSubmoduleCode() + feature.getFeatureTypeCode() + feature.getFeatureCode() + actionCode;
 
         SysPrivPrivilege privilege = systemPrivilegeRegistryService.findPrivilegeByCode(privilegeCode)
@@ -611,7 +568,6 @@ public class DataSeeder {
                         .active(true)
                         .build());
 
-        privilege.setSubMenu(subMenu);
         privilege.setActive(true);
         return systemPrivilegeRegistryService.savePrivilege(privilege);
     }
