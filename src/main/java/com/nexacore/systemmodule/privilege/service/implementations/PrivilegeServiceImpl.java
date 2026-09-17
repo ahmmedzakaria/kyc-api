@@ -17,6 +17,7 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicat
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.accesscontrol.security.EffectiveTenantAccessContextHolder;
 import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeFeatureDefinitionDto;
+import com.nexacore.systemmodule.privilege.catalog.dto.PrivilegeActionDefinitionDto;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
 import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
 import com.nexacore.systemmodule.layout.repository.LayoutNavigationCategoryRepository;
@@ -39,7 +40,6 @@ import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepositor
 import com.nexacore.systemmodule.privilege.assignment.repository.RolePrivilegeRepository;
 import com.nexacore.systemmodule.privilege.catalog.repository.SubmoduleRepository;
 import com.nexacore.systemmodule.privilege.assignment.repository.UserPrivilegeRepository;
-import com.nexacore.systemmodule.privilege.catalog.service.interfaces.ModulePrivilegeProvider;
 import com.nexacore.systemmodule.privilege.service.interfaces.PrivilegeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -80,7 +80,6 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     private final LayoutNavigationCategoryRepository navigationCategoryRepository;
     private final ActionRepository actionRepository;
     private final AuthModuleGateway authModuleGateway;
-    private final List<ModulePrivilegeProvider> modulePrivilegeProviders;
     private final ClientApplicationContextService clientApplicationContextService;
     private final AuthApplicationContextService authApplicationContextService;
     private final LayoutContextService layoutContextService;
@@ -180,9 +179,34 @@ public class PrivilegeServiceImpl implements PrivilegeService {
     }
 
     @Override
+    @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<PrivilegeFeatureDefinitionDto> getModulePrivilegeDefinitions() {
-        return modulePrivilegeProviders.stream()
-                .flatMap(provider -> provider.getPrivilegeFeatures().stream())
+        List<SysPrivAction> actions = actionRepository.findAllByActiveTrueOrderByDisplayOrderAscActionCodeAsc();
+        return featureRepository.findActiveCatalogFeatures().stream()
+                .map(feature -> {
+                    SysPrivSubmodule submodule = feature.getSubmodule();
+                    SysPrivModule module = submodule.getModule();
+                    SysLayoutNavigationCategory category = feature.getNavigationCategory();
+                    List<PrivilegeActionDefinitionDto> actionDefinitions = actions.stream()
+                            .map(action -> PrivilegeActionDefinitionDto.builder()
+                                    .actionCode(action.getActionCode())
+                                    .actionName(action.getActionName())
+                                    .privilegeCode(buildPrivilegeCode(module.getCode(), submodule.getCode(),
+                                            category.getFeatureTypeCode(), feature.getFeatureCode(), action.getActionCode()))
+                                    .build())
+                            .toList();
+                    return PrivilegeFeatureDefinitionDto.builder()
+                            .moduleCode(module.getCode())
+                            .moduleName(module.getName())
+                            .submoduleCode(submodule.getCode())
+                            .submoduleName(submodule.getName())
+                            .featureTypeCode(category.getFeatureTypeCode())
+                            .featureTypeName(category.getCategoryName())
+                            .featureCode(feature.getFeatureCode())
+                            .featureName(feature.getFeatureName())
+                            .actions(actionDefinitions)
+                            .build();
+                })
                 .toList();
     }
 

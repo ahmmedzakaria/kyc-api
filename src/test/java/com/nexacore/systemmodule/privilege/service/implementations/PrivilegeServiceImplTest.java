@@ -6,6 +6,7 @@ import com.nexacore.gatewaymodule.auth.dto.AuthUserAccessDto;
 import com.nexacore.gatewaymodule.auth.service.interfaces.AuthModuleGateway;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationContextService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivFeature;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivAction;
 import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
 import com.nexacore.systemmodule.layout.repository.LayoutNavigationCategoryRepository;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
@@ -66,7 +67,6 @@ class PrivilegeServiceImplTest {
             navigationCategoryRepository,
             actionRepository,
             authModuleGateway,
-            List.of(),
             clientApplicationContextService,
             authApplicationContextService,
             layoutContextService,
@@ -74,6 +74,33 @@ class PrivilegeServiceImplTest {
             layoutUiPolicyService,
             authorizationDataCache
     );
+
+    @Test
+    void privilegeDefinitionsAreLoadedFromTheNormalizedDatabaseCatalog() {
+        SysPrivModule module = SysPrivModule.builder().code("11").name("System").active(true).build();
+        SysPrivSubmodule submodule = SysPrivSubmodule.builder().module(module).code("01").name("Access Control").active(true).build();
+        SysLayoutNavigationCategory category = SysLayoutNavigationCategory.builder()
+                .featureTypeCode("01").categoryName("Setup").active(false).build();
+        SysPrivFeature feature = SysPrivFeature.builder().submodule(submodule).navigationCategory(category)
+                .featureCode("001").featureName("Privilege Catalog").active(true).build();
+        SysPrivAction action = SysPrivAction.builder().actionCode("80").actionName("Synchronize")
+                .displayOrder(80).active(true).build();
+        when(featureRepository.findActiveCatalogFeatures()).thenReturn(List.of(feature));
+        when(actionRepository.findAllByActiveTrueOrderByDisplayOrderAscActionCodeAsc()).thenReturn(List.of(action));
+
+        var definitions = service.getModulePrivilegeDefinitions();
+
+        assertThat(definitions).singleElement().satisfies(definition -> {
+            assertThat(definition.getModuleName()).isEqualTo("System");
+            assertThat(definition.getSubmoduleName()).isEqualTo("Access Control");
+            assertThat(definition.getFeatureTypeName()).isEqualTo("Setup");
+            assertThat(definition.getFeatureName()).isEqualTo("Privilege Catalog");
+            assertThat(definition.getActions()).singleElement().satisfies(resultAction -> {
+                assertThat(resultAction.getActionName()).isEqualTo("Synchronize");
+                assertThat(resultAction.getPrivilegeCode()).isEqualTo("11010100180");
+            });
+        });
+    }
 
     @Test
     void deactivationRequiresTheCurrentPresentedDependencyImpact() {
