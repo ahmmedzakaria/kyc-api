@@ -20,7 +20,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "sys_priv_submodules",
-        uniqueConstraints = @UniqueConstraint(name = "uk_sys_submodules_module_code", columnNames = {"module_id", "code"})
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_sys_priv_submodules_module_priv_code",
+                columnNames = {"module_id", "submodule_priv_code"}
+        )
 )
 @Data
 @NoArgsConstructor
@@ -38,8 +41,8 @@ public class SysPrivSubmodule extends ActionInfo {
     @EqualsAndHashCode.Exclude
     private SysPrivModule module;
 
-    @Column(nullable = false, length = 2)
-    private String code;
+    @Column(name = "submodule_priv_code", nullable = false, length = 2)
+    private String submodulePrivCode;
 
     @Column(nullable = false)
     private String name;

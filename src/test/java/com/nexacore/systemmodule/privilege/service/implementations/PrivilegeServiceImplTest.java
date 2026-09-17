@@ -77,8 +77,8 @@ class PrivilegeServiceImplTest {
 
     @Test
     void privilegeDefinitionsAreLoadedFromTheNormalizedDatabaseCatalog() {
-        SysPrivModule module = SysPrivModule.builder().code("11").name("System").active(true).build();
-        SysPrivSubmodule submodule = SysPrivSubmodule.builder().module(module).code("01").name("Access Control").active(true).build();
+        SysPrivModule module = SysPrivModule.builder().modulePrivCode("11").name("System").active(true).build();
+        SysPrivSubmodule submodule = SysPrivSubmodule.builder().module(module).submodulePrivCode("01").name("Access Control").active(true).build();
         SysLayoutNavigationCategory category = SysLayoutNavigationCategory.builder()
                 .featureTypeCode("01").categoryName("Setup").active(false).build();
         SysPrivFeature feature = SysPrivFeature.builder().submodule(submodule).navigationCategory(category)

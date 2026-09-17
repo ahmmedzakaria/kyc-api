@@ -25,7 +25,7 @@ public class SysPhysicalModule extends PhysicalCatalogAuditInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "module_code", nullable = false, unique = true, length = 2)
+    @Column(name = "module_code", nullable = false, unique = true, length = 80)
     private String moduleCode;
 
     @Column(name = "module_name", nullable = false)

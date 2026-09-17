@@ -180,7 +180,7 @@ public class LicenseDecisionServiceImpl implements LicenseDecisionService {
     }
 
     private Long resolveModuleId(LicenseDecisionRequestDto request) {
-        return request.moduleCode() == null ? null : moduleRepository.findByCode(request.moduleCode()).map(module -> module.getId()).orElse(null);
+        return request.moduleCode() == null ? null : moduleRepository.findByModulePrivCode(request.moduleCode()).map(module -> module.getId()).orElse(null);
     }
 
     private Long resolveFeatureId(LicenseDecisionRequestDto request) {
@@ -188,7 +188,7 @@ public class LicenseDecisionServiceImpl implements LicenseDecisionService {
                 || request.featureTypeCode() == null || request.featureCode() == null) {
             return null;
         }
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
+        return featureRepository.findBySubmoduleModuleModulePrivCodeAndSubmoduleSubmodulePrivCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
                         request.moduleCode(),
                         request.submoduleCode(),
                         request.featureTypeCode(),

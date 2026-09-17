@@ -40,7 +40,7 @@ public class SysPhysicalSubmodule extends PhysicalCatalogAuditInfo {
     @EqualsAndHashCode.Exclude
     private SysPhysicalModule physicalModule;
 
-    @Column(name = "submodule_code", nullable = false, length = 2)
+    @Column(name = "submodule_code", nullable = false, length = 80)
     private String submoduleCode;
 
     @Column(name = "submodule_name", nullable = false)

@@ -61,21 +61,21 @@ class SystemPrivilegeRegistryServiceImplTest {
         Map<String, SysPrivModule> modules = new HashMap<>();
         Map<String, SysPrivSubmodule> submodules = new HashMap<>();
 
-        when(moduleRepository.findByCode(any())).thenAnswer(invocation ->
+        when(moduleRepository.findByModulePrivCode(any())).thenAnswer(invocation ->
                 Optional.ofNullable(modules.get(invocation.getArgument(0, String.class))));
         when(moduleRepository.save(any(SysPrivModule.class))).thenAnswer(invocation -> {
             SysPrivModule module = invocation.getArgument(0, SysPrivModule.class);
-            modules.put(module.getCode(), module);
+            modules.put(module.getModulePrivCode(), module);
             return module;
         });
-        when(submoduleRepository.findByModuleCodeAndCode(any(), any())).thenAnswer(invocation -> {
+        when(submoduleRepository.findByModuleModulePrivCodeAndSubmodulePrivCode(any(), any())).thenAnswer(invocation -> {
             String moduleCode = invocation.getArgument(0, String.class);
             String submoduleCode = invocation.getArgument(1, String.class);
             return Optional.ofNullable(submodules.get(moduleCode + ":" + submoduleCode));
         });
         when(submoduleRepository.save(any(SysPrivSubmodule.class))).thenAnswer(invocation -> {
             SysPrivSubmodule submodule = invocation.getArgument(0, SysPrivSubmodule.class);
-            submodules.put(submodule.getModule().getCode() + ":" + submodule.getCode(), submodule);
+            submodules.put(submodule.getModule().getModulePrivCode() + ":" + submodule.getSubmodulePrivCode(), submodule);
             return submodule;
         });
 
@@ -87,13 +87,13 @@ class SystemPrivilegeRegistryServiceImplTest {
         verify(submoduleRepository, times(ApplicationSubmodule.values().length)).save(submoduleCaptor.capture());
 
         assertThat(moduleCaptor.getAllValues())
-                .extracting(SysPrivModule::getCode)
+                .extracting(SysPrivModule::getModulePrivCode)
                 .containsExactlyInAnyOrderElementsOf(List.of(ApplicationModule.values()).stream()
                         .map(ApplicationModule::getCode)
                         .toList());
 
         assertThat(submoduleCaptor.getAllValues().stream()
-                .map(submodule -> submodule.getModule().getCode() + ":" + submodule.getCode())
+                .map(submodule -> submodule.getModule().getModulePrivCode() + ":" + submodule.getSubmodulePrivCode())
                 .collect(Collectors.toSet()))
                 .containsExactlyInAnyOrderElementsOf(List.of(ApplicationSubmodule.values()).stream()
                         .map(submodule -> submodule.getModule().getCode() + ":" + submodule.getCode())
@@ -166,14 +166,14 @@ class SystemPrivilegeRegistryServiceImplTest {
     private SysPrivFeature feature() {
         SysPrivModule module = SysPrivModule.builder()
                 .id(1L)
-                .code("01")
+                .modulePrivCode("01")
                 .name("KYC")
                 .active(true)
                 .build();
         SysPrivSubmodule submodule = SysPrivSubmodule.builder()
                 .id(1L)
                 .module(module)
-                .code("01")
+                .submodulePrivCode("01")
                 .name("Person")
                 .active(true)
                 .build();

@@ -142,7 +142,7 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
 
         SysPrivSubmodule resolvedSubmodule = submodule;
         SysLayoutNavigationCategory navigationCategory = resolveNavigationCategory(moduleCode, featureTypeCode);
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
+        return featureRepository.findBySubmoduleModuleModulePrivCodeAndSubmoduleSubmodulePrivCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
                         moduleCode,
                         submoduleCode,
                         featureTypeCode,
@@ -193,9 +193,9 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     }
 
     private SysPrivModule resolveModule(String moduleCode, String moduleName) {
-        SysPrivModule module = moduleRepository.findByCode(moduleCode)
+        SysPrivModule module = moduleRepository.findByModulePrivCode(moduleCode)
                 .orElseGet(() -> moduleRepository.save(SysPrivModule.builder()
-                        .code(moduleCode)
+                        .modulePrivCode(moduleCode)
                         .name(moduleName)
                         .active(true)
                         .build()));
@@ -208,10 +208,11 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     }
 
     private SysPrivSubmodule resolveSubmodule(SysPrivModule module, String submoduleCode, String submoduleName) {
-        SysPrivSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(module.getCode(), submoduleCode)
+        SysPrivSubmodule submodule = submoduleRepository
+                .findByModuleModulePrivCodeAndSubmodulePrivCode(module.getModulePrivCode(), submoduleCode)
                 .orElseGet(() -> submoduleRepository.save(SysPrivSubmodule.builder()
                         .module(module)
-                        .code(submoduleCode)
+                        .submodulePrivCode(submoduleCode)
                         .name(submoduleName)
                         .active(true)
                         .build()));

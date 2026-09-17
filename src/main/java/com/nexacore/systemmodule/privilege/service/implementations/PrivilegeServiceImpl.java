@@ -191,14 +191,14 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                             .map(action -> PrivilegeActionDefinitionDto.builder()
                                     .actionCode(action.getActionCode())
                                     .actionName(action.getActionName())
-                                    .privilegeCode(buildPrivilegeCode(module.getCode(), submodule.getCode(),
+                                    .privilegeCode(buildPrivilegeCode(module.getModulePrivCode(), submodule.getSubmodulePrivCode(),
                                             category.getFeatureTypeCode(), feature.getFeatureCode(), action.getActionCode()))
                                     .build())
                             .toList();
                     return PrivilegeFeatureDefinitionDto.builder()
-                            .moduleCode(module.getCode())
+                            .moduleCode(module.getModulePrivCode())
                             .moduleName(module.getName())
-                            .submoduleCode(submodule.getCode())
+                            .submoduleCode(submodule.getSubmodulePrivCode())
                             .submoduleName(submodule.getName())
                             .featureTypeCode(category.getFeatureTypeCode())
                             .featureTypeName(category.getCategoryName())
@@ -400,9 +400,9 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                                       String featureTypeName,
                                       String featureCode,
                                       String featureName) {
-        SysPrivModule module = moduleRepository.findByCode(moduleCode)
+        SysPrivModule module = moduleRepository.findByModulePrivCode(moduleCode)
                 .orElseGet(() -> moduleRepository.save(SysPrivModule.builder()
-                        .code(moduleCode)
+                        .modulePrivCode(moduleCode)
                         .name(moduleName)
                         .active(true)
                         .build()));
@@ -413,10 +413,11 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         }
 
         SysPrivModule resolvedModule = module;
-        SysPrivSubmodule submodule = submoduleRepository.findByModuleCodeAndCode(moduleCode, submoduleCode)
+        SysPrivSubmodule submodule = submoduleRepository
+                .findByModuleModulePrivCodeAndSubmodulePrivCode(moduleCode, submoduleCode)
                 .orElseGet(() -> submoduleRepository.save(SysPrivSubmodule.builder()
                         .module(resolvedModule)
-                        .code(submoduleCode)
+                        .submodulePrivCode(submoduleCode)
                         .name(submoduleName)
                         .active(true)
                         .build()));
@@ -428,7 +429,7 @@ public class PrivilegeServiceImpl implements PrivilegeService {
 
         SysPrivSubmodule resolvedSubmodule = submodule;
         SysLayoutNavigationCategory navigationCategory = resolveNavigationCategory(moduleCode, featureTypeCode);
-        return featureRepository.findBySubmoduleModuleCodeAndSubmoduleCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
+        return featureRepository.findBySubmoduleModuleModulePrivCodeAndSubmoduleSubmodulePrivCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
                         moduleCode,
                         submoduleCode,
                         featureTypeCode,

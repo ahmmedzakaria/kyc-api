@@ -17,13 +17,14 @@ public interface FeatureRepository extends JpaRepository<SysPrivFeature, Long> {
             where feature.active = true
               and submodule.active = true
               and module.active = true
-            order by module.code, submodule.code, category.featureTypeCode, feature.featureCode
+            order by module.modulePrivCode, submodule.submodulePrivCode,
+                     category.featureTypeCode, feature.featureCode
             """)
     List<SysPrivFeature> findActiveCatalogFeatures();
 
-    Optional<SysPrivFeature> findBySubmoduleModuleCodeAndSubmoduleCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
-            String moduleCode,
-            String submoduleCode,
+    Optional<SysPrivFeature> findBySubmoduleModuleModulePrivCodeAndSubmoduleSubmodulePrivCodeAndNavigationCategoryFeatureTypeCodeAndFeatureCode(
+            String modulePrivCode,
+            String submodulePrivCode,
             String featureTypeCode,
             String code
     );

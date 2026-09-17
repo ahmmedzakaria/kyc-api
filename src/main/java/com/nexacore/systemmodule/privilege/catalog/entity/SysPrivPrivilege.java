@@ -78,7 +78,7 @@ public class SysPrivPrivilege extends ActionInfo {
 
     public String getModuleCode() {
         return feature != null && feature.getSubmodule() != null && feature.getSubmodule().getModule() != null
-                ? feature.getSubmodule().getModule().getCode()
+                ? feature.getSubmodule().getModule().getModulePrivCode()
                 : moduleCode;
     }
 
@@ -90,7 +90,7 @@ public class SysPrivPrivilege extends ActionInfo {
 
     public String getSubmoduleCode() {
         return feature != null && feature.getSubmodule() != null
-                ? feature.getSubmodule().getCode()
+                ? feature.getSubmodule().getSubmodulePrivCode()
                 : submoduleCode;
     }
 

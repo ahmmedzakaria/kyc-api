@@ -26,8 +26,8 @@ public class SysPrivModule extends ActionInfo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 2)
-    private String code;
+    @Column(name = "module_priv_code", nullable = false, unique = true, length = 2)
+    private String modulePrivCode;
 
     @Column(nullable = false)
     private String name;
