@@ -37,10 +37,21 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("69");
+                .isEqualTo("74");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(68);
+                .isEqualTo(69);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
+        assertThat(regclass("sys_priv_modules_tobe_deleted")).isEqualTo("sys_priv_modules_tobe_deleted");
+        assertThat(regclass("sys_layout_navigation_modules")).isNull();
+        assertThat(count("SELECT count(*) FROM sys_priv_modules "
+                + "WHERE module_priv_code IS NOT NULL AND active"))
+                .isEqualTo(11);
+        assertThat(count("SELECT count(*) FROM sys_priv_modules "
+                + "WHERE navigation_module_code LIKE 'PRIV\\_%' ESCAPE '\\' "
+                + "AND active AND NOT navigation_enabled"))
+                .isEqualTo(8);
+        assertThat(count("SELECT count(*) FROM sys_physical_submodules WHERE submodule_code = 'LOG_ADMINISTRATION'"))
+                .isEqualTo(1);
         assertThat(regclass("sys_priv_feature_types")).isNull();
         assertThat(regclass("sys_priv_sub_menus")).isNull();
         assertThat(count("SELECT count(*) FROM information_schema.columns "
@@ -214,11 +225,12 @@ class SystemDatabaseMigrationTest {
         assertThat(regclass("sys_modules")).isNull();
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
-                + "WHERE code = 'ZZ' AND name = 'Migration sentinel' AND created_by = 41 AND updated_by = 42"))
+                + "WHERE module_priv_code = 'ZZ' AND navigation_module_name = 'Migration sentinel'"))
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM sys_priv_submodules sm "
                 + "JOIN sys_priv_modules m ON m.id = sm.module_id "
-                + "WHERE m.code = 'ZZ' AND sm.code = '01'"))
+                + "WHERE m.module_priv_code = 'ZZ' AND sm.submodule_priv_code = '01' "
+                + "AND sm.submodule_code = 'SUBMODULE_01'"))
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM pg_constraint c "
                 + "WHERE c.contype = 'f' "
@@ -241,9 +253,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("67");
+                .isEqualTo("74");
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
-                + "WHERE code = 'ZY' AND created_by = 51 AND updated_by = 52"))
+                + "WHERE module_priv_code = 'ZY' AND navigation_module_name = 'V13 sentinel'"))
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM information_schema.columns "
                 + "WHERE table_schema = 'public' AND table_name = 'sys_acc_api_registry' "

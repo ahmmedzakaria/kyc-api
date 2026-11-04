@@ -27,6 +27,12 @@ public class NavNodeDto {
     private String moduleIconName;
     private String description;
     private String route;
+    private String modulePrivCode;
+    private String physicalModuleCode;
+    private String physicalSubmoduleCode;
+    private String physicalFeatureTypeCode;
+    private String physicalFeatureCode;
+    private Boolean navigationEnabled;
     private Boolean active;
     private Integer displayOrder;
 

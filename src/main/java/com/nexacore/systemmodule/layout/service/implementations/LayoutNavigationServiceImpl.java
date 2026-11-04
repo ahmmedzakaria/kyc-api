@@ -15,7 +15,6 @@ import com.nexacore.systemmodule.layout.entity.SysLayoutFeatureGroup;
 import com.nexacore.systemmodule.layout.entity.SysLayoutFeaturePrivilege;
 import com.nexacore.systemmodule.layout.entity.SysLayoutModuleGroup;
 import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationCategory;
-import com.nexacore.systemmodule.layout.entity.SysLayoutNavigationModule;
 import com.nexacore.systemmodule.layout.entity.SysLayoutRoutePolicy;
 import com.nexacore.systemmodule.layout.enums.PrivilegeMatchMode;
 import com.nexacore.systemmodule.layout.repository.LayoutFeatureGroupRepository;
@@ -28,6 +27,7 @@ import com.nexacore.systemmodule.layout.repository.LayoutRoutePolicyRepository;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutCodeGenerationService;
 import com.nexacore.systemmodule.layout.service.interfaces.LayoutNavigationService;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -69,8 +69,8 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<NavNodeDto> getNavigationTree(String clientCode, String username, Set<String> privilegeCodes) {
         Set<String> effectivePrivilegeCodes = resolveClientPrivileges(clientCode, privilegeCodes);
-        Map<Long, List<SysLayoutNavigationModule>> modulesByGroup = navigationModuleRepository
-                .findByActiveTrueOrderByDisplayOrderAscNavigationModuleNameAsc().stream()
+        Map<Long, List<SysPrivModule>> modulesByGroup = navigationModuleRepository
+                .findByActiveTrueAndNavigationEnabledTrueOrderByDisplayOrderAscNameAsc().stream()
                 .collect(Collectors.groupingBy(module -> module.getModuleGroup().getId()));
         Map<Long, List<SysLayoutNavigationCategory>> categoriesByModule = categoryRepository
                 .findByActiveTrueOrderByDisplayOrderAscCategoryNameAsc().stream()
@@ -113,8 +113,8 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<NavNodeDto> getFullNavigationTree() {
-        Map<Long, List<SysLayoutNavigationModule>> modulesByGroup = navigationModuleRepository
-                .findByActiveTrueOrderByDisplayOrderAscNavigationModuleNameAsc().stream()
+        Map<Long, List<SysPrivModule>> modulesByGroup = navigationModuleRepository
+                .findByActiveTrueAndNavigationEnabledTrueOrderByDisplayOrderAscNameAsc().stream()
                 .collect(Collectors.groupingBy(module -> module.getModuleGroup().getId()));
         Map<Long, List<SysLayoutNavigationCategory>> categoriesByModule = categoryRepository
                 .findByActiveTrueOrderByDisplayOrderAscCategoryNameAsc().stream()
@@ -135,14 +135,14 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     }
 
     private NavNodeDto buildModuleGroupNode(SysLayoutModuleGroup group,
-                                            Map<Long, List<SysLayoutNavigationModule>> modulesByGroup,
+                                            Map<Long, List<SysPrivModule>> modulesByGroup,
                                             Map<Long, List<SysLayoutNavigationCategory>> categoriesByModule,
                                             Map<Long, List<SysLayoutFeatureGroup>> featureGroupsByCategory,
                                             Map<Long, List<SysLayoutFeature>> featuresByFeatureGroup,
                                             Set<String> privilegeCodes, boolean includeAll) {
         NavNodeDto groupNode = node(group.getId(), null, group.getGroupCode(), null, group.getGroupName(),
                 "group", group.getIcon(), null, null, group.isActive(), group.getDisplayOrder());
-        for (SysLayoutNavigationModule module : modulesByGroup.getOrDefault(group.getId(), List.of())) {
+        for (SysPrivModule module : modulesByGroup.getOrDefault(group.getId(), List.of())) {
             NavNodeDto moduleNode = buildModuleNode(module, categoriesByModule, featureGroupsByCategory,
                     featuresByFeatureGroup, privilegeCodes, includeAll);
             if (includeAll || !moduleNode.getChildren().isEmpty()) {
@@ -152,7 +152,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         return groupNode;
     }
 
-    private NavNodeDto buildModuleNode(SysLayoutNavigationModule module,
+    private NavNodeDto buildModuleNode(SysPrivModule module,
                                        Map<Long, List<SysLayoutNavigationCategory>> categoriesByModule,
                                        Map<Long, List<SysLayoutFeatureGroup>> featureGroupsByCategory,
                                        Map<Long, List<SysLayoutFeature>> featuresByFeatureGroup,
@@ -160,6 +160,9 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         NavNodeDto moduleNode = node(module.getId(), module.getModuleGroup().getId(), module.getNavigationModuleCode(),
                 null, module.getNavigationModuleName(), "module", module.getIcon(), module.getDescription(), null,
                 module.isActive(), module.getDisplayOrder());
+        moduleNode.setModulePrivCode(module.getModulePrivCode());
+        moduleNode.setPhysicalModuleCode(module.getPhysicalModuleCode());
+        moduleNode.setNavigationEnabled(module.isNavigationEnabled());
         for (SysLayoutNavigationCategory category : categoriesByModule.getOrDefault(module.getId(), List.of())) {
             NavNodeDto categoryNode = buildCategoryNode(category, featureGroupsByCategory, featuresByFeatureGroup,
                     privilegeCodes, includeAll);
@@ -225,20 +228,24 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         SysLayoutModuleGroup parent = moduleGroupRepository.findById(requiredParent(request))
                 .orElseThrow(() -> new IllegalArgumentException("Layout module group not found: " + request.getParentId()));
         requireActiveParent(parent.isActive(), request);
-        SysLayoutNavigationModule module = request.getId() == null
-                ? new SysLayoutNavigationModule()
+        SysPrivModule module = request.getId() == null
+                ? new SysPrivModule()
                 : navigationModuleRepository.findById(request.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Layout navigation module not found: " + request.getId()));
         module.setModuleGroup(parent);
         module.setNavigationModuleCode(codeGenerationService.normalizeBusinessCode(request.getCode(), request.getName()));
         module.setNavigationModuleName(required(request.getName(), "name"));
+        if (request.getId() == null || request.getModulePrivCode() != null) {
+            module.setModulePrivCode(normalizeOptionalCode(request.getModulePrivCode(), 2, "modulePrivCode"));
+        }
         module.setPhysicalModuleCode(request.getPhysicalModuleCode());
         module.setIcon(request.getIcon());
         module.setDescription(request.getDescription());
         module.setDisplayOrder(defaultOrder(request.getDisplayOrder()));
+        module.setNavigationEnabled(request.getNavigationEnabled() == null || request.getNavigationEnabled());
         module.setActive(defaultActive(request.getActive()));
         audit(module, userId);
-        SysLayoutNavigationModule saved = navigationModuleRepository.save(module);
+        SysPrivModule saved = navigationModuleRepository.save(module);
         return node(saved.getId(), parent.getId(), saved.getNavigationModuleCode(), null, saved.getNavigationModuleName(),
                 "module", saved.getIcon(), saved.getDescription(), null, saved.isActive(), saved.getDisplayOrder());
     }
@@ -247,7 +254,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
     @Transactional(transactionManager = "systemTransactionManager")
     public NavNodeDto saveCategory(LayoutNavigationNodeRequestDto request, String actor) {
         Long userId = authModuleGateway.getUserId(actor);
-        SysLayoutNavigationModule parent = navigationModuleRepository.findById(requiredParent(request))
+        SysPrivModule parent = navigationModuleRepository.findById(requiredParent(request))
                 .orElseThrow(() -> new IllegalArgumentException("Layout navigation module not found: " + request.getParentId()));
         requireActiveParent(parent.isActive(), request);
         SysLayoutNavigationCategory category = request.getId() == null
@@ -407,6 +414,10 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
                 .type("feature")
                 .icon(feature.getIcon())
                 .route(feature.getRoute())
+                .physicalModuleCode(feature.getPhysicalModuleCode())
+                .physicalSubmoduleCode(feature.getPhysicalSubmoduleCode())
+                .physicalFeatureTypeCode(feature.getPhysicalFeatureTypeCode())
+                .physicalFeatureCode(feature.getPhysicalFeatureCode())
                 .active(feature.isActive())
                 .displayOrder(feature.getDisplayOrder())
                 .privilegeCodes(requiredCodes)
@@ -511,7 +522,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
 
         List<String> duplicateCodes = new ArrayList<>();
         collectDuplicates(moduleGroupRepository.findAll(), SysLayoutModuleGroup::getGroupCode, "group", duplicateCodes);
-        collectDuplicates(navigationModuleRepository.findAll(), SysLayoutNavigationModule::getNavigationModuleCode, "module", duplicateCodes);
+        collectDuplicates(navigationModuleRepository.findAll(), SysPrivModule::getNavigationModuleCode, "module", duplicateCodes);
         collectDuplicates(categoryRepository.findAll(), SysLayoutNavigationCategory::getCategoryCode, "category", duplicateCodes);
         collectDuplicates(featureGroupRepository.findAll(), SysLayoutFeatureGroup::getFeatureGroupCode, "feature-group", duplicateCodes);
         collectDuplicates(features, SysLayoutFeature::getFeatureCode, "feature", duplicateCodes);
@@ -567,6 +578,17 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
 
     private Integer defaultOrder(Integer value) {
         return value == null ? 100 : value;
+    }
+
+    private String normalizeOptionalCode(String value, int maximumLength, String field) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String normalized = value.trim().toUpperCase();
+        if (normalized.length() > maximumLength) {
+            throw new IllegalArgumentException(field + " must not exceed " + maximumLength + " characters");
+        }
+        return normalized;
     }
 
     private boolean defaultActive(Boolean value) {

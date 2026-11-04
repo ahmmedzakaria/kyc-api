@@ -29,7 +29,7 @@ public class SysLayoutNavigationCategory extends LayoutAuditInfo {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "navigation_module_id", nullable = false)
-    private SysLayoutNavigationModule navigationModule;
+    private com.nexacore.systemmodule.privilege.catalog.entity.SysPrivModule navigationModule;
 
     @Column(name = "category_code", nullable = false, length = 80)
     private String categoryCode;

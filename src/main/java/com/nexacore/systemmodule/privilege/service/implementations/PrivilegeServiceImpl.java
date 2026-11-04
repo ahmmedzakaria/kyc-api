@@ -401,31 +401,16 @@ public class PrivilegeServiceImpl implements PrivilegeService {
                                       String featureCode,
                                       String featureName) {
         SysPrivModule module = moduleRepository.findByModulePrivCode(moduleCode)
-                .orElseGet(() -> moduleRepository.save(SysPrivModule.builder()
-                        .modulePrivCode(moduleCode)
-                        .name(moduleName)
-                        .active(true)
-                        .build()));
-        if (!Objects.equals(moduleName, module.getName()) || !module.isActive()) {
-            module.setName(moduleName);
-            module.setActive(true);
-            module = moduleRepository.save(module);
-        }
+                .filter(SysPrivModule::isActive)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Active logical privilege module is not configured: " + moduleCode + " (" + moduleName + ")"));
 
-        SysPrivModule resolvedModule = module;
         SysPrivSubmodule submodule = submoduleRepository
                 .findByModuleModulePrivCodeAndSubmodulePrivCode(moduleCode, submoduleCode)
-                .orElseGet(() -> submoduleRepository.save(SysPrivSubmodule.builder()
-                        .module(resolvedModule)
-                        .submodulePrivCode(submoduleCode)
-                        .name(submoduleName)
-                        .active(true)
-                        .build()));
-        if (!Objects.equals(submoduleName, submodule.getName()) || !submodule.isActive()) {
-            submodule.setName(submoduleName);
-            submodule.setActive(true);
-            submodule = submoduleRepository.save(submodule);
-        }
+                .filter(SysPrivSubmodule::isActive)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Active logical privilege submodule is not configured: "
+                                + moduleCode + ":" + submoduleCode + " (" + submoduleName + ")"));
 
         SysPrivSubmodule resolvedSubmodule = submodule;
         SysLayoutNavigationCategory navigationCategory = resolveNavigationCategory(moduleCode, featureTypeCode);

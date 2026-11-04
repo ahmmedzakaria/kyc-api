@@ -57,47 +57,41 @@ class SystemPrivilegeRegistryServiceImplTest {
     );
 
     @Test
-    void syncsApplicationModulesAndSubmodulesToCatalogTables() {
+    void validatesApplicationModulesAndSubmodulesAgainstLogicalCatalog() {
         Map<String, SysPrivModule> modules = new HashMap<>();
         Map<String, SysPrivSubmodule> submodules = new HashMap<>();
 
+        for (ApplicationModule applicationModule : ApplicationModule.values()) {
+            modules.put(applicationModule.getCode(), SysPrivModule.builder()
+                    .modulePrivCode(applicationModule.getCode())
+                    .name(applicationModule.getDisplayName())
+                    .active(true)
+                    .build());
+        }
+        for (ApplicationSubmodule applicationSubmodule : ApplicationSubmodule.values()) {
+            SysPrivModule module = modules.get(applicationSubmodule.getModule().getCode());
+            submodules.put(module.getModulePrivCode() + ":" + applicationSubmodule.getCode(),
+                    SysPrivSubmodule.builder()
+                            .module(module)
+                            .submodulePrivCode(applicationSubmodule.getCode())
+                            .submoduleCode(applicationSubmodule.name())
+                            .name(applicationSubmodule.getDisplayName())
+                            .active(true)
+                            .build());
+        }
+
         when(moduleRepository.findByModulePrivCode(any())).thenAnswer(invocation ->
                 Optional.ofNullable(modules.get(invocation.getArgument(0, String.class))));
-        when(moduleRepository.save(any(SysPrivModule.class))).thenAnswer(invocation -> {
-            SysPrivModule module = invocation.getArgument(0, SysPrivModule.class);
-            modules.put(module.getModulePrivCode(), module);
-            return module;
-        });
         when(submoduleRepository.findByModuleModulePrivCodeAndSubmodulePrivCode(any(), any())).thenAnswer(invocation -> {
             String moduleCode = invocation.getArgument(0, String.class);
             String submoduleCode = invocation.getArgument(1, String.class);
             return Optional.ofNullable(submodules.get(moduleCode + ":" + submoduleCode));
         });
-        when(submoduleRepository.save(any(SysPrivSubmodule.class))).thenAnswer(invocation -> {
-            SysPrivSubmodule submodule = invocation.getArgument(0, SysPrivSubmodule.class);
-            submodules.put(submodule.getModule().getModulePrivCode() + ":" + submodule.getSubmodulePrivCode(), submodule);
-            return submodule;
-        });
 
         service.syncApplicationCatalog();
 
-        ArgumentCaptor<SysPrivModule> moduleCaptor = ArgumentCaptor.forClass(SysPrivModule.class);
-        ArgumentCaptor<SysPrivSubmodule> submoduleCaptor = ArgumentCaptor.forClass(SysPrivSubmodule.class);
-        verify(moduleRepository, times(ApplicationModule.values().length)).save(moduleCaptor.capture());
-        verify(submoduleRepository, times(ApplicationSubmodule.values().length)).save(submoduleCaptor.capture());
-
-        assertThat(moduleCaptor.getAllValues())
-                .extracting(SysPrivModule::getModulePrivCode)
-                .containsExactlyInAnyOrderElementsOf(List.of(ApplicationModule.values()).stream()
-                        .map(ApplicationModule::getCode)
-                        .toList());
-
-        assertThat(submoduleCaptor.getAllValues().stream()
-                .map(submodule -> submodule.getModule().getModulePrivCode() + ":" + submodule.getSubmodulePrivCode())
-                .collect(Collectors.toSet()))
-                .containsExactlyInAnyOrderElementsOf(List.of(ApplicationSubmodule.values()).stream()
-                        .map(submodule -> submodule.getModule().getCode() + ":" + submodule.getCode())
-                        .collect(Collectors.toSet()));
+        verify(moduleRepository, never()).save(any(SysPrivModule.class));
+        verify(submoduleRepository, never()).save(any(SysPrivSubmodule.class));
     }
 
     @Test

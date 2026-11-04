@@ -193,34 +193,18 @@ public class SystemPrivilegeRegistryServiceImpl implements SystemPrivilegeRegist
     }
 
     private SysPrivModule resolveModule(String moduleCode, String moduleName) {
-        SysPrivModule module = moduleRepository.findByModulePrivCode(moduleCode)
-                .orElseGet(() -> moduleRepository.save(SysPrivModule.builder()
-                        .modulePrivCode(moduleCode)
-                        .name(moduleName)
-                        .active(true)
-                        .build()));
-        if (!Objects.equals(moduleName, module.getName()) || !module.isActive()) {
-            module.setName(moduleName);
-            module.setActive(true);
-            module = moduleRepository.save(module);
-        }
-        return module;
+        return moduleRepository.findByModulePrivCode(moduleCode)
+                .filter(SysPrivModule::isActive)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Active logical privilege module is not configured: " + moduleCode + " (" + moduleName + ")"));
     }
 
     private SysPrivSubmodule resolveSubmodule(SysPrivModule module, String submoduleCode, String submoduleName) {
-        SysPrivSubmodule submodule = submoduleRepository
+        return submoduleRepository
                 .findByModuleModulePrivCodeAndSubmodulePrivCode(module.getModulePrivCode(), submoduleCode)
-                .orElseGet(() -> submoduleRepository.save(SysPrivSubmodule.builder()
-                        .module(module)
-                        .submodulePrivCode(submoduleCode)
-                        .name(submoduleName)
-                        .active(true)
-                        .build()));
-        if (!Objects.equals(submoduleName, submodule.getName()) || !submodule.isActive()) {
-            submodule.setName(submoduleName);
-            submodule.setActive(true);
-            submodule = submoduleRepository.save(submodule);
-        }
-        return submodule;
+                .filter(SysPrivSubmodule::isActive)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Active logical privilege submodule is not configured: "
+                                + module.getModulePrivCode() + ":" + submoduleCode + " (" + submoduleName + ")"));
     }
 }

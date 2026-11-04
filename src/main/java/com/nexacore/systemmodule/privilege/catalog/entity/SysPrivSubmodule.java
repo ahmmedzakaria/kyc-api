@@ -41,8 +41,16 @@ public class SysPrivSubmodule extends ActionInfo {
     @EqualsAndHashCode.Exclude
     private SysPrivModule module;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "physical_submodule_id")
+    @EqualsAndHashCode.Exclude
+    private SysPhysicalSubmodule physicalSubmodule;
+
     @Column(name = "submodule_priv_code", nullable = false, length = 2)
     private String submodulePrivCode;
+
+    @Column(name = "submodule_code", nullable = false, length = 80)
+    private String submoduleCode;
 
     @Column(nullable = false)
     private String name;
