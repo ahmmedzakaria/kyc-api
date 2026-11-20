@@ -24,6 +24,14 @@ SELECT
     lf.feature_name     AS navigation_feature_name,
     lf.route            AS navigation_route,
     lf.icon             AS navigation_icon,
+    route_policy.id     AS route_policy_id,
+    CASE
+        WHEN route_policy.id IS NULL THEN 'MISSING'
+        WHEN route_policy.client_application_id IS NULL THEN 'GLOBAL'
+        ELSE 'APPLICATION'
+    END                  AS route_policy_scope,
+    route_policy.match_mode AS route_policy_match_mode,
+    route_policy.privilege_codes AS route_policy_privilege_codes,
     lfg.display_order   AS feature_group_order,
     lf.display_order    AS feature_order,
     m.module_priv_code   AS module_code,
@@ -69,6 +77,32 @@ FROM effective_privileges ep
          JOIN sys_priv_modules m
               ON m.id = s.module_id
                   AND m.active = true
+         LEFT JOIN LATERAL (
+             -- Match LayoutRoutePolicyServiceImpl: an application-specific
+             -- policy overrides a global policy for the same route.
+             SELECT
+                 rp.id,
+                 rp.client_application_id,
+                 rp.match_mode,
+                 array_agg(DISTINCT route_privilege.privilege_code
+                           ORDER BY route_privilege.privilege_code)
+                     FILTER (WHERE route_privilege.id IS NOT NULL)
+                     AS privilege_codes
+             FROM sys_layout_route_policies rp
+                      LEFT JOIN sys_layout_route_policy_privileges rpp
+                                ON rpp.route_policy_id = rp.id
+                                    AND rpp.active = true
+                      LEFT JOIN sys_priv_privileges route_privilege
+                                ON route_privilege.id = rpp.privilege_id
+                                    AND route_privilege.active = true
+             WHERE rp.active = true
+               AND rp.route_url = lf.route
+               AND (rp.client_application_id IS NULL
+                    OR rp.client_application_id = ca.id)
+             GROUP BY rp.id, rp.client_application_id, rp.match_mode
+             ORDER BY rp.client_application_id IS NOT NULL DESC
+             LIMIT 1
+         ) route_policy ON true
 GROUP BY
     ft.feature_type_code,
     ft.category_name,
@@ -77,6 +111,10 @@ GROUP BY
     lf.feature_name,
     lf.route,
     lf.icon,
+    route_policy.id,
+    route_policy.client_application_id,
+    route_policy.match_mode,
+    route_policy.privilege_codes,
     lfg.display_order,
     lf.display_order,
     m.module_priv_code,
