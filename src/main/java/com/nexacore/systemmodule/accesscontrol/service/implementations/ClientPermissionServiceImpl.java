@@ -21,6 +21,7 @@ import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.commonmodule.util.AssignmentVersion;
 import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,19 +92,23 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     public void assignFeaturePermissions(ClientPermissionAssignmentRequestDto requestDto, String username) {
         Long actorId = authModuleGateway.getUserId(username);
         SysAccClientApplication application = resolveClient(requestDto);
+        Long tenantId = requireTenant(requestDto.getTenantId());
+        validateRequestTenant(tenantId);
         Set<String> privilegeCodes = requestDto.getPrivilegeCodes() == null ? Set.of() : requestDto.getPrivilegeCodes();
-        Set<String> existingPrivilegeCodes = clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(application.getId());
+        Set<String> existingPrivilegeCodes = clientFeaturePermissionRepository
+                .findActivePrivilegeCodesByTenantIdAndClientApplicationId(tenantId, application.getId());
         if (existingPrivilegeCodes.equals(privilegeCodes)) {
             return;
         }
 
-        clientFeaturePermissionRepository.deleteByClientApplicationId(application.getId());
+        clientFeaturePermissionRepository.deleteByTenantIdAndClientApplicationId(tenantId, application.getId());
         clientFeaturePermissionRepository.saveAll(privilegeCodes.stream()
                 .map(code -> {
                     SysPrivPrivilege privilege = privilegeRepository.findByPrivilegeCode(code)
                             .orElseThrow(() -> new IllegalArgumentException("Privilege code not found: " + code));
                     return SysAccClientFeaturePermission.builder()
                             .clientApplication(application)
+                            .tenantId(tenantId)
                             .privilege(privilege)
                             .active(true)
                             .createdBy(actorId)
@@ -118,14 +123,16 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     @Transactional(transactionManager = "systemTransactionManager")
     public void grantFeaturePermissions(ClientPermissionAssignmentRequestDto requestDto, String username) {
         SysAccClientApplication application = resolveClient(requestDto);
+        Long tenantId = requireTenant(requestDto.getTenantId());
         Set<String> mergedPrivilegeCodes = new HashSet<>(
-                clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(application.getId()));
+                clientFeaturePermissionRepository.findActivePrivilegeCodesByTenantIdAndClientApplicationId(tenantId, application.getId()));
         if (requestDto.getPrivilegeCodes() != null) {
             mergedPrivilegeCodes.addAll(requestDto.getPrivilegeCodes());
         }
 
         ClientPermissionAssignmentRequestDto mergedRequest = new ClientPermissionAssignmentRequestDto();
         mergedRequest.setClientApplicationId(application.getId());
+        mergedRequest.setTenantId(tenantId);
         mergedRequest.setPrivilegeCodes(mergedPrivilegeCodes);
         assignFeaturePermissions(mergedRequest, username);
     }
@@ -191,12 +198,12 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode) {
+    public ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode, Long tenantId) {
         SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);
         return ClientAdministrationDetailDto.builder()
                 .client(com.nexacore.systemmodule.accesscontrol.dto.ClientApplicationDto.fromEntity(application))
                 .apiRegistryIds(getApiPermissions(application.getId(), null))
-                .privilegeCodes(getFeaturePermissions(application.getId(), null))
+                .privilegeCodes(getFeaturePermissions(application.getId(), null, tenantId))
                 .scopeAssignments(getScopeAssignments(application.getId(), null))
                 .scopeVersion(AssignmentVersion.of(getScopeAssignments(application.getId(), null).stream().map(this::scopeKey).toList()))
                 .build();
@@ -211,9 +218,12 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Set<String> getFeaturePermissions(Long clientApplicationId, String clientCode) {
+    public Set<String> getFeaturePermissions(Long clientApplicationId, String clientCode, Long tenantId) {
         SysAccClientApplication application = clientApplicationService.requireClientApplication(clientApplicationId, clientCode);
-        return Set.copyOf(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(application.getId()));
+        Long requiredTenantId = requireTenant(tenantId);
+        validateRequestTenant(requiredTenantId);
+        return Set.copyOf(clientFeaturePermissionRepository
+                .findActivePrivilegeCodesByTenantIdAndClientApplicationId(requiredTenantId, application.getId()));
     }
 
     @Override
@@ -237,6 +247,18 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
 
     private SysAccClientApplication resolveClient(ClientPermissionAssignmentRequestDto requestDto) {
         return clientApplicationService.requireClientApplication(requestDto.getClientApplicationId(), requestDto.getClientCode());
+    }
+    private Long requireTenant(Long tenantId) {
+        if (tenantId == null) throw new IllegalArgumentException("tenantId is required for client feature permissions");
+        return tenantId;
+    }
+    private void validateRequestTenant(Long tenantId) {
+        ResolvedTenantContextHolder.get().ifPresent(context -> {
+            if (context.tenantId() != tenantId) {
+                throw new DataScopeAccessDeniedException("Feature permissions must use the resolved tenant");
+            }
+            scopeLookupService.validateAssignment(tenantId, null, null);
+        });
     }
     private String scopeKey(ClientScopeAssignmentDto scope) {
         return scope.tenantId()+":"+(scope.businessId()==null?"":scope.businessId())+":"+(scope.branchId()==null?"":scope.branchId());

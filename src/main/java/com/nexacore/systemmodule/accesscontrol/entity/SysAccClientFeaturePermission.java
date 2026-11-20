@@ -35,6 +35,9 @@ public class SysAccClientFeaturePermission {
     @EqualsAndHashCode.Exclude
     private SysAccClientApplication clientApplication;
 
+    @jakarta.persistence.Column(name = "tenant_id", nullable = false, updatable = false)
+    private Long tenantId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "privilege_id", nullable = false)
     @EqualsAndHashCode.Exclude

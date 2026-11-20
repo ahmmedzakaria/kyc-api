@@ -5,6 +5,7 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.enums.ClientApplicationStatus;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissionRepository;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import com.nexacore.systemmodule.layout.dto.LayoutNavigationCategoryOrderRequestDto;
 import com.nexacore.systemmodule.layout.dto.LayoutNavigationNodeRequestDto;
 import com.nexacore.systemmodule.layout.dto.NavNodeDto;
@@ -100,7 +101,11 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
         SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode.trim())
                 .filter(candidate -> candidate.getStatus() == ClientApplicationStatus.ACTIVE)
                 .orElseThrow(() -> new IllegalArgumentException("Active client application not found: " + clientCode));
-        Set<String> allowed = clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(client.getId());
+        long tenantId = ResolvedTenantContextHolder.get()
+                .map(context -> context.tenantId())
+                .orElseThrow(() -> new IllegalStateException("A resolved tenant is required for navigation"));
+        Set<String> allowed = clientFeaturePermissionRepository
+                .findActivePrivilegeCodesByTenantIdAndClientApplicationId(tenantId, client.getId());
         return userPrivilegeCodes.stream().filter(allowed::contains).collect(Collectors.toUnmodifiableSet());
     }
 

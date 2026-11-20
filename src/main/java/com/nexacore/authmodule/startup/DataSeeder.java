@@ -222,6 +222,7 @@ public class DataSeeder {
 
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("WEB");
+        featureAssignment.setTenantId(bootstrapTenantId);
         featureAssignment.setPrivilegeCodes(privilegeCodes);
         clientPermissionService.assignFeaturePermissions(featureAssignment, "system_admin");
 
@@ -281,6 +282,7 @@ public class DataSeeder {
                                                     ApiRegistrySyncReportDto syncReport) {
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setTenantId(bootstrapTenantId);
         featureAssignment.setPrivilegeCodes(Set.of(
                 BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW,
                 BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE,
@@ -327,6 +329,7 @@ public class DataSeeder {
                                                   ApiRegistrySyncReportDto syncReport) {
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setTenantId(bootstrapTenantId);
         featureAssignment.setPrivilegeCodes(Set.of(
                 BootstrapAdministrationPrivileges.DATABASE_BACKUP_VIEW,
                 BootstrapAdministrationPrivileges.DATABASE_BACKUP_EXECUTE,
@@ -352,6 +355,7 @@ public class DataSeeder {
                                                      ApiRegistrySyncReportDto syncReport) {
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setTenantId(bootstrapTenantId);
         featureAssignment.setPrivilegeCodes(Set.of(
                 BootstrapAdministrationPrivileges.USER_ADMINISTRATION_VIEW,
                 BootstrapAdministrationPrivileges.USER_ADMINISTRATION_MANAGE,
@@ -378,6 +382,7 @@ public class DataSeeder {
                                                   ApiRegistrySyncReportDto syncReport) {
         ClientPermissionAssignmentRequestDto featureAssignment = new ClientPermissionAssignmentRequestDto();
         featureAssignment.setClientCode("SYSTEM_ADMIN_WEB");
+        featureAssignment.setTenantId(bootstrapTenantId);
         featureAssignment.setPrivilegeCodes(Set.of(
                 BootstrapAdministrationPrivileges.TENANT_VIEW,
                 BootstrapAdministrationPrivileges.TENANT_REGISTER,

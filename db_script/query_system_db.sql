@@ -1,6 +1,8 @@
 -- User and Role wise features
 --target_user_id : 1
 --target_role_ids : ARRAY[1]
+--target_tenant_id : 1
+--target_client_code : WEB
 WITH effective_privileges AS (
     -- Privileges assigned directly to the user
     SELECT up.privilege_id, 'DIRECT' AS assignment_source
@@ -38,6 +40,14 @@ FROM effective_privileges ep
          JOIN sys_priv_privileges p
               ON p.id = ep.privilege_id
                   AND p.active = true
+         JOIN sys_acc_client_feature_permissions cfp
+              ON cfp.privilege_id = p.id
+                  AND cfp.tenant_id = :'target_tenant_id'::bigint
+                  AND cfp.active = true
+         JOIN sys_acc_client_applications ca
+              ON ca.id = cfp.client_application_id
+                  AND ca.client_code = :'target_client_code'
+                  AND ca.status = 'ACTIVE'
          JOIN sys_priv_features f
               ON f.id = p.feature_id
                   AND f.active = true

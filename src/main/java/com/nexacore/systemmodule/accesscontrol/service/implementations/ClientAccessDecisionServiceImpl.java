@@ -7,6 +7,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientApiPermissionRep
 import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissionRepository;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientAccessDecisionService;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +25,12 @@ public class ClientAccessDecisionServiceImpl implements ClientAccessDecisionServ
     private final AuthorizationDataCache authorizationDataCache;
 
     private AuthorizationDataCache.ClientGrantSnapshot grants(Long clientId) {
-        return authorizationDataCache.clientGrants(clientId, () -> new AuthorizationDataCache.ClientGrantSnapshot(
+        Long tenantId = ResolvedTenantContextHolder.get()
+                .map(context -> context.tenantId())
+                .orElseThrow(() -> new IllegalStateException("A resolved tenant is required for client feature permissions"));
+        return authorizationDataCache.clientGrants(tenantId, clientId, () -> new AuthorizationDataCache.ClientGrantSnapshot(
                 clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(clientId),
-                clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(clientId)));
+                clientFeaturePermissionRepository.findActivePrivilegeCodesByTenantIdAndClientApplicationId(tenantId, clientId)));
     }
 
     @Override

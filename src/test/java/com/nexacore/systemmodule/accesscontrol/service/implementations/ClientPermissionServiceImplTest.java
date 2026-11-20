@@ -5,6 +5,8 @@ import com.nexacore.systemmodule.accesscontrol.dto.ClientPermissionAssignmentReq
 import com.nexacore.systemmodule.accesscontrol.dto.ClientScopeAssignmentDto;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplicationTenant;
+import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientFeaturePermission;
+import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.accesscontrol.repository.*;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
@@ -66,5 +68,29 @@ class ClientPermissionServiceImplTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("scopeAssignments");
         verify(scopes, never()).deleteByClientApplicationId(anyLong());
+    }
+
+    @Test
+    void replacesFeaturePermissionsOnlyForSelectedTenant() {
+        SysAccClientApplication client = SysAccClientApplication.builder().id(9L).clientCode("WEB").build();
+        SysPrivPrivilege privilege = SysPrivPrivilege.builder().id(20L).privilegeCode("11020100481").build();
+        when(clients.requireClientApplication(9L, null)).thenReturn(client);
+        when(auth.getUserId("admin")).thenReturn(4L);
+        when(featurePermissions.findActivePrivilegeCodesByTenantIdAndClientApplicationId(7L, 9L))
+                .thenReturn(Set.of());
+        when(privileges.findByPrivilegeCode("11020100481")).thenReturn(java.util.Optional.of(privilege));
+        ClientPermissionAssignmentRequestDto request = new ClientPermissionAssignmentRequestDto();
+        request.setClientApplicationId(9L);
+        request.setTenantId(7L);
+        request.setPrivilegeCodes(Set.of("11020100481"));
+
+        service.assignFeaturePermissions(request, "admin");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<SysAccClientFeaturePermission>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(featurePermissions).deleteByTenantIdAndClientApplicationId(7L, 9L);
+        verify(featurePermissions).saveAll(captor.capture());
+        assertThat(captor.getValue().iterator().next().getTenantId()).isEqualTo(7L);
+        verify(featurePermissions, never()).deleteByTenantIdAndClientApplicationId(eq(8L), anyLong());
     }
 }

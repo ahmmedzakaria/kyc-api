@@ -121,13 +121,15 @@ class PrivilegeServiceImplTest {
     }
 
     {
-        when(authorizationDataCache.userPrivileges(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
-                ((java.util.function.Supplier<Set<String>>) invocation.getArgument(2)).get());
+        when(authorizationDataCache.userPrivileges(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
+                ((java.util.function.Supplier<Set<String>>) invocation.getArgument(3)).get());
     }
 
     @AfterEach
     void clearEffectiveTenant() {
         EffectiveTenantAccessContextHolder.clear();
+        com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder.clear();
     }
 
     @Test
@@ -143,6 +145,9 @@ class PrivilegeServiceImplTest {
         EffectiveTenantAccessContextHolder.set(new EffectiveTenantAccessContext(
                 7L, "TENANT_7", "tenant.example.test", 10L, 3L,
                 Set.of(new UserScopeAssignment(7L, 8L, 9L))));
+        com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder.set(
+                new com.nexacore.systemmodule.tenant.security.ResolvedTenantContext(
+                        7L, "TENANT_7", "tenant.example.test"));
 
         ApplicationContextDto context = service.getApplicationContext("operator");
 

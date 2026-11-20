@@ -259,7 +259,11 @@ public class PrivilegeServiceImpl implements PrivilegeService {
         AuthUserAccessDto userAccess = authModuleGateway.getUserAccess(username);
 
         ClientApplicationContextDto client = clientApplicationContextService.getCurrentClientContext().orElse(null);
-        return authorizationDataCache.userPrivileges(userAccess.userId(), client == null ? null : client.getClientApplicationId(), () -> {
+        long tenantId = com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder.get()
+                .map(context -> context.tenantId())
+                .orElseThrow(() -> new IllegalStateException("A resolved tenant is required for user privileges"));
+        return authorizationDataCache.userPrivileges(userAccess.userId(), tenantId,
+                client == null ? null : client.getClientApplicationId(), () -> {
             Set<String> directPrivileges = new HashSet<>(privilegeRepository.findActivePrivilegeCodesByUserId(userAccess.userId()));
             Set<String> rolePrivileges = userAccess.roleIds().isEmpty() ? Set.of()
                     : new HashSet<>(privilegeRepository.findActivePrivilegeCodesByRoleIdIn(userAccess.roleIds()));

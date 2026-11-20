@@ -19,11 +19,11 @@ public interface ClientPermissionService {
     /** Add bootstrap tenant assignments without replacing administrator-managed assignments. */
     void grantTenants(ClientPermissionAssignmentRequestDto requestDto, String username);
 
-    ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode);
+    ClientAdministrationDetailDto getAdministrationDetail(Long clientApplicationId, String clientCode, Long tenantId);
 
     Set<Long> getApiPermissions(Long clientApplicationId, String clientCode);
 
-    Set<String> getFeaturePermissions(Long clientApplicationId, String clientCode);
+    Set<String> getFeaturePermissions(Long clientApplicationId, String clientCode, Long tenantId);
 
     Set<ClientScopeAssignmentDto> getScopeAssignments(Long clientApplicationId, String clientCode);
 }

@@ -8,6 +8,7 @@ import java.util.Set;
 public class ClientPermissionAssignmentRequestDto {
     private Long clientApplicationId;
     private String clientCode;
+    private Long tenantId;
     private Set<Long> apiRegistryIds;
     private Set<String> privilegeCodes;
     private Set<Long> tenantIds;

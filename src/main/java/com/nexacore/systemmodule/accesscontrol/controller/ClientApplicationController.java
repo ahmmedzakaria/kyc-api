@@ -56,7 +56,7 @@ public class ClientApplicationController {
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).CLIENT_APPLICATION_VIEW)")
     public ResponseEntity<ApiResponse<ClientAdministrationDetailDto>> detail(@RequestBody ClientPermissionAssignmentRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(
-                clientPermissionService.getAdministrationDetail(requestDto.getClientApplicationId(), requestDto.getClientCode()),
+                clientPermissionService.getAdministrationDetail(requestDto.getClientApplicationId(), requestDto.getClientCode(), requestDto.getTenantId()),
                 "Client administration detail loaded"));
     }
 
@@ -74,7 +74,7 @@ public class ClientApplicationController {
     @PreAuthorize("@privilegeAuthorizer.has(authentication, T(com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges).CLIENT_FEATURE_PERMISSION_ASSIGN)")
     public ResponseEntity<ApiResponse<Set<String>>> featurePermissions(@RequestBody ClientPermissionAssignmentRequestDto requestDto) {
         return ResponseEntity.ok(ApiResponse.success(
-                clientPermissionService.getFeaturePermissions(requestDto.getClientApplicationId(), requestDto.getClientCode()),
+                clientPermissionService.getFeaturePermissions(requestDto.getClientApplicationId(), requestDto.getClientCode(), requestDto.getTenantId()),
                 "Client feature permissions loaded"));
     }
 

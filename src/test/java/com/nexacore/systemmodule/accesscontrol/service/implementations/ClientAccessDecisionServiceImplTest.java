@@ -8,6 +8,10 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientFeaturePermissio
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
 import com.nexacore.servicesmodule.cacheservice.service.interfaces.CacheService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContext;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 
 import java.util.Set;
 import java.util.Optional;
@@ -29,6 +33,16 @@ class ClientAccessDecisionServiceImplTest {
     );
 
     { when(cacheService.get(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(Optional.empty()); }
+
+    @BeforeEach
+    void setTenantContext() {
+        ResolvedTenantContextHolder.set(new ResolvedTenantContext(7L, "TENANT_7", "tenant.example.test"));
+    }
+
+    @AfterEach
+    void clearTenantContext() {
+        ResolvedTenantContextHolder.clear();
+    }
 
     @Test
     void allowsPublicApiWithoutClient() {
@@ -68,7 +82,7 @@ class ClientAccessDecisionServiceImplTest {
                 .build();
 
         when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of(20L));
-        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L)).thenReturn(Set.of());
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByTenantIdAndClientApplicationId(7L, 10L)).thenReturn(Set.of());
 
         ClientAccessDecisionDto decision = service.decide(client, api);
 
@@ -81,7 +95,7 @@ class ClientAccessDecisionServiceImplTest {
         SysAccClientApplication client = SysAccClientApplication.builder().id(10L).clientCode("WEB").build();
         SysAccApiRegistry api = SysAccApiRegistry.builder().id(20L).publicApi(false).active(true).build();
         when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of());
-        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L)).thenReturn(Set.of());
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByTenantIdAndClientApplicationId(7L, 10L)).thenReturn(Set.of());
 
         ClientAccessDecisionDto decision = service.decide(client, api);
 
@@ -95,7 +109,7 @@ class ClientAccessDecisionServiceImplTest {
         SysAccApiRegistry api = SysAccApiRegistry.builder().id(20L)
                 .requiredPrivilegeCode("01010200101").publicApi(false).active(true).build();
         when(clientApiPermissionRepository.findActiveApiRegistryIdsByClientApplicationId(10L)).thenReturn(Set.of(20L));
-        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L))
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByTenantIdAndClientApplicationId(7L, 10L))
                 .thenReturn(Set.of("01010200101"));
 
         assertThat(service.decide(client, api).allowed()).isTrue();
@@ -106,7 +120,7 @@ class ClientAccessDecisionServiceImplTest {
         SysAccClientApplication client = SysAccClientApplication.builder().id(10L).clientCode("WEB").build();
         Set<String> userPrivilegeCodes = Set.of("01010200101", "01010200201");
 
-        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByClientApplicationId(10L))
+        when(clientFeaturePermissionRepository.findActivePrivilegeCodesByTenantIdAndClientApplicationId(7L, 10L))
                 .thenReturn(Set.of("01010200201"));
 
         assertThat(service.filterPrivilegeCodesForClient(client, userPrivilegeCodes))

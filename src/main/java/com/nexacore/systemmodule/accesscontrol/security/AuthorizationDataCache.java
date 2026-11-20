@@ -43,8 +43,8 @@ public class AuthorizationDataCache {
         return loaded;
     }
 
-    public ClientGrantSnapshot clientGrants(Long clientId, Supplier<ClientGrantSnapshot> loader) {
-        String key = CLIENT_GRANTS + clientId;
+    public ClientGrantSnapshot clientGrants(Long tenantId, Long clientId, Supplier<ClientGrantSnapshot> loader) {
+        String key = CLIENT_GRANTS + tenantId + ":" + clientId;
         ClientGrantSnapshot cached = get(key, ClientGrantSnapshot.class);
         if (cached != null) {
             metrics.recordCacheRequest("client_grants", "hit");
@@ -56,8 +56,8 @@ public class AuthorizationDataCache {
         return loaded;
     }
 
-    public Set<String> userPrivileges(Long userId, Long clientId, Supplier<Set<String>> loader) {
-        String key = USER_PRIVILEGES + userId + ":" + (clientId == null ? "none" : clientId);
+    public Set<String> userPrivileges(Long userId, Long tenantId, Long clientId, Supplier<Set<String>> loader) {
+        String key = USER_PRIVILEGES + userId + ":" + tenantId + ":" + (clientId == null ? "none" : clientId);
         StringSetSnapshot cached = get(key, StringSetSnapshot.class);
         if (cached != null) {
             metrics.recordCacheRequest("user_privileges", "hit");
@@ -72,8 +72,8 @@ public class AuthorizationDataCache {
     public void invalidateRegistryAfterCommit() { afterCommit(() -> deletePattern(REGISTRY + "*")); }
     public void invalidateClientAfterCommit(Long clientId) {
         afterCommit(() -> {
-            delete(CLIENT_GRANTS + clientId);
-            deletePattern(USER_PRIVILEGES + "*:" + clientId);
+            deletePattern(CLIENT_GRANTS + "*:" + clientId);
+            deletePattern(USER_PRIVILEGES + "*:*:" + clientId);
         });
     }
     public void invalidateUserAfterCommit(Long userId) { afterCommit(() -> deletePattern(USER_PRIVILEGES + userId + ":*")); }

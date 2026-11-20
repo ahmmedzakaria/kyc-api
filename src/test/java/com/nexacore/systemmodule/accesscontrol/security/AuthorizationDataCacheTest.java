@@ -30,9 +30,9 @@ class AuthorizationDataCacheTest {
     @Test
     void cachesImmutableUserPrivilegeSnapshotWithBoundedTtl() {
         when(cacheService.get(anyString(), eq(AuthorizationDataCache.StringSetSnapshot.class))).thenReturn(Optional.empty());
-        Set<String> result = cache.userPrivileges(7L, 3L, () -> Set.of("P1"));
+        Set<String> result = cache.userPrivileges(7L, 11L, 3L, () -> Set.of("P1"));
         assertThat(result).containsExactly("P1");
-        verify(cacheService).put(eq("authorization:user-privileges:7:3"), any(), eq(Duration.ofSeconds(30)));
+        verify(cacheService).put(eq("authorization:user-privileges:7:11:3"), any(), eq(Duration.ofSeconds(30)));
     }
 
     @Test
@@ -51,8 +51,8 @@ class AuthorizationDataCacheTest {
     @Test
     void clientInvalidationEvictsGrantsAndClientFilteredPrivileges() {
         cache.invalidateClientAfterCommit(9L);
-        verify(cacheService).delete("authorization:client-grants:9");
-        verify(cacheService).deleteByPattern("authorization:user-privileges:*:9");
+        verify(cacheService).deleteByPattern("authorization:client-grants:*:9");
+        verify(cacheService).deleteByPattern("authorization:user-privileges:*:*:9");
     }
 
     @Test
