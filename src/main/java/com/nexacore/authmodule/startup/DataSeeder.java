@@ -431,6 +431,7 @@ public class DataSeeder {
 
     private void seedSystemAdminRoutePolicies(LayoutRoutePolicyService service) {
         synchronizeRoute(service, "/access-control/client-applications", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW);
+        synchronizeRoute(service, "/client-credential", BootstrapAdministrationPrivileges.CLIENT_CREDENTIAL_ROTATE);
         synchronizeRoute(service, "/access-control/client-applications/create", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
         synchronizeRoute(service, "/access-control/client-applications/:id/edit", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_MANAGE);
         synchronizeRoute(service, "/access-control/client-applications/:id", BootstrapAdministrationPrivileges.CLIENT_APPLICATION_VIEW);
