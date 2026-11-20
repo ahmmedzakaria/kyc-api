@@ -427,7 +427,7 @@ public class LayoutNavigationServiceImpl implements LayoutNavigationService {
 
     private boolean isVisible(List<SysLayoutFeaturePrivilege> links, List<String> requiredCodes, Set<String> userPrivilegeCodes) {
         if (links.isEmpty()) {
-            return true;
+            return false;
         }
         boolean allMode = links.stream().anyMatch(link -> link.getMatchMode() == PrivilegeMatchMode.ALL);
         if (allMode) {
