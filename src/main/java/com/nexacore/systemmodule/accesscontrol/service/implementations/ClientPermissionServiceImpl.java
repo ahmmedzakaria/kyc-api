@@ -18,8 +18,10 @@ import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientPermissi
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.commonmodule.util.AssignmentVersion;
+import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges;
 import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -254,11 +256,17 @@ public class ClientPermissionServiceImpl implements ClientPermissionService {
     }
     private void validateRequestTenant(Long tenantId) {
         ResolvedTenantContextHolder.get().ifPresent(context -> {
-            if (context.tenantId() != tenantId) {
+            if (context.tenantId() != tenantId && !canAdministerTenants()) {
                 throw new DataScopeAccessDeniedException("Feature permissions must use the resolved tenant");
             }
             scopeLookupService.validateAssignment(tenantId, null, null);
         });
+    }
+    private boolean canAdministerTenants() {
+        return AuthenticatedRequestContextHolder.get()
+                .map(context -> context.effectivePrivilegeCodes()
+                        .contains(BootstrapAdministrationPrivileges.TENANT_VIEW))
+                .orElse(false);
     }
     private String scopeKey(ClientScopeAssignmentDto scope) {
         return scope.tenantId()+":"+(scope.businessId()==null?"":scope.businessId())+":"+(scope.branchId()==null?"":scope.branchId());

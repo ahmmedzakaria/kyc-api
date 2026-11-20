@@ -8,10 +8,17 @@ import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplicationTen
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientFeaturePermission;
 import com.nexacore.systemmodule.privilege.catalog.entity.SysPrivPrivilege;
 import com.nexacore.systemmodule.accesscontrol.repository.*;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContext;
+import com.nexacore.systemmodule.accesscontrol.security.AuthenticatedRequestContextHolder;
 import com.nexacore.systemmodule.accesscontrol.security.AuthorizationDataCache;
+import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import com.nexacore.systemmodule.accesscontrol.service.interfaces.ClientApplicationService;
+import com.nexacore.systemmodule.privilege.bootstrap.BootstrapAdministrationPrivileges;
 import com.nexacore.systemmodule.privilege.catalog.repository.PrivilegeRepository;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContext;
+import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -33,6 +40,12 @@ class ClientPermissionServiceImplTest {
     private final AuthorizedScopeLookupService scopeLookup = mock(AuthorizedScopeLookupService.class);
     private final ClientPermissionServiceImpl service = new ClientPermissionServiceImpl(
             clients, apis, privileges, apiPermissions, featurePermissions, scopes, auth, cache, scopeLookup);
+
+    @AfterEach
+    void clearRequestContexts() {
+        ResolvedTenantContextHolder.clear();
+        AuthenticatedRequestContextHolder.clear();
+    }
 
     @Test
     void replacesNormalizedHierarchicalScopeTuples() {
@@ -92,5 +105,35 @@ class ClientPermissionServiceImplTest {
         verify(featurePermissions).saveAll(captor.capture());
         assertThat(captor.getValue().iterator().next().getTenantId()).isEqualTo(7L);
         verify(featurePermissions, never()).deleteByTenantIdAndClientApplicationId(eq(8L), anyLong());
+    }
+
+    @Test
+    void allowsTenantViewAdministratorToLoadAnotherTenantsFeaturePermissions() {
+        when(clients.requireClientApplication(9L, null))
+                .thenReturn(SysAccClientApplication.builder().id(9L).clientCode("WEB").build());
+        when(featurePermissions.findActivePrivilegeCodesByTenantIdAndClientApplicationId(8L, 9L))
+                .thenReturn(Set.of("11020100481"));
+        ResolvedTenantContextHolder.set(new ResolvedTenantContext(7L, "TENANT_7", "tenant7.example.test"));
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                4L, "admin", 1L, "SYSTEM_ADMIN_WEB", Set.of(), "trace",
+                Set.of(BootstrapAdministrationPrivileges.TENANT_VIEW)));
+
+        assertThat(service.getFeaturePermissions(9L, null, 8L))
+                .containsExactly("11020100481");
+        verify(scopeLookup).validateAssignment(8L, null, null);
+    }
+
+    @Test
+    void rejectsAnotherTenantWithoutTenantViewPrivilege() {
+        when(clients.requireClientApplication(9L, null))
+                .thenReturn(SysAccClientApplication.builder().id(9L).clientCode("WEB").build());
+        ResolvedTenantContextHolder.set(new ResolvedTenantContext(7L, "TENANT_7", "tenant7.example.test"));
+        AuthenticatedRequestContextHolder.set(new AuthenticatedRequestContext(
+                5L, "operator", 1L, "SYSTEM_ADMIN_WEB", Set.of(), "trace", Set.of()));
+
+        assertThatThrownBy(() -> service.getFeaturePermissions(9L, null, 8L))
+                .isInstanceOf(DataScopeAccessDeniedException.class)
+                .hasMessage("Feature permissions must use the resolved tenant");
+        verify(scopeLookup, never()).validateAssignment(anyLong(), any(), any());
     }
 }
