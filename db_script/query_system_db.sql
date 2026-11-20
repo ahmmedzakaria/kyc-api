@@ -2,19 +2,19 @@
 --target_user_id : 1
 --target_role_ids : ARRAY[1]
 --target_tenant_id : 1
---target_client_code : WEB
+--target_client_code : SYSTEM_ADMIN_WEB
 WITH effective_privileges AS (
     -- Privileges assigned directly to the user
     SELECT up.privilege_id, 'DIRECT' AS assignment_source
     FROM sys_priv_user_privileges up
-    WHERE up.user_id = :'target_user_id'::bigint
+    WHERE up.user_id = :target_user_id::bigint
 
 UNION
 
 -- Privileges inherited through roles
 SELECT rp.privilege_id, 'ROLE' AS assignment_source
 FROM sys_priv_role_privileges rp
-WHERE rp.role_id = ANY (:'target_role_ids'::bigint[])
+WHERE rp.role_id = ANY (:target_role_ids::bigint[])
     )
 SELECT
     ft.feature_type_code,
@@ -50,11 +50,11 @@ FROM effective_privileges ep
                   AND p.active = true
          JOIN sys_acc_client_feature_permissions cfp
               ON cfp.privilege_id = p.id
-                  AND cfp.tenant_id = :'target_tenant_id'::bigint
+                  AND cfp.tenant_id = :target_tenant_id::bigint
                   AND cfp.active = true
          JOIN sys_acc_client_applications ca
               ON ca.id = cfp.client_application_id
-                  AND ca.client_code = :'target_client_code'
+                  AND ca.client_code = :target_client_code
                   AND ca.status = 'ACTIVE'
          JOIN sys_priv_features f
               ON f.id = p.feature_id
