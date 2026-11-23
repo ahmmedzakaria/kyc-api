@@ -18,7 +18,8 @@ public enum ApplicationSubmodule {
     SERVICE_FIREBASE_AUTH(ApplicationModule.SERVICES, "04", "Firebase Auth Service"),
     SERVICE_MESSAGING(ApplicationModule.SERVICES, "05", "Messaging Service"),
     SERVICE_QUEUEING(ApplicationModule.SERVICES, "06", "Queueing Service"),
-    SERVICE_REPORT(ApplicationModule.SERVICES, "07", "Report Service");
+    SERVICE_REPORT(ApplicationModule.SERVICES, "07", "Report Service"),
+    CATALOG_CONTENT(ApplicationModule.CATALOG, "01", "Catalog Content");
 
     private final ApplicationModule module;
     private final String code;

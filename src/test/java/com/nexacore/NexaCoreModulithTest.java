@@ -16,7 +16,7 @@ class NexaCoreModulithTest {
         AtomicInteger moduleCount = new AtomicInteger();
         modules.forEach(module -> moduleCount.incrementAndGet());
 
-        assertThat(moduleCount.get()).isGreaterThanOrEqualTo(8);
+        assertThat(moduleCount.get()).isGreaterThanOrEqualTo(9);
     }
 
     @Test

@@ -9,6 +9,7 @@ The following top-level packages are declared as application modules:
 ```text
 appconfigmodule
 authmodule
+catalogmodule
 commonmodule
 gismodule
 kycmodule

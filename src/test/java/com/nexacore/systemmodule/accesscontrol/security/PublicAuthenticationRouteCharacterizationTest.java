@@ -29,4 +29,12 @@ class PublicAuthenticationRouteCharacterizationTest {
                 "/api/v1/auth/application-context"
         }).noneMatch(policy::isPublic);
     }
+
+    @Test
+    void onlyTheDeclaredCatalogReadEndpointIsAnonymous() {
+        assertThat(policy.isPublic("/api/v1/public/site")).isTrue();
+        assertThat(policy.isPublic("/api/v1/catalog/admin/context")).isFalse();
+        assertThat(policy.isPublic("/api/v1/catalog/admin/site")).isFalse();
+        assertThat(policy.isPublic("/api/v1/public/site/draft")).isFalse();
+    }
 }

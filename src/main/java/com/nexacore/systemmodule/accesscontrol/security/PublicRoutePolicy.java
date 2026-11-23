@@ -12,7 +12,8 @@ public class PublicRoutePolicy {
             "/api/v1/auth/application-context/public", "/api/v1/auth/sso/authenticate",
             "/api/v1/auth/login-status", "/api/v1/auth/refresh-token", "/oauth2/**",
             "/users/register", "/api/v1/auth/test", "/v3/api-docs/**",
-            "/swagger-ui/**", "/swagger-ui.html"
+            "/swagger-ui/**", "/swagger-ui.html",
+            "/api/v1/public/site"
     );
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();

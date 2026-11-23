@@ -14,7 +14,8 @@ public enum ApplicationModule {
     LOG("09", "Log"),
     POS("10", "POS"),
     SERVICES("04", "Services"),
-    SYSTEM("11", "System");
+    SYSTEM("11", "System"),
+    CATALOG("12", "Catalog");
 
     private final String code;
     private final String displayName;

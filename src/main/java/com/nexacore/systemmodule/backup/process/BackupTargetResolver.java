@@ -10,7 +10,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class BackupTargetResolver {
-    private static final List<String> LOGICAL_TARGETS = List.of("auth", "system", "kyc", "gis", "log");
+    private static final List<String> LOGICAL_TARGETS = List.of("auth", "system", "kyc", "gis", "log", "catalog");
     private final Environment environment;
 
     public List<BackupDatabaseTarget> resolve() {
