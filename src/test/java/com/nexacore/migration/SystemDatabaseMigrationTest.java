@@ -37,15 +37,30 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("74");
+                .isEqualTo("82");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(69);
+                .isEqualTo(81);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_priv_modules_tobe_deleted")).isEqualTo("sys_priv_modules_tobe_deleted");
         assertThat(regclass("sys_layout_navigation_modules")).isNull();
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE module_priv_code IS NOT NULL AND active"))
-                .isEqualTo(11);
+                .isEqualTo(12);
+        assertThat(count("SELECT count(*) FROM sys_priv_modules "
+                + "WHERE module_priv_code='12' AND navigation_module_code='CATALOG' "
+                + "AND physical_module_code='12' AND navigation_enabled AND active"))
+                .isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM sys_priv_submodules submodule "
+                + "JOIN sys_priv_modules module ON module.id=submodule.module_id "
+                + "WHERE module.module_priv_code='12' AND submodule.submodule_priv_code='01' "
+                + "AND submodule.submodule_code='CONTENT' AND submodule.active"))
+                .isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM sys_layout_navigation_categories category "
+                + "JOIN sys_priv_modules module ON module.id=category.navigation_module_id "
+                + "WHERE module.module_priv_code='12' AND category.active "
+                + "AND (category.category_code,category.feature_type_code) IN "
+                + "(('SETUP','01'),('OPERATION','02'),('REPORT','03'))"))
+                .isEqualTo(3);
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE navigation_module_code LIKE 'PRIV\\_%' ESCAPE '\\' "
                 + "AND active AND NOT navigation_enabled"))

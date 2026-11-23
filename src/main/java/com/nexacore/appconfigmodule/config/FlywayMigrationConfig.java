@@ -42,6 +42,11 @@ public class FlywayMigrationConfig {
         return createFlyway(dataSource, "classpath:db/migration/log");
     }
 
+    @Bean(name = "catalogFlyway", initMethod = "migrate")
+    public Flyway catalogFlyway(@Qualifier("catalogDataSource") DataSource dataSource) {
+        return createFlyway(dataSource, "classpath:db/migration/catalog");
+    }
+
     private Flyway createFlyway(DataSource dataSource, String location) {
         return Flyway.configure()
                 .dataSource(dataSource)
