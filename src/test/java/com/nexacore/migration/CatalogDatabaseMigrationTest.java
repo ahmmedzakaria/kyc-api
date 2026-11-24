@@ -33,7 +33,7 @@ class CatalogDatabaseMigrationTest {
     @Test
     void migratesCleanDatabaseAndRepeatMigrationIsIdempotent() throws SQLException {
         Flyway flyway = flyway();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(2);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
 
         assertThat(count("SELECT count(*) FROM information_schema.tables "
@@ -42,7 +42,15 @@ class CatalogDatabaseMigrationTest {
         assertThat(count("SELECT count(*) FROM information_schema.columns "
                 + "WHERE table_schema='public' AND table_name LIKE 'catalog_%' "
                 + "AND column_name IN ('created_at','updated_at','created_by','updated_by')")).isEqualTo(100);
-        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success")).isEqualTo(2);
+        assertThat(count("SELECT count(*) FROM catalog_sites WHERE tenant_id=7 "
+                + "AND site_key='arsv-public-site' AND publication_state='PUBLISHED' "
+                + "AND created_by='migration:v2' AND updated_by='migration:v2'")).isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM catalog_site_translations translation "
+                + "JOIN catalog_sites site ON site.tenant_id=translation.tenant_id AND site.id=translation.site_id "
+                + "WHERE site.tenant_id=7 AND site.site_key='arsv-public-site' "
+                + "AND translation.locale='en' AND translation.created_by='migration:v2' "
+                + "AND translation.updated_by='migration:v2'")).isEqualTo(1);
     }
 
     @Test

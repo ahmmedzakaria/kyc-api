@@ -1,8 +1,9 @@
 package com.nexacore.catalogmodule.service;
 
 import com.nexacore.catalogmodule.api.AdminCatalogContextResponse;
-import com.nexacore.catalogmodule.api.PublicSiteContextResponse;
+import com.nexacore.catalogmodule.api.PublicSiteResponse;
 import com.nexacore.catalogmodule.config.CatalogProperties;
+import com.nexacore.catalogmodule.repository.PublicCatalogSiteRepository;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContext;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -14,12 +15,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class CatalogContextService {
     private final CatalogProperties properties;
+    private final PublicCatalogSiteRepository siteRepository;
 
-    public PublicSiteContextResponse publicContext() {
+    public PublicSiteResponse publicContext(String locale) {
         ResolvedTenantContext tenant = requiredTenant();
-        return new PublicSiteContextResponse(
-                tenant.tenantCode(), tenant.hostname(), properties.defaultLocale(),
-                properties.supportedLocales(), "v1");
+        String selectedLocale = properties.supportedLocales().contains(locale) ? locale : properties.defaultLocale();
+        return siteRepository.findPublished(tenant.tenantId(), tenant.hostname(), selectedLocale,
+                        properties.supportedLocales(), properties.media().publicPath())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "No published catalog site for this hostname"));
     }
 
     public AdminCatalogContextResponse adminContext() {

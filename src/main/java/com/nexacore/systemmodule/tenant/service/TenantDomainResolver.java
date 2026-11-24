@@ -21,19 +21,30 @@ public class TenantDomainResolver {
     private final ConcurrentHashMap<String, CachedTenant> cache = new ConcurrentHashMap<>();
 
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
-    public Optional<ResolvedTenant> resolveVerified(String rawHost) {
+    public Resolution resolve(String rawHost) {
         String hostname = hostnameNormalizer.normalize(rawHost);
         CachedTenant cached = cache.get(hostname);
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) return Optional.of(cached.tenant());
+        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+            return Resolution.resolved(cached.tenant());
+        }
         cache.remove(hostname);
-        Optional<ResolvedTenant> resolved = repository.findByHostnameAndActiveTrueAndVerificationStatus(
-                        hostname, TenantDomainVerificationStatus.VERIFIED)
-                .map(domain -> {
-                    var tenant = domain.getTenant();
-                    return new ResolvedTenant(tenant.getId(), tenant.getTenantCode(), tenant.getStatus());
-                });
-        resolved.ifPresent(tenant -> cache.put(hostname, new CachedTenant(tenant, Instant.now().plus(TTL))));
-        return resolved;
+        var domains = repository.findTop2ByHostnameAndActiveTrueAndVerificationStatusOrderByIdAsc(
+                hostname, TenantDomainVerificationStatus.VERIFIED);
+        if (domains.isEmpty()) return Resolution.unknown();
+        if (domains.size() != 1) return Resolution.ambiguous();
+        var tenant = domains.getFirst().getTenant();
+        var resolved = new ResolvedTenant(tenant.getId(), tenant.getTenantCode(), tenant.getStatus());
+        if (resolved.status() == TenantStatus.ACTIVE) {
+            cache.put(hostname, new CachedTenant(resolved, Instant.now().plus(TTL)));
+        }
+        return Resolution.resolved(resolved);
+    }
+
+    /** Compatibility contract for callers that do not need the denial reason. */
+    public Optional<ResolvedTenant> resolveVerified(String rawHost) {
+        Resolution resolution = resolve(rawHost);
+        return resolution.status() == ResolutionStatus.RESOLVED
+                ? Optional.of(resolution.tenant()) : Optional.empty();
     }
 
     public void invalidate(String rawHost) {
@@ -45,6 +56,20 @@ public class TenantDomainResolver {
     }
 
     public record ResolvedTenant(Long id, String tenantCode, TenantStatus status) {}
+
+    public enum ResolutionStatus { RESOLVED, UNKNOWN, AMBIGUOUS }
+
+    public record Resolution(ResolutionStatus status, ResolvedTenant tenant) {
+        public static Resolution resolved(ResolvedTenant tenant) {
+            return new Resolution(ResolutionStatus.RESOLVED, tenant);
+        }
+        public static Resolution unknown() {
+            return new Resolution(ResolutionStatus.UNKNOWN, null);
+        }
+        public static Resolution ambiguous() {
+            return new Resolution(ResolutionStatus.AMBIGUOUS, null);
+        }
+    }
 
     private record CachedTenant(ResolvedTenant tenant, Instant expiresAt) {}
 }

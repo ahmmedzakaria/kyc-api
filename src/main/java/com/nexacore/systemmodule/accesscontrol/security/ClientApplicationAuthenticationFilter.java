@@ -22,6 +22,8 @@ import java.util.UUID;
 public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String CLIENT_CODE_HEADER = "X-Client-Code";
+    public static final String CATALOG_CLIENT_CODE = "CATALOG";
+    public static final String PUBLIC_CATALOG_SITE_PATH = "/api/v1/public/site";
     public static final String API_KEY_HEADER = "X-API-Key";
     public static final String TRACE_ID_HEADER = "X-Trace-Id";
 
@@ -40,7 +42,7 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         return request.getDispatcherType() == DispatcherType.ERROR
                 || !accessControlProperties.isDecisionEvaluationEnabled()
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
-                || publicRoutePolicy.isPublic(path);
+                || publicRoutePolicy.isPublic(path) && !PUBLIC_CATALOG_SITE_PATH.equals(path);
     }
 
     private String requestPath(HttpServletRequest request) {
@@ -61,6 +63,11 @@ public class ClientApplicationAuthenticationFilter extends OncePerRequestFilter 
         try {
             String clientCode = request.getHeader(CLIENT_CODE_HEADER);
             String apiKey = request.getHeader(API_KEY_HEADER);
+            boolean catalogSiteRequest = PUBLIC_CATALOG_SITE_PATH.equals(requestPath(request));
+            if (catalogSiteRequest && !CATALOG_CLIENT_CODE.equalsIgnoreCase(clientCode)) {
+                deny(response, traceId, AccessControlError.INVALID_CLIENT_CREDENTIALS);
+                return;
+            }
             if (hasText(apiKey) && !hasText(clientCode)) {
                 deny(response, traceId, AccessControlError.INVALID_CLIENT_CREDENTIALS);
                 return;

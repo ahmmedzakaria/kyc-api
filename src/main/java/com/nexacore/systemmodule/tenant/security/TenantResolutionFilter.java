@@ -26,9 +26,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
+        String servletPath = request.getServletPath();
+        String path = servletPath == null || servletPath.isBlank() ? request.getRequestURI() : servletPath;
         return request.getDispatcherType() == DispatcherType.ERROR
                 || "OPTIONS".equalsIgnoreCase(request.getMethod())
+                || path.equals("/actuator/health")
+                || path.startsWith("/actuator/health/")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs");
     }
@@ -38,7 +41,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
             String hostname = requestHostnameResolver.resolve(request);
-            var tenant = tenantDomainResolver.resolveVerified(hostname).orElse(null);
+            var resolution = tenantDomainResolver.resolve(hostname);
+            if (resolution.status() == TenantDomainResolver.ResolutionStatus.AMBIGUOUS) {
+                deny(response, 403, "TENANT_DOMAIN_AMBIGUOUS", "The request domain does not resolve to exactly one tenant");
+                return;
+            }
+            var tenant = resolution.tenant();
             if (tenant == null) {
                 deny(response, 403, "TENANT_DOMAIN_NOT_RECOGNIZED", "The request domain is not assigned to a verified tenant");
                 return;

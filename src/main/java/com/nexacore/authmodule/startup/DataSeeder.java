@@ -60,6 +60,9 @@ public class DataSeeder {
     @Value("${nexacore.auth.bootstrap-system-password:}")
     private String bootstrapSystemPassword;
 
+    @Value("${catalog.client.allowed-origins:http://localhost:4400,http://catalog.localhost:4400}")
+    private String catalogClientAllowedOrigins;
+
     private final UsernameNormalizer usernameNormalizer = new UsernameNormalizer();
 
     @Bean
@@ -100,6 +103,8 @@ public class DataSeeder {
                     clientApiRegistryService,
                     webPrivilegeCodes
             ));
+            runAsBootstrapAccount(systemUser.getId(), systemUser.getUsername(), () ->
+                    seedCatalogClient(clientApplicationService));
 
             seedPersonRoutePolicies(layoutRoutePolicyService);
             seedPersonUiPolicies(layoutUiPolicyService);
@@ -258,6 +263,17 @@ public class DataSeeder {
         seedSystemAdminTenantPermissions(clientPermissionService, syncReport);
         seedSystemAdminPlatformPermissions(clientPermissionService, syncReport);
         seedSystemAdminSessionLifecyclePermissions(clientPermissionService, syncReport);
+    }
+
+    private void seedCatalogClient(ClientApplicationService clientApplicationService) {
+        ClientApplicationRequestDto requestDto = new ClientApplicationRequestDto();
+        requestDto.setClientCode("CATALOG");
+        requestDto.setClientName("Public Catalog Website");
+        requestDto.setClientType(ClientApplicationType.WEB);
+        requestDto.setStatus(ClientApplicationStatus.ACTIVE);
+        requestDto.setAllowedOrigins(catalogClientAllowedOrigins);
+        requestDto.setDescription("Public tenant catalog frontend client.");
+        clientApplicationService.createIfAbsent(requestDto, "system_admin");
     }
 
     private void seedSystemAdminSessionLifecyclePermissions(ClientPermissionService clientPermissionService,

@@ -13,6 +13,7 @@ public class PublicRoutePolicy {
             "/api/v1/auth/login-status", "/api/v1/auth/refresh-token", "/oauth2/**",
             "/users/register", "/api/v1/auth/test", "/v3/api-docs/**",
             "/swagger-ui/**", "/swagger-ui.html",
+            "/actuator/health", "/actuator/health/**",
             "/api/v1/public/site"
     );
 

@@ -11,17 +11,17 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TenantResolutionFilterTest {
-    private final AtomicReference<TenantDomainResolver.ResolvedTenant> resolved = new AtomicReference<>();
+    private final AtomicReference<TenantDomainResolver.Resolution> resolved =
+            new AtomicReference<>(TenantDomainResolver.Resolution.unknown());
     private final HostnameNormalizer normalizer = new HostnameNormalizer();
     private final TenantDomainResolver resolver = new TenantDomainResolver(null, normalizer) {
-        @Override public Optional<TenantDomainResolver.ResolvedTenant> resolveVerified(String rawHost) {
-            return Optional.ofNullable(resolved.get());
+        @Override public TenantDomainResolver.Resolution resolve(String rawHost) {
+            return resolved.get();
         }
     };
     private final TenantResolutionFilter filter = new TenantResolutionFilter(
@@ -30,7 +30,7 @@ class TenantResolutionFilterTest {
     @AfterEach void clear() { ResolvedTenantContextHolder.clear(); }
 
     @Test void resolvesActiveTenantAndClearsContextAfterRequest() throws Exception {
-        resolved.set(tenant(TenantStatus.ACTIVE));
+        resolved.set(resolution(TenantStatus.ACTIVE));
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/test/private");
         request.setServerName("LOCALHOST");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -51,18 +51,19 @@ class TenantResolutionFilterTest {
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(response.getContentAsString()).contains("TENANT_DOMAIN_NOT_RECOGNIZED");
 
-        resolved.set(tenant(TenantStatus.SUSPENDED));
+        resolved.set(resolution(TenantStatus.SUSPENDED));
         response = new MockHttpServletResponse();
         filter.doFilter(request, response, new MockFilterChain());
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(response.getContentAsString()).contains("TENANT_NOT_ACTIVE");
     }
 
-    @Test void resolvesCentralApiRequestFromBrowserOriginHostname() throws Exception {
-        resolved.set(tenant(TenantStatus.ACTIVE));
+    @Test void usesRoutedHostnameAndIgnoresCallerControlledOriginAndForwardedHost() throws Exception {
+        resolved.set(resolution(TenantStatus.ACTIVE));
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/config");
-        request.setServerName("localhost");
-        request.addHeader("Origin", "http://bdcom.localhost:5301");
+        request.setServerName("bdcom.localhost");
+        request.addHeader("Origin", "https://caller-selected.example:5443");
+        request.addHeader("X-Forwarded-Host", "forwarded-attacker.example");
         AtomicReference<ResolvedTenantContext> insideChain = new AtomicReference<>();
 
         filter.doFilter(request, new MockHttpServletResponse(),
@@ -71,38 +72,32 @@ class TenantResolutionFilterTest {
         assertThat(insideChain.get().hostname()).isEqualTo("bdcom.localhost");
     }
 
-    /**
-     * Phase 1 characterization: Origin is currently treated as a tenant-host candidate
-     * before it has been bound to an authenticated client. Phase 2 must replace this
-     * contract with a client/origin/tenant binding and a stable denial code.
-     */
-    @Test void currentBehaviorAcceptsCallerSuppliedOriginAsTenantCandidate() throws Exception {
-        resolved.set(tenant(TenantStatus.ACTIVE));
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/config");
-        request.setServerName("localhost");
-        request.addHeader("Origin", "https://caller-selected.example:5443");
-        AtomicReference<ResolvedTenantContext> insideChain = new AtomicReference<>();
+    @Test void rejectsAmbiguousDomainBeforeTheChain() throws Exception {
+        resolved.set(TenantDomainResolver.Resolution.ambiguous());
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/public/site");
+        request.setServerName("duplicate.example");
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-        filter.doFilter(request, new MockHttpServletResponse(),
-                (req, res) -> insideChain.set(ResolvedTenantContextHolder.get().orElseThrow()));
+        filter.doFilter(request, response, new MockFilterChain());
 
-        assertThat(insideChain.get().hostname()).isEqualTo("caller-selected.example");
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getContentAsString()).contains("TENANT_DOMAIN_AMBIGUOUS");
     }
 
-    /** Phase 1 characterization for non-browser centralized API requests. */
-    @Test void currentBehaviorFallsBackToApiServerHostWhenOriginIsMissing() throws Exception {
-        resolved.set(tenant(TenantStatus.ACTIVE));
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/auth/config");
-        request.setServerName("localhost");
-        AtomicReference<ResolvedTenantContext> insideChain = new AtomicReference<>();
+    @Test void healthEndpointsDoNotRequireTenantResolution() throws Exception {
+        for (String path : new String[]{"/actuator/health", "/actuator/health/readiness", "/actuator/health/liveness"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
+            request.setServerName("localhost");
+            AtomicReference<Boolean> invoked = new AtomicReference<>(false);
 
-        filter.doFilter(request, new MockHttpServletResponse(),
-                (req, res) -> insideChain.set(ResolvedTenantContextHolder.get().orElseThrow()));
+            filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> invoked.set(true));
 
-        assertThat(insideChain.get().hostname()).isEqualTo("localhost");
+            assertThat(invoked.get()).as(path).isTrue();
+        }
     }
 
-    private TenantDomainResolver.ResolvedTenant tenant(TenantStatus status) {
-        return new TenantDomainResolver.ResolvedTenant(1L, "system", status);
+    private TenantDomainResolver.Resolution resolution(TenantStatus status) {
+        return TenantDomainResolver.Resolution.resolved(
+                new TenantDomainResolver.ResolvedTenant(1L, "system", status));
     }
 }

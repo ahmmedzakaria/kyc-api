@@ -333,8 +333,8 @@ class AccessControlFilterChainIntegrationTest {
         }
         @Bean TenantDomainResolver tenantDomainResolver(HostnameNormalizer normalizer) {
             return new TenantDomainResolver(null, normalizer) {
-                @Override public Optional<ResolvedTenant> resolveVerified(String rawHost) {
-                    return Optional.of(new ResolvedTenant(1L, "system", TenantStatus.ACTIVE));
+                @Override public Resolution resolve(String rawHost) {
+                    return Resolution.resolved(new ResolvedTenant(1L, "system", TenantStatus.ACTIVE));
                 }
             };
         }

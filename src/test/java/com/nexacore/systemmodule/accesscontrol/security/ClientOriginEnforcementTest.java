@@ -85,6 +85,51 @@ class ClientOriginEnforcementTest {
     }
 
     @Test
+    void catalogSiteRequiresCatalogClientCode() throws Exception {
+        resolvedClient = webClient("http://catalog.localhost:4400");
+        MockHttpServletRequest request = catalogRequest("WEB", "http://catalog.localhost:4400");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> continued.set(true));
+
+        assertThat(continued).isFalse();
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("INVALID_CLIENT_CREDENTIALS");
+    }
+
+    @Test
+    void catalogSiteAppliesCatalogClientOriginAllowlist() throws Exception {
+        resolvedClient = SysAccClientApplication.builder()
+                .id(4L).clientCode("CATALOG").clientType(ClientApplicationType.WEB)
+                .allowedOrigins("http://catalog.localhost:4400").build();
+        MockHttpServletRequest request = catalogRequest("CATALOG", "http://attacker.localhost:4400");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> continued.set(true));
+
+        assertThat(continued).isFalse();
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(response.getContentAsString()).contains("CLIENT_ORIGIN_NOT_ALLOWED");
+    }
+
+    @Test
+    void catalogSiteAllowsRegisteredCatalogOrigin() throws Exception {
+        resolvedClient = SysAccClientApplication.builder()
+                .id(4L).clientCode("CATALOG").clientType(ClientApplicationType.WEB)
+                .allowedOrigins("http://catalog.localhost:4400").build();
+        MockHttpServletRequest request = catalogRequest("CATALOG", "http://catalog.localhost:4400");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean continued = new AtomicBoolean();
+
+        filter.doFilter(request, response, (ignoredRequest, ignoredResponse) -> continued.set(true));
+
+        assertThat(continued).isTrue();
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    @Test
     void delegatesPreflightToCentralCorsConfiguration() {
         MockHttpServletRequest request = request("OPTIONS", "https://portal.example.com");
         assertThat(filter.shouldNotFilter(request)).isTrue();
@@ -141,6 +186,14 @@ class ClientOriginEnforcementTest {
         MockHttpServletRequest request = new MockHttpServletRequest(method, "/api/v1/person/search");
         request.setServletPath("/api/v1/person/search");
         request.addHeader(ClientApplicationAuthenticationFilter.CLIENT_CODE_HEADER, "portal");
+        if (origin != null) request.addHeader("Origin", origin);
+        return request;
+    }
+
+    private MockHttpServletRequest catalogRequest(String clientCode, String origin) {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/public/site");
+        request.setServletPath("/api/v1/public/site");
+        if (clientCode != null) request.addHeader(ClientApplicationAuthenticationFilter.CLIENT_CODE_HEADER, clientCode);
         if (origin != null) request.addHeader("Origin", origin);
         return request;
     }

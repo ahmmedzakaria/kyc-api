@@ -37,4 +37,18 @@ class PublicAuthenticationRouteCharacterizationTest {
         assertThat(policy.isPublic("/api/v1/catalog/admin/site")).isFalse();
         assertThat(policy.isPublic("/api/v1/public/site/draft")).isFalse();
     }
+
+    @Test
+    void healthChecksAreAnonymousWithoutExposingOtherActuatorEndpoints() {
+        assertThat(new String[]{
+                "/actuator/health",
+                "/actuator/health/readiness",
+                "/actuator/health/liveness"
+        }).allMatch(policy::isPublic);
+        assertThat(new String[]{
+                "/actuator/info",
+                "/actuator/metrics",
+                "/actuator/prometheus"
+        }).noneMatch(policy::isPublic);
+    }
 }

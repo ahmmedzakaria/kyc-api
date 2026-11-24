@@ -21,7 +21,7 @@ WORKDIR /app
 
 # Logical database backups use the native PostgreSQL client tools.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client \
+    && apt-get install -y --no-install-recommends curl postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a user for security (optional)
