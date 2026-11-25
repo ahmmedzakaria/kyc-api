@@ -15,6 +15,7 @@ import com.nexacore.systemmodule.layout.service.interfaces.ClientLayoutAssignmen
 import com.nexacore.systemmodule.accesscontrol.entity.SysAccClientApplication;
 import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepository;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeService;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,12 +30,14 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     private final LayoutProfileRepository layoutProfileRepository;
     private final AuthModuleGateway authModuleGateway;
     private final DataScopeService dataScopeService;
+    private final AuthorizedScopeLookupService authorizedScopeLookupService;
 
     @Override
     @Transactional(transactionManager = "systemTransactionManager")
     public ClientLayoutAssignmentDto assign(ClientLayoutAssignmentRequestDto request, String actor) {
         Long userId = authModuleGateway.getUserId(actor);
-        Long tenantId = dataScopeService.requireWritableScope(requireTenantSelection(request.getTenantId()), null, null).tenantId();
+        Long tenantId = requireTenantSelection(request.getTenantId());
+        authorizedScopeLookupService.validateAssignment(tenantId, null, null);
         SysAccClientApplication client = resolveClient(request);
         SysLayoutProfile profile = resolveProfile(request);
         Long currentId = request.getId() == null ? -1L : request.getId();
@@ -74,7 +77,8 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public List<ClientLayoutAssignmentDto> list(Long requestedTenantId, String clientCode) {
-        Long tenantId = dataScopeService.requireEffectiveTenant(requireTenantSelection(requestedTenantId));
+        Long tenantId = requireTenantSelection(requestedTenantId);
+        authorizedScopeLookupService.validateAssignment(tenantId, null, null);
         SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientCode));
         return clientLayoutProfileRepository.findByTenantIdAndClientApplicationIdOrderByDisplayOrderAscIdAsc(

@@ -9,6 +9,7 @@ import com.nexacore.systemmodule.layout.dto.LayoutBrandDto;
 import com.nexacore.systemmodule.layout.entity.SysLayoutProfile;
 import com.nexacore.systemmodule.layout.repository.ClientLayoutProfileRepository;
 import com.nexacore.systemmodule.layout.repository.LayoutProfileRepository;
+import com.nexacore.systemmodule.tenant.service.AuthorizedScopeLookupService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 class ClientLayoutAssignmentTenantIsolationTest {
     private final AtomicReference<Long> directIdTenant = new AtomicReference<>();
@@ -95,7 +97,8 @@ class ClientLayoutAssignmentTenantIsolationTest {
             if (method.getName().equals("getUserId")) return 9L;
             throw new UnsupportedOperationException(method.getName());
         });
-        return new ClientLayoutAssignmentServiceImpl(assignments, clients, profiles, auth, new DataScopeService());
+        return new ClientLayoutAssignmentServiceImpl(assignments, clients, profiles, auth, new DataScopeService(),
+                mock(AuthorizedScopeLookupService.class));
     }
 
     private void authenticateAsTenant(long tenantId) {
