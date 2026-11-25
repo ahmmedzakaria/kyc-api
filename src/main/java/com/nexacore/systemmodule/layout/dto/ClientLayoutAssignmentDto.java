@@ -18,6 +18,7 @@ public class ClientLayoutAssignmentDto {
     private String clientCode;
     private Long layoutProfileId;
     private String profileCode;
+    private Boolean profileActive;
     private AssignmentScope assignmentScope;
     private String roleCode;
     private String privilegeCode;

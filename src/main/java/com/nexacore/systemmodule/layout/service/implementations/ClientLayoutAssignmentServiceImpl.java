@@ -77,7 +77,7 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
         Long tenantId = dataScopeService.requireEffectiveTenant(requireTenantSelection(requestedTenantId));
         SysAccClientApplication client = clientApplicationRepository.findByClientCode(clientCode)
                 .orElseThrow(() -> new IllegalArgumentException("Client application not found: " + clientCode));
-        return clientLayoutProfileRepository.findByTenantIdAndClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(
+        return clientLayoutProfileRepository.findByTenantIdAndClientApplicationIdOrderByDisplayOrderAscIdAsc(
                         tenantId, client.getId()).stream()
                 .map(this::toDto)
                 .toList();
@@ -118,6 +118,7 @@ public class ClientLayoutAssignmentServiceImpl implements ClientLayoutAssignment
                 .clientCode(assignment.getClientApplication().getClientCode())
                 .layoutProfileId(assignment.getLayoutProfile().getId())
                 .profileCode(assignment.getLayoutProfile().getProfileCode())
+                .profileActive(assignment.getLayoutProfile().isActive())
                 .assignmentScope(assignment.getAssignmentScope())
                 .roleCode(assignment.getRoleCode())
                 .privilegeCode(assignment.getPrivilegeCode())

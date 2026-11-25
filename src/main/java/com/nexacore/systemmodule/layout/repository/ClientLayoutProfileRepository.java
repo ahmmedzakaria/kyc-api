@@ -10,6 +10,8 @@ import java.util.Optional;
 public interface ClientLayoutProfileRepository extends JpaRepository<SysClientLayoutProfile, Long> {
     List<SysClientLayoutProfile> findByTenantIdAndClientApplicationIdAndActiveTrueOrderByDisplayOrderAscIdAsc(
             Long tenantId, Long clientApplicationId);
+    List<SysClientLayoutProfile> findByTenantIdAndClientApplicationIdOrderByDisplayOrderAscIdAsc(
+            Long tenantId, Long clientApplicationId);
     Optional<SysClientLayoutProfile> findFirstByTenantIdAndClientApplicationClientCodeAndDefaultProfileTrueAndActiveTrueOrderByDisplayOrderAscIdAsc(
             Long tenantId, String clientCode);
     boolean existsByTenantIdAndClientApplicationIdAndDefaultProfileTrueAndActiveTrueAndIdNot(
