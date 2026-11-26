@@ -37,9 +37,9 @@ class SystemDatabaseMigrationTest {
         migrateTo(null);
 
         assertThat(scalar("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1"))
-                .isEqualTo("82");
+                .isEqualTo("83");
         assertThat(count("SELECT count(*) FROM flyway_schema_history WHERE success"))
-                .isEqualTo(81);
+                .isEqualTo(82);
         assertThat(regclass("sys_priv_modules")).isEqualTo("sys_priv_modules");
         assertThat(regclass("sys_priv_modules_tobe_deleted")).isEqualTo("sys_priv_modules_tobe_deleted");
         assertThat(regclass("sys_layout_navigation_modules")).isNull();
@@ -49,6 +49,21 @@ class SystemDatabaseMigrationTest {
         assertThat(count("SELECT count(*) FROM sys_priv_modules "
                 + "WHERE module_priv_code='12' AND navigation_module_code='CATALOG' "
                 + "AND physical_module_code='12' AND navigation_enabled AND active"))
+                .isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM sys_layout_profiles "
+                + "WHERE profile_code='WEB_CATALOG_LAYOUT' AND layout_type='PUBLIC' "
+                + "AND navigation_mode='MODULE_LIST' AND topbar_enabled "
+                + "AND NOT sidebar_enabled AND footer_enabled AND breadcrumb_enabled "
+                + "AND NOT command_bar_enabled AND active"))
+                .isEqualTo(1);
+        assertThat(count("SELECT count(*) FROM sys_layout_profile_themes theme "
+                + "JOIN sys_layout_profiles profile ON profile.id=theme.layout_profile_id "
+                + "JOIN sys_layout_theme_primaries primary_colors "
+                + "ON primary_colors.layout_profile_theme_id=theme.id "
+                + "WHERE profile.profile_code='WEB_CATALOG_LAYOUT' "
+                + "AND theme.theme_id='purple' AND theme.swatch='#6b3fa0' "
+                + "AND primary_colors.accent_color='#6b3fa0' "
+                + "AND theme.active AND primary_colors.active"))
                 .isEqualTo(1);
         assertThat(count("SELECT count(*) FROM sys_priv_submodules submodule "
                 + "JOIN sys_priv_modules module ON module.id=submodule.module_id "
