@@ -1,5 +1,7 @@
 package com.nexacore.catalogmodule.api;
 
+import com.nexacore.gatewaymodule.layout.dto.PublicLayoutContextDto;
+
 import java.util.List;
 
 /** Complete public site contract matching the Angular CatalogSiteView. */
@@ -14,8 +16,14 @@ public record PublicSiteResponse(
         List<CategoryView> categoryNavigation,
         ContactView contact,
         List<SocialLinkView> socialLinks,
-        SeoView defaultSeo
+        SeoView defaultSeo,
+        PublicLayoutContextDto layout
 ) {
+    public PublicSiteResponse withLayout(PublicLayoutContextDto resolvedLayout) {
+        return new PublicSiteResponse(siteKey, hostname, name, logo, supportedLocales, defaultLocale,
+                navigation, categoryNavigation, contact, socialLinks, defaultSeo, resolvedLayout);
+    }
+
     public record MediaView(String id, String kind, String url, String alternativeText,
                             String title, String mimeType, Integer width, Integer height) {}
     public record NavigationItemView(String id, String label, String path,

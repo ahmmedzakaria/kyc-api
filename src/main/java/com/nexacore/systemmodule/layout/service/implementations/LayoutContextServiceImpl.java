@@ -36,6 +36,7 @@ import com.nexacore.systemmodule.accesscontrol.repository.ClientApplicationRepos
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import com.nexacore.systemmodule.accesscontrol.security.DataScopeAccessDeniedException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,8 +46,10 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LayoutContextServiceImpl implements LayoutContextService {
     private static final String DEFAULT_PROFILE_CODE = "WEB_DEFAULT";
+    private static final String PUBLIC_FALLBACK_PROFILE_CODE = "PUBLIC_SAFE_DEFAULT";
 
     private final ClientApplicationRepository clientApplicationRepository;
     private final ClientLayoutProfileRepository clientLayoutProfileRepository;
@@ -80,9 +83,11 @@ public class LayoutContextServiceImpl implements LayoutContextService {
     @Override
     @Transactional(transactionManager = "systemTransactionManager", readOnly = true)
     public LayoutContextDto getPublicLayout(String clientCode, String origin) {
-        EffectiveProfile activeProfile = resolveDefaultProfile(clientCode);
+        EffectiveProfile activeProfile = resolvePublicDefaultProfile(clientCode);
         if (activeProfile == null) {
-            return defaultContext(clientCode);
+            log.warn("No active PUBLIC layout assignment for tenant {} and client {}; using public-safe fallback",
+                    currentTenantId(), clientCode);
+            return publicDefaultContext(clientCode);
         }
         return LayoutContextDto.builder()
                 .activeProfileCode(activeProfile.profile().getProfileCode())
@@ -92,6 +97,17 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .sizes(resolveSizes(activeProfile.profile()))
                 .fonts(resolveFonts(activeProfile.profile()))
                 .build();
+    }
+
+    private EffectiveProfile resolvePublicDefaultProfile(String clientCode) {
+        if (clientCode == null || clientCode.isBlank()) return null;
+        return clientLayoutProfileRepository
+                .findFirstByTenantIdAndClientApplicationClientCodeAndDefaultProfileTrueAndActiveTrueOrderByDisplayOrderAscIdAsc(
+                        currentTenantId(), clientCode)
+                .filter(assignment -> assignment.getLayoutProfile().isActive())
+                .filter(assignment -> assignment.getLayoutProfile().getLayoutType() == LayoutType.PUBLIC)
+                .map(assignment -> new EffectiveProfile(assignment.getLayoutProfile(), assignment))
+                .orElse(null);
     }
 
     private EffectiveProfile resolveDefaultProfile(String clientCode) {
@@ -303,6 +319,36 @@ public class LayoutContextServiceImpl implements LayoutContextService {
                 .activeProfileCode(DEFAULT_PROFILE_CODE)
                 .availableProfiles(List.of(profile))
                 .navTree(new ArrayList<>())
+                .themes(List.of(defaultTheme()))
+                .sizes(defaultSizes())
+                .fonts(defaultFonts())
+                .build();
+    }
+
+    private LayoutContextDto publicDefaultContext(String clientCode) {
+        LayoutProfileDto profile = LayoutProfileDto.builder()
+                .code(PUBLIC_FALLBACK_PROFILE_CODE)
+                .name("Public Safe Default")
+                .layoutType(LayoutType.PUBLIC)
+                .navigationMode(NavigationMode.MODULE_LIST)
+                .themeMode(ThemeMode.LIGHT)
+                .density(LayoutDensity.COMFORTABLE)
+                .topbarEnabled(true)
+                .sidebarEnabled(false)
+                .sidebarCollapsed(false)
+                .footerEnabled(true)
+                .breadcrumbEnabled(true)
+                .commandBarEnabled(false)
+                .rtlEnabled(false)
+                .active(true)
+                .brand(LayoutBrandDto.builder()
+                        .displayName(clientCode == null || clientCode.isBlank() ? "Catalog" : clientCode)
+                        .build())
+                .build();
+        return LayoutContextDto.builder()
+                .activeProfileCode(PUBLIC_FALLBACK_PROFILE_CODE)
+                .availableProfiles(List.of(profile))
+                .navTree(List.of())
                 .themes(List.of(defaultTheme()))
                 .sizes(defaultSizes())
                 .fonts(defaultFonts())

@@ -50,7 +50,8 @@ public class PublicCatalogSiteRepository {
                 List.copyOf(supportedLocales), site.defaultLocale(), navigation(tenantId, site.id(), locale),
                 categories(tenantId, locale, mediaPublicPath),
                 new PublicSiteResponse.ContactView(site.email(), site.phone(), site.address(), null),
-                List.of(), new PublicSiteResponse.SeoView(site.seoTitle(), site.seoDescription(), "/", logo, false)));
+                List.of(), new PublicSiteResponse.SeoView(site.seoTitle(), site.seoDescription(), "/", logo, false),
+                null));
     }
 
     private List<PublicSiteResponse.NavigationItemView> navigation(long tenantId, long siteId, String locale) {

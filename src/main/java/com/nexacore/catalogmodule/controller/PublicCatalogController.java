@@ -5,9 +5,11 @@ import com.nexacore.catalogmodule.service.CatalogContextService;
 import com.nexacore.systemmodule.accesscontrol.security.PublicApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -19,7 +21,8 @@ public class PublicCatalogController {
     @GetMapping("/site")
     @PublicApi
     public ResponseEntity<PublicSiteResponse> site(
-            @RequestParam(value = "lang", defaultValue = "en") String locale) {
-        return ResponseEntity.ok(contextService.publicContext(locale));
+            @RequestParam(value = "lang", defaultValue = "en") String locale,
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false) String origin) {
+        return ResponseEntity.ok(contextService.publicContext(locale, origin));
     }
 }
