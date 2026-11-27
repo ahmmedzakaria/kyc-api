@@ -51,7 +51,7 @@ public class PublicCatalogSiteRepository {
                 categories(tenantId, locale, mediaPublicPath),
                 new PublicSiteResponse.ContactView(site.email(), site.phone(), site.address(), null),
                 List.of(), new PublicSiteResponse.SeoView(site.seoTitle(), site.seoDescription(), "/", logo, false),
-                null));
+                null, List.of()));
     }
 
     private List<PublicSiteResponse.NavigationItemView> navigation(long tenantId, long siteId, String locale) {

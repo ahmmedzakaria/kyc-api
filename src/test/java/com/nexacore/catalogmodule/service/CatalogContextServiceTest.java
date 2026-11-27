@@ -3,6 +3,8 @@ package com.nexacore.catalogmodule.service;
 import com.nexacore.catalogmodule.config.CatalogProperties;
 import com.nexacore.gatewaymodule.layout.dto.PublicLayoutContextDto;
 import com.nexacore.gatewaymodule.layout.service.interfaces.LayoutModuleGateway;
+import com.nexacore.gatewaymodule.navigation.dto.PublicNavigationContextDto;
+import com.nexacore.gatewaymodule.navigation.service.interfaces.PublicNavigationModuleGateway;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContext;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import org.junit.jupiter.api.AfterEach;
@@ -23,9 +25,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CatalogContextServiceTest {
     private final PublicCatalogSiteRepository repository = mock(PublicCatalogSiteRepository.class);
     private final LayoutModuleGateway layoutGateway = mock(LayoutModuleGateway.class);
+    private final PublicNavigationModuleGateway navigationGateway = mock(PublicNavigationModuleGateway.class);
     private final CatalogContextService service = new CatalogContextService(
-            new CatalogProperties("en", List.of("en", "bn"), new CatalogProperties.Media("catalog", "/api/v1/public/media")),
-            repository, layoutGateway);
+            new CatalogProperties("en", List.of("en", "bn"), new CatalogProperties.Media("catalog", "/api/v1/public/media"), true),
+            repository, layoutGateway, navigationGateway);
 
     @AfterEach
     void clearTenant() {
@@ -41,9 +44,11 @@ class CatalogContextServiceTest {
                 .thenReturn(Optional.of(new PublicSiteResponse("acme", "catalog.acme.test", "Acme", logo,
                         List.of("en", "bn"), "en", List.of(), List.of(),
                         new PublicSiteResponse.ContactView("", "", "", null), List.of(),
-                        new PublicSiteResponse.SeoView("Acme", "", "/", logo, false), null)));
+                        new PublicSiteResponse.SeoView("Acme", "", "/", logo, false), null, List.of())));
         var layout = new PublicLayoutContextDto("WEB_CATALOG_LAYOUT", List.of(), List.of(), null, null);
         when(layoutGateway.getPublicLayout("CATALOG", "https://catalog.acme.test")).thenReturn(layout);
+        when(navigationGateway.getPublicNavigation(org.mockito.ArgumentMatchers.eq("CATALOG"), org.mockito.ArgumentMatchers.anySet()))
+                .thenReturn(new PublicNavigationContextDto("CATALOG", List.of()));
         var response = service.publicContext("en", "https://catalog.acme.test");
 
         assertThat(response.siteKey()).isEqualTo("acme");

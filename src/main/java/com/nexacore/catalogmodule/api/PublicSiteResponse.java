@@ -1,6 +1,7 @@
 package com.nexacore.catalogmodule.api;
 
 import com.nexacore.gatewaymodule.layout.dto.PublicLayoutContextDto;
+import com.nexacore.gatewaymodule.navigation.dto.PublicNavigationContextDto;
 
 import java.util.List;
 
@@ -17,11 +18,31 @@ public record PublicSiteResponse(
         ContactView contact,
         List<SocialLinkView> socialLinks,
         SeoView defaultSeo,
-        PublicLayoutContextDto layout
+        PublicLayoutContextDto layout,
+        List<PublicNavigationContextDto.Region> navigationRegions
 ) {
     public PublicSiteResponse withLayout(PublicLayoutContextDto resolvedLayout) {
         return new PublicSiteResponse(siteKey, hostname, name, logo, supportedLocales, defaultLocale,
-                navigation, categoryNavigation, contact, socialLinks, defaultSeo, resolvedLayout);
+                navigation, categoryNavigation, contact, socialLinks, defaultSeo, resolvedLayout, navigationRegions);
+    }
+
+    public PublicSiteResponse withSystemContext(PublicLayoutContextDto resolvedLayout,
+                                                PublicNavigationContextDto resolvedNavigation) {
+        List<NavigationItemView> primary = resolvedNavigation.regions().stream()
+                .filter(region -> "PRIMARY".equals(region.surface()))
+                .flatMap(region -> region.groups().stream())
+                .flatMap(group -> group.items().stream())
+                .map(PublicSiteResponse::navigationItem)
+                .toList();
+        return new PublicSiteResponse(siteKey, hostname, name, logo, supportedLocales, defaultLocale,
+                primary, categoryNavigation, contact, socialLinks, defaultSeo, resolvedLayout,
+                resolvedNavigation.regions());
+    }
+
+    private static NavigationItemView navigationItem(PublicNavigationContextDto.Item item) {
+        String path = "INTERNAL_ROUTE".equals(item.type()) ? item.routePath() : item.externalUrl();
+        return new NavigationItemView(item.code(), item.label(), path,
+                item.children().stream().map(PublicSiteResponse::navigationItem).toList());
     }
 
     public record MediaView(String id, String kind, String url, String alternativeText,

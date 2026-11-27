@@ -5,6 +5,8 @@ import com.nexacore.catalogmodule.api.PublicSiteResponse;
 import com.nexacore.catalogmodule.config.CatalogProperties;
 import com.nexacore.catalogmodule.repository.PublicCatalogSiteRepository;
 import com.nexacore.gatewaymodule.layout.service.interfaces.LayoutModuleGateway;
+import com.nexacore.gatewaymodule.navigation.enums.PublicNavigationSurface;
+import com.nexacore.gatewaymodule.navigation.service.interfaces.PublicNavigationModuleGateway;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContext;
 import com.nexacore.systemmodule.tenant.security.ResolvedTenantContextHolder;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class CatalogContextService {
     private final CatalogProperties properties;
     private final PublicCatalogSiteRepository siteRepository;
     private final LayoutModuleGateway layoutModuleGateway;
+    private final PublicNavigationModuleGateway publicNavigationModuleGateway;
 
     public PublicSiteResponse publicContext(String locale, String origin) {
         ResolvedTenantContext tenant = requiredTenant();
@@ -28,7 +31,11 @@ public class CatalogContextService {
                         properties.supportedLocales(), properties.media().publicPath())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No published catalog site for this hostname"));
-        return site.withLayout(layoutModuleGateway.getPublicLayout(CATALOG_CLIENT_CODE, origin));
+        var layout = layoutModuleGateway.getPublicLayout(CATALOG_CLIENT_CODE, origin);
+        if (!properties.systemNavigationEnabled()) return site.withLayout(layout);
+        return site.withSystemContext(layout, publicNavigationModuleGateway.getPublicNavigation(CATALOG_CLIENT_CODE,
+                java.util.EnumSet.of(PublicNavigationSurface.PRIMARY,
+                        PublicNavigationSurface.UTILITY, PublicNavigationSurface.FOOTER)));
     }
 
     public AdminCatalogContextResponse adminContext() {

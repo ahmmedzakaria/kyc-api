@@ -8,13 +8,15 @@ import java.util.List;
 public record CatalogProperties(
         String defaultLocale,
         List<String> supportedLocales,
-        Media media
+        Media media,
+        Boolean systemNavigationEnabled
 ) {
     public CatalogProperties {
         defaultLocale = defaultLocale == null || defaultLocale.isBlank() ? "en" : defaultLocale;
         supportedLocales = supportedLocales == null || supportedLocales.isEmpty()
                 ? List.of("en", "bn") : List.copyOf(supportedLocales);
         media = media == null ? new Media("catalog", "/api/v1/public/media") : media;
+        systemNavigationEnabled = Boolean.TRUE.equals(systemNavigationEnabled);
     }
 
     public record Media(String namespace, String publicPath) {
